@@ -37,6 +37,16 @@ public class RoleSaveRequest implements Serializable {
 
     private String remark;
 
-    /** 授权菜单 ID 集合。 */
+    /**
+     * 授权资源 ID 集合（RC11：菜单 ID 与按钮 ID 混合，按存在性分流绑定；
+     * 兼容旧字段名 menuIds 读取）。
+     */
+    private List<String> permissionIds;
+
+    /** 兼容旧字段（= permissionIds）。 */
     private List<String> menuIds;
+
+    public List<String> effectivePermissionIds() {
+        return permissionIds != null ? permissionIds : menuIds;
+    }
 }

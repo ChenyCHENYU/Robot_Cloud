@@ -6,9 +6,11 @@ import com.robot.common.security.util.AuthUtil;
 import com.robot.system.api.entity.SysMenu;
 import com.robot.system.api.entity.SysMenuButton;
 import com.robot.system.api.entity.SysRoleMenu;
+import com.robot.system.api.entity.SysRoleButton;
 import com.robot.system.menu.mapper.SysMenuButtonMapper;
 import com.robot.system.menu.mapper.SysMenuMapper;
 import com.robot.system.permission.service.EffectiveRoleResolver.EffectiveRoles;
+import com.robot.system.role.mapper.SysRoleButtonMapper;
 import com.robot.system.role.mapper.SysRoleMenuMapper;
 import com.robot.system.support.SystemKeys;
 import cn.dev33.satoken.stp.StpInterface;
@@ -42,6 +44,7 @@ public class RobotStpInterface implements StpInterface {
     private static final Duration PERM_TTL = Duration.ofMinutes(30);
 
     private final SysRoleMenuMapper roleMenuMapper;
+    private final SysRoleButtonMapper roleButtonMapper;
     private final SysMenuMapper menuMapper;
     private final SysMenuButtonMapper menuButtonMapper;
     private final EffectiveRoleResolver effectiveRoleResolver;
@@ -102,16 +105,13 @@ public class RobotStpInterface implements StpInterface {
         }
 
         Set<String> permissions = new HashSet<>();
-        List<SysMenu> grantedMenus = grantedMenus(effective.roleIds());
-        for (SysMenu menu : grantedMenus) {
+        for (SysMenu menu : grantedMenus(effective.roleIds())) {
             if (menu.getPermCode() != null && !menu.getPermCode().isBlank()) {
                 permissions.add(menu.getPermCode());
             }
         }
-        if (!grantedMenus.isEmpty()) {
-            for (SysMenuButton button : grantedButtons(grantedMenus)) {
-                permissions.add(button.getPermCode());
-            }
+        for (SysMenuButton button : grantedButtons(effective.roleIds())) {
+            permissions.add(button.getPermCode());
         }
         return new CachedPermissions(false, new ArrayList<>(permissions));
     }
@@ -128,13 +128,19 @@ public class RobotStpInterface implements StpInterface {
                 .eq(SysMenu::getStatusFlag, 1));
     }
 
-    /** RC11 前过渡语义：授权菜单仍隐含其全部按钮（精确绑定属紧随提交）。 */
-    private List<SysMenuButton> grantedButtons(List<SysMenu> grantedMenus) {
-        return menuButtonMapper.selectList(new LambdaQueryWrapper<SysMenuButton>()
-                .in(SysMenuButton::getMenuId,
-                        grantedMenus.stream().map(SysMenu::getId).toList())
-                .eq(SysMenuButton::getStatusFlag, 1)
-                .eq(SysMenuButton::getDeleteFlag, 1));
+    /** RC11：按钮权限只来自 sys_role_button 精确绑定（菜单授权不再隐含按钮）。 */
+    private List<SysMenuButton> grantedButtons(Set<String> roleIds) {
+        List<String> buttonIds = roleButtonMapper.selectList(
+                        new LambdaQueryWrapper<SysRoleButton>()
+                                .in(SysRoleButton::getRoleId, roleIds))
+                .stream().map(SysRoleButton::getButtonId).toList();
+        if (buttonIds.isEmpty()) {
+            return List.of();
+        }
+        return menuButtonMapper.selectBatchIds(buttonIds).stream()
+                .filter(button -> button.getStatusFlag() != null && button.getStatusFlag() == 1
+                        && button.getDeleteFlag() != null && button.getDeleteFlag() == 1)
+                .toList();
     }
 
     /** 租户来源（登录态公司；package 缝：单测可覆写注入固定值）。 */

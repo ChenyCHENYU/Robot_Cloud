@@ -5,7 +5,9 @@ import com.robot.api.system.dto.RemoteMenuRouteDTO;
 import com.robot.common.core.constant.RobotConstants;
 import com.robot.system.api.entity.SysMenu;
 import com.robot.system.api.entity.SysMenuButton;
+import com.robot.system.api.entity.SysRoleButton;
 import com.robot.system.api.entity.SysRoleMenu;
+import com.robot.system.role.mapper.SysRoleButtonMapper;
 import com.robot.system.api.vo.menu.MenuButtonVO;
 import com.robot.system.api.vo.menu.MenuTreeNode;
 import com.robot.system.api.vo.permission.PermissionItem;
@@ -36,6 +38,7 @@ public class MenuQueryService {
     private final SysMenuMapper menuMapper;
     private final SysMenuButtonMapper menuButtonMapper;
     private final SysRoleMenuMapper roleMenuMapper;
+    private final SysRoleButtonMapper roleButtonMapper;
     private final EffectiveRoleResolver effectiveRoleResolver;
 
     /** 全量菜单树（管理端；菜单为全局表，可见性由角色授权控制）。 */
@@ -52,9 +55,15 @@ public class MenuQueryService {
         return toRoutes(menus, null);
     }
 
-    /** 用户按钮权限映射：菜单 path → 权限码集合（/auth/button-list 数据源）。 */
+    /**
+     * 用户按钮权限映射：菜单 path → 权限码集合（/auth/button-list 数据源）。
+     * RC11：按钮码只来自 sys_role_button 精确绑定且挂在已授权菜单下。
+     */
     public Map<String, List<String>> buttonListOfUser(String userId, String companyId) {
-        Set<String> grantedIds = grantedMenuIds(userId, companyId);
+        EffectiveRoleResolver.EffectiveRoles effective =
+                effectiveRoleResolver.resolve(userId, companyId);
+        Set<String> grantedIds = effective.superAdmin() ? null
+                : menuIdsOfRoles(effective.roleIds());
         List<SysMenu> menus = activeMenus().stream()
                 .filter(menu -> menu.getPath() != null && !menu.getPath().isBlank())
                 .filter(menu -> grantedIds == null || grantedIds.contains(menu.getId()))
@@ -62,14 +71,8 @@ public class MenuQueryService {
         if (menus.isEmpty()) {
             return Map.of();
         }
-        Map<String, List<SysMenuButton>> byMenu = menuButtonMapper.selectList(
-                        new LambdaQueryWrapper<SysMenuButton>()
-                                .in(SysMenuButton::getMenuId,
-                                        menus.stream().map(SysMenu::getId).toList())
-                                .eq(SysMenuButton::getStatusFlag, 1)
-                                .eq(SysMenuButton::getDeleteFlag,
-                                        RobotConstants.DELETE_FLAG_ACTIVE))
-                .stream().collect(Collectors.groupingBy(SysMenuButton::getMenuId));
+        Map<String, List<SysMenuButton>> byMenu = boundButtons(effective).stream()
+                .collect(Collectors.groupingBy(SysMenuButton::getMenuId));
 
         Map<String, List<String>> result = new HashMap<>();
         for (SysMenu menu : menus) {
@@ -83,6 +86,39 @@ public class MenuQueryService {
             result.put(menu.getPath(), codes);
         }
         return result;
+    }
+
+    private Set<String> menuIdsOfRoles(Set<String> roleIds) {
+        if (roleIds.isEmpty()) {
+            return Set.of();
+        }
+        return roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
+                        .in(SysRoleMenu::getRoleId, roleIds))
+                .stream().map(SysRoleMenu::getMenuId).collect(Collectors.toSet());
+    }
+
+    /** 精确绑定的按钮（超管为全部）。 */
+    private List<SysMenuButton> boundButtons(EffectiveRoleResolver.EffectiveRoles effective) {
+        if (effective.superAdmin()) {
+            return menuButtonMapper.selectList(new LambdaQueryWrapper<SysMenuButton>()
+                    .eq(SysMenuButton::getStatusFlag, 1)
+                    .eq(SysMenuButton::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE));
+        }
+        if (effective.isEmpty()) {
+            return List.of();
+        }
+        List<String> buttonIds = roleButtonMapper.selectList(
+                        new LambdaQueryWrapper<SysRoleButton>()
+                                .in(SysRoleButton::getRoleId, effective.roleIds()))
+                .stream().map(SysRoleButton::getButtonId).toList();
+        if (buttonIds.isEmpty()) {
+            return List.of();
+        }
+        return menuButtonMapper.selectBatchIds(buttonIds).stream()
+                .filter(button -> button.getStatusFlag() != null && button.getStatusFlag() == 1
+                        && button.getDeleteFlag() != null
+                        && button.getDeleteFlag() == RobotConstants.DELETE_FLAG_ACTIVE)
+                .toList();
     }
 
     /** 按钮清单（menuId 空 = 全量；管理端与装配复用）。 */

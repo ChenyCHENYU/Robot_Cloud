@@ -8,6 +8,7 @@ import com.robot.system.api.constant.SystemConstants;
 import com.robot.common.core.domain.PageResult;
 import com.robot.common.core.domain.ResultCode;
 import com.robot.common.core.exception.ServiceAssert;
+import com.robot.common.core.exception.ServiceException;
 import com.robot.system.api.dto.role.RolePageQuery;
 import com.robot.system.api.dto.role.RoleSaveRequest;
 import com.robot.system.api.dto.role.TempAuthorizationCreateRequest;
@@ -20,9 +21,17 @@ import com.robot.system.api.vo.role.RoleVO;
 
 import com.robot.system.role.mapper.SysRoleMapper;
 import com.robot.system.role.mapper.SysRoleMenuMapper;
+import com.robot.system.role.mapper.SysRoleButtonMapper;
 import com.robot.system.role.mapper.SysTempAuthorizationMapper;
+import com.robot.system.api.entity.SysRoleButton;
+import com.robot.system.api.entity.SysMenuButton;
+import com.robot.system.menu.mapper.SysMenuButtonMapper;
+import com.robot.system.menu.mapper.SysMenuMapper;
+import com.robot.system.api.entity.SysMenu;
+import com.robot.common.security.util.AuthUtil;
 import com.robot.system.user.mapper.SysUserMapper;
 import com.robot.system.user.mapper.SysUserRoleMapper;
+import com.robot.system.permission.service.EffectiveRoleResolver;
 import com.robot.system.permission.service.PermissionChangeRecorder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +56,10 @@ import java.util.Map;
 public class RoleService extends ServiceImpl<SysRoleMapper, SysRole> {
 
     private final SysRoleMenuMapper roleMenuMapper;
+    private final SysRoleButtonMapper roleButtonMapper;
+    private final SysMenuMapper menuMapper;
+    private final SysMenuButtonMapper menuButtonMapper;
+    private final EffectiveRoleResolver effectiveRoleResolver;
     private final SysUserRoleMapper userRoleMapper;
     private final SysTempAuthorizationMapper tempAuthorizationMapper;
     private final SysUserMapper userMapper;
@@ -96,7 +109,7 @@ public class RoleService extends ServiceImpl<SysRoleMapper, SysRole> {
         SysRole role = new SysRole();
         applyFields(role, request);
         save(role);
-        bindMenus(role.getId(), request.getMenuIds());
+        bindPermissions(role.getId(), request.effectivePermissionIds());
         changeRecorder.record("save_role", role.getId(), request);
         return role.getId();
     }
@@ -111,9 +124,9 @@ public class RoleService extends ServiceImpl<SysRoleMapper, SysRole> {
                 ResultCode.ROLE_CODE_DUPLICATED);
         applyFields(role, request);
         updateById(role);
-        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
-                .eq(SysRoleMenu::getRoleId, id));
-        bindMenus(id, request.getMenuIds());
+        assertNotSelfRoleEdit(id);
+        deleteBindings(id);
+        bindPermissions(id, request.effectivePermissionIds());
         changeRecorder.record("update_role", id, request);
     }
 
@@ -121,11 +134,11 @@ public class RoleService extends ServiceImpl<SysRoleMapper, SysRole> {
     @Transactional(rollbackFor = Exception.class)
     public void assignPermissions(String roleId, List<String> permissionIds) {
         SysRole role = ServiceAssert.notNull(getById(roleId), ResultCode.ROLE_NOT_FOUND);
-        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
-                .eq(SysRoleMenu::getRoleId, roleId));
-        bindMenus(roleId, permissionIds);
+        assertNotSelfRoleEdit(roleId);
+        deleteBindings(roleId);
+        bindPermissions(roleId, permissionIds);
         changeRecorder.record("assign_permissions", roleId,
-                Map.of("menuCount", permissionIds == null ? 0 : permissionIds.size()));
+                Map.of("permissionCount", permissionIds == null ? 0 : permissionIds.size()));
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -138,8 +151,7 @@ public class RoleService extends ServiceImpl<SysRoleMapper, SysRole> {
         ServiceAssert.isTrue(bound == 0, ResultCode.DATA_REFERENCED, "角色已分配用户，禁止删除");
         // MP 逻辑删除（软删）
         removeById(id);
-        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
-                .eq(SysRoleMenu::getRoleId, id));
+        deleteBindings(id);
         changeRecorder.record("delete_role", id, null);
     }
 
@@ -221,15 +233,91 @@ public class RoleService extends ServiceImpl<SysRoleMapper, SysRole> {
         role.setRemark(request.getRemark());
     }
 
-    private void bindMenus(String roleId, List<String> menuIds) {
-        if (menuIds == null || menuIds.isEmpty()) {
+    /**
+     * 权限绑定分流（RC11）：permissionIds 中菜单 ID 进 sys_role_menu、按钮 ID 进
+     * sys_role_button；未知/重复/跨资源 ID 一律拒绝（防静默丢授权）。
+     */
+    private void bindPermissions(String roleId, List<String> permissionIds) {
+        if (permissionIds == null || permissionIds.isEmpty()) {
             return;
         }
-        for (String menuId : menuIds) {
+        List<String> distinctIds = permissionIds.stream().distinct().toList();
+        assertWithinGrantCeiling(distinctIds);
+
+        java.util.Set<String> resolvedMenus = new java.util.HashSet<>();
+        for (SysMenu menu : menuMapper.selectBatchIds(distinctIds)) {
+            if (menu.getDeleteFlag() != null && menu.getDeleteFlag() == 1) {
+                resolvedMenus.add(menu.getId());
+            }
+        }
+        java.util.Set<String> resolvedButtons = new java.util.HashSet<>();
+        for (SysMenuButton button : menuButtonMapper.selectBatchIds(distinctIds)) {
+            if (button.getDeleteFlag() != null && button.getDeleteFlag() == 1) {
+                resolvedButtons.add(button.getId());
+            }
+        }
+        ServiceAssert.isTrue(
+                resolvedMenus.size() + resolvedButtons.size() == distinctIds.size(),
+                ResultCode.PARAM_INVALID, "包含未知或已失效的权限资源 ID");
+
+        for (String menuId : resolvedMenus) {
             SysRoleMenu binding = new SysRoleMenu();
             binding.setRoleId(roleId);
             binding.setMenuId(menuId);
             roleMenuMapper.insert(binding);
+        }
+        for (String buttonId : resolvedButtons) {
+            SysRoleButton binding = new SysRoleButton();
+            binding.setRoleId(roleId);
+            binding.setButtonId(buttonId);
+            roleButtonMapper.insert(binding);
+        }
+    }
+
+    /** 清空角色全部权限绑定（菜单 + 按钮）。 */
+    private void deleteBindings(String roleId) {
+        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
+                .eq(SysRoleMenu::getRoleId, roleId));
+        roleButtonMapper.delete(new LambdaQueryWrapper<SysRoleButton>()
+                .eq(SysRoleButton::getRoleId, roleId));
+    }
+
+    /**
+     * 授予上界（RC11/T18）：非超管操作者只能授予自己有效集合内的权限。
+     */
+    private void assertWithinGrantCeiling(List<String> requestedIds) {
+        String operatorId = AuthUtil.getLoginUserId();
+        if (operatorId == null || AuthUtil.isSuperAdmin()) {
+            return; // 系统任务或超管不受上界限制
+        }
+        com.robot.system.permission.service.EffectiveRoleResolver.EffectiveRoles effective =
+                effectiveRoleResolver.resolve(operatorId, AuthUtil.getLoginCompanyId());
+        java.util.Set<String> ownable = new java.util.HashSet<>();
+        if (!effective.isEmpty()) {
+            roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
+                            .in(SysRoleMenu::getRoleId, effective.roleIds()))
+                    .forEach(binding -> ownable.add(binding.getMenuId()));
+            roleButtonMapper.selectList(new LambdaQueryWrapper<SysRoleButton>()
+                            .in(SysRoleButton::getRoleId, effective.roleIds()))
+                    .forEach(binding -> ownable.add(binding.getButtonId()));
+        }
+        for (String id : requestedIds) {
+            ServiceAssert.isTrue(ownable.contains(id), ResultCode.FORBIDDEN,
+                    "禁止授予超出自身权限范围的资源: " + id);
+        }
+    }
+
+    /** 自授禁令：非超管不得修改自己持有角色的权限集。 */
+    private void assertNotSelfRoleEdit(String roleId) {
+        String operatorId = AuthUtil.getLoginUserId();
+        if (operatorId == null || AuthUtil.isSuperAdmin()) {
+            return;
+        }
+        com.robot.system.permission.service.EffectiveRoleResolver.EffectiveRoles effective =
+                effectiveRoleResolver.resolve(operatorId, AuthUtil.getLoginCompanyId());
+        if (effective.roleIds().contains(roleId)) {
+            throw new ServiceException(ResultCode.FORBIDDEN,
+                    "禁止修改自己持有角色的权限（自授禁令）");
         }
     }
 

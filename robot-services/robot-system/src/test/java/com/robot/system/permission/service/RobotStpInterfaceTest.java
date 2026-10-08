@@ -5,9 +5,11 @@ import com.robot.system.api.entity.SysMenu;
 import com.robot.system.api.entity.SysMenuButton;
 import com.robot.system.api.entity.SysRole;
 import com.robot.system.api.entity.SysRoleMenu;
+import com.robot.system.api.entity.SysRoleButton;
 import com.robot.system.menu.mapper.SysMenuButtonMapper;
 import com.robot.system.menu.mapper.SysMenuMapper;
 import com.robot.system.permission.service.EffectiveRoleResolver.EffectiveRoles;
+import com.robot.system.role.mapper.SysRoleButtonMapper;
 import com.robot.system.role.mapper.SysRoleMenuMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,6 +41,8 @@ class RobotStpInterfaceTest {
     @Mock
     private SysRoleMenuMapper roleMenuMapper;
     @Mock
+    private SysRoleButtonMapper roleButtonMapper;
+    @Mock
     private SysMenuMapper menuMapper;
     @Mock
     private SysMenuButtonMapper menuButtonMapper;
@@ -48,8 +52,8 @@ class RobotStpInterfaceTest {
     private RedisHelper redisHelper;
 
     private RobotStpInterface stpInterface() {
-        return new RobotStpInterface(roleMenuMapper, menuMapper, menuButtonMapper,
-                effectiveRoleResolver, redisHelper) {
+        return new RobotStpInterface(roleMenuMapper, roleButtonMapper, menuMapper,
+                menuButtonMapper, effectiveRoleResolver, redisHelper) {
             @Override
             String currentCompanyId() {
                 return "cmp-1";
@@ -116,17 +120,30 @@ class RobotStpInterfaceTest {
         userMenu.setDeleteFlag(1);
         when(menuMapper.selectList(any())).thenReturn(List.of(userMenu));
 
+        // RC11：按钮只来自 sys_role_button 精确绑定
+        SysRoleButton buttonBinding = new SysRoleButton();
+        buttonBinding.setRoleId("role-1");
+        buttonBinding.setButtonId("btn-save");
+        when(roleButtonMapper.selectList(any())).thenReturn(List.of(buttonBinding));
+
         SysMenuButton saveButton = new SysMenuButton();
+        saveButton.setId("btn-save");
         saveButton.setMenuId("menu-1");
         saveButton.setPermCode("sys:user:save");
         saveButton.setStatusFlag(1);
         saveButton.setDeleteFlag(1);
-        when(menuButtonMapper.selectList(any())).thenReturn(List.of(saveButton));
+        when(menuButtonMapper.selectBatchIds(any())).thenReturn(List.of(saveButton));
 
         List<String> permissions = stpInterface().getPermissionList("usr-1", "login");
 
         assertTrue(permissions.contains("sys:user:list"));
         assertTrue(permissions.contains("sys:user:save"));
+        // RC11：按钮仅来自精确绑定集合（selectBatchIds 仅收到绑定的 btn-save）
+        org.mockito.ArgumentCaptor<java.util.Collection<String>> ids =
+                org.mockito.ArgumentCaptor.forClass(java.util.Collection.class);
+        verify(menuButtonMapper).selectBatchIds(ids.capture());
+        org.junit.jupiter.api.Assertions.assertEquals(List.of("btn-save"),
+                List.copyOf(ids.getValue()));
 
         ArgumentCaptor<RobotStpInterface.CachedPermissions> captor =
                 ArgumentCaptor.forClass(RobotStpInterface.CachedPermissions.class);
@@ -185,12 +202,12 @@ class RobotStpInterfaceTest {
                 .thenReturn(EffectiveRoles.EMPTY);
         cacheMiss();
 
-        RobotStpInterface cmpA = new RobotStpInterface(roleMenuMapper, menuMapper,
-                menuButtonMapper, effectiveRoleResolver, redisHelper) {
+        RobotStpInterface cmpA = new RobotStpInterface(roleMenuMapper, roleButtonMapper,
+                menuMapper, menuButtonMapper, effectiveRoleResolver, redisHelper) {
             @Override String currentCompanyId() { return "cmp-A"; }
         };
-        RobotStpInterface cmpB = new RobotStpInterface(roleMenuMapper, menuMapper,
-                menuButtonMapper, effectiveRoleResolver, redisHelper) {
+        RobotStpInterface cmpB = new RobotStpInterface(roleMenuMapper, roleButtonMapper,
+                menuMapper, menuButtonMapper, effectiveRoleResolver, redisHelper) {
             @Override String currentCompanyId() { return "cmp-B"; }
         };
 

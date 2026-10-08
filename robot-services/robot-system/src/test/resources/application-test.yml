@@ -35,6 +35,7 @@ robot:
         - sys_user_company
         - sys_menu
         - sys_role_menu
+        - sys_role_button
         - sys_menu_button
         - sys_dict_type
         - sys_dict_item

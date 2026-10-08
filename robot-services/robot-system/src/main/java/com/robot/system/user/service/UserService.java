@@ -191,6 +191,10 @@ public class UserService extends ServiceImpl<SysUserMapper, SysUser> {
         if (roleIds == null || roleIds.isEmpty()) {
             return;
         }
+        // 自授禁令（RC11/T18）：非超管不得给自己绑定角色
+        if (userId.equals(AuthUtil.getLoginUserId()) && !AuthUtil.isSuperAdmin()) {
+            throw new ServiceException(ResultCode.FORBIDDEN, "禁止为自己绑定角色（自授禁令）");
+        }
         ServiceAssert.isTrue(roleIds.size() <= RobotConstants.BATCH_WRITE_LIMIT,
                 ResultCode.PARAM_INVALID, "角色数量超出单批上限");
         // 角色必须属于当前公司（防越权挂载他司角色）

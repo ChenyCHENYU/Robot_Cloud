@@ -68,7 +68,8 @@ class EntityDdlAlignmentTest {
         for (String file : List.of("db/migration/V1__init_schema.sql",
                 "db/migration/V2__seed_data.sql",
                 "db/migration/V3__login_log.sql",
-                "db/migration/V4__permission_buttons_expansion.sql")) {
+                "db/migration/V4__permission_buttons_expansion.sql",
+                "db/migration/V5__role_button.sql")) {
             String sql = new String(Objects.requireNonNull(
                     Thread.currentThread().getContextClassLoader().getResourceAsStream(file),
                     "缺少迁移文件: " + file).readAllBytes(), StandardCharsets.UTF_8);
@@ -195,6 +196,6 @@ class EntityDdlAlignmentTest {
                 .filter(c -> BaseEntity.class.isAssignableFrom(c)
                         && !TenantEntity.class.isAssignableFrom(c)).count();
         assertEquals(8, tenantEntities, "租户表实体数量变化需同步更新架构文档");
-        assertEquals(8, globalEntities, "全局表实体数量变化需同步更新架构文档");
+        assertEquals(9, globalEntities, "全局表实体数量变化需同步更新架构文档");
     }
 }
