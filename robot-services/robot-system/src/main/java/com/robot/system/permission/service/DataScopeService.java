@@ -28,61 +28,19 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DataScopeService {
 
-    private final SysRoleMapper roleMapper;
-    private final SysUserRoleMapper userRoleMapper;
-    private final SysTempAuthorizationMapper tempAuthorizationMapper;
+    private final EffectiveRoleResolver effectiveRoleResolver;
 
     public List<DataScopeVO> scopesOfUser(String userId, String companyId) {
-        Set<String> roleIds = new HashSet<>();
-        Set<String> scopes = new HashSet<>();
-        for (SysRole role : rolesOfUser(userId, companyId)) {
-            roleIds.add(role.getId());
-            scopes.add(role.getDataScope() == null
-                    ? SystemConstants.DATA_SCOPE_SELF : role.getDataScope());
-        }
-        // 临时授权并入（只提升范围，不降级；角色一次批量查询）
-        List<SysTempAuthorization> tempAuths = tempAuthorizationMapper.selectList(
-                new LambdaQueryWrapper<SysTempAuthorization>()
-                        .eq(SysTempAuthorization::getUserId, userId)
-                        .eq(SysTempAuthorization::getStatusFlag, 1)
-                        .eq(SysTempAuthorization::getDeleteFlag,
-                                RobotConstants.DELETE_FLAG_ACTIVE)
-                        .le(SysTempAuthorization::getEffectFrom, LocalDateTime.now())
-                        .ge(SysTempAuthorization::getEffectTo, LocalDateTime.now()));
-        if (!tempAuths.isEmpty()) {
-            Set<String> grantedIds = tempAuths.stream()
-                    .map(SysTempAuthorization::getRoleId).collect(Collectors.toSet());
-            for (SysRole granted : roleMapper.selectBatchIds(grantedIds)) {
-                if (granted.getCompanyId().equals(companyId)
-                        && granted.getDeleteFlag().equals(RobotConstants.DELETE_FLAG_ACTIVE)) {
-                    roleIds.add(granted.getId());
-                    scopes.add(granted.getDataScope());
-                }
-            }
-        }
-
+        EffectiveRoleResolver.EffectiveRoles effective =
+                effectiveRoleResolver.resolve(userId, companyId);
+        Set<String> scopes = effective.roles().stream()
+                .map(role -> role.getDataScope() == null
+                        ? SystemConstants.DATA_SCOPE_SELF : role.getDataScope())
+                .collect(Collectors.toSet());
         // 范围取最大（all > custom > department_below > department > self）
         return List.of(new DataScopeVO("*", strongest(scopes)));
     }
 
-    private List<SysRole> rolesOfUser(String userId, String companyId) {
-        List<SysRole> companyRoles = roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
-                .eq(SysRole::getCompanyId, companyId)
-                .eq(SysRole::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
-                .eq(SysRole::getStatusFlag, 1));
-        if (companyRoles.isEmpty()) {
-            return List.of();
-        }
-        Set<String> boundRoleIds = userRoleMapper.selectList(
-                        new LambdaQueryWrapper<SysUserRole>()
-                                .eq(SysUserRole::getUserId, userId)
-                                .eq(SysUserRole::getDeleteFlag,
-                                        RobotConstants.DELETE_FLAG_ACTIVE))
-                .stream().map(SysUserRole::getRoleId).collect(java.util.stream.Collectors.toSet());
-        return companyRoles.stream()
-                .filter(role -> boundRoleIds.contains(role.getId()))
-                .toList();
-    }
 
     private String strongest(Set<String> scopes) {
         if (scopes.contains(SystemConstants.DATA_SCOPE_ALL)) {

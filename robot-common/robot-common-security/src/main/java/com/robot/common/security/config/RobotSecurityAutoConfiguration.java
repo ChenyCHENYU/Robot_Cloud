@@ -29,6 +29,14 @@ public class RobotSecurityAutoConfiguration {
         return new NotLoginExceptionHandler();
     }
 
+    /** 登录后的 Feign 委托上下文透传（仅消费方具备 Feign 时装配）。 */
+    @Bean
+    @ConditionalOnClass(feign.RequestInterceptor.class)
+    @ConditionalOnMissingBean(com.robot.common.security.interceptor.InnerTrustRelayInterceptor.class)
+    public feign.RequestInterceptor innerTrustRelayInterceptor() {
+        return new com.robot.common.security.interceptor.InnerTrustRelayInterceptor();
+    }
+
     @Bean
     public WebMvcConfigurer robotSaTokenInterceptorConfigurer(RobotSecurityProperties properties) {
         return new WebMvcConfigurer() {

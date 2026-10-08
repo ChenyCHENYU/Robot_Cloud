@@ -28,6 +28,15 @@ public final class RobotConstants {
     /** 请求头：内部服务调用标识（网关清洗，服务侧校验）。 */
     public static final String HEADER_INNER_CALL = "X-Inner-Call";
 
+    /** 内部委托用户 ID（仅 /inner/** 生效；网关清洗外部伪造值）。 */
+    public static final String HEADER_INNER_USER = "X-Inner-User-Id";
+
+    /** 内部委托公司 ID（仅 /inner/** 生效；网关清洗外部伪造值）。 */
+    public static final String HEADER_INNER_COMPANY = "X-Inner-Company-Id";
+
+    /** 内部委托用户名（审计操作人用；仅 /inner/** 生效）。 */
+    public static final String HEADER_INNER_USERNAME = "X-Inner-Username";
+
     /** 租户列名（MySQL 统一小写）。 */
     public static final String TENANT_COLUMN = "company_id";
 

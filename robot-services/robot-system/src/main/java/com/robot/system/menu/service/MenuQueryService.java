@@ -5,18 +5,16 @@ import com.robot.api.system.dto.RemoteMenuRouteDTO;
 import com.robot.common.core.constant.RobotConstants;
 import com.robot.system.api.entity.SysMenu;
 import com.robot.system.api.entity.SysMenuButton;
-import com.robot.system.api.entity.SysRole;
 import com.robot.system.api.entity.SysRoleMenu;
-import com.robot.system.api.entity.SysTempAuthorization;
 import com.robot.system.api.vo.menu.MenuButtonVO;
 import com.robot.system.api.vo.menu.MenuTreeNode;
 import com.robot.system.api.vo.permission.PermissionItem;
 import com.robot.system.api.vo.permission.PermissionNode;
 import com.robot.system.menu.mapper.SysMenuButtonMapper;
 import com.robot.system.menu.mapper.SysMenuMapper;
-import com.robot.system.role.mapper.SysRoleMapper;
+import com.robot.system.permission.service.EffectiveRoleResolver;
+import com.robot.system.permission.service.EffectiveRoleResolver.EffectiveRoles;
 import com.robot.system.role.mapper.SysRoleMenuMapper;
-import com.robot.system.role.mapper.SysTempAuthorizationMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -37,9 +35,8 @@ public class MenuQueryService {
 
     private final SysMenuMapper menuMapper;
     private final SysMenuButtonMapper menuButtonMapper;
-    private final SysRoleMapper roleMapper;
     private final SysRoleMenuMapper roleMenuMapper;
-    private final SysTempAuthorizationMapper tempAuthorizationMapper;
+    private final EffectiveRoleResolver effectiveRoleResolver;
 
     /** 全量菜单树（管理端；菜单为全局表，可见性由角色授权控制）。 */
     public List<MenuTreeNode> menuTree() {
@@ -137,41 +134,20 @@ public class MenuQueryService {
 
     /**
      * 用户可用菜单 ID 集：null 表示超管（不过滤）。
-     * 角色来源 = 绑定角色 + 生效中的临时授权角色。
+     * 角色事实源 = {@link EffectiveRoleResolver}（RC02：按用户有效角色过滤，
+     * 不再使用全公司角色并集）。
      */
     private Set<String> grantedMenuIds(String userId, String companyId) {
-        List<SysRole> companyRoles = roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
-                .eq(SysRole::getCompanyId, companyId)
-                .eq(SysRole::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
-                .eq(SysRole::getStatusFlag, 1));
-        // 超管判断用新鲜 DB 角色（会话内 roleCodes 可能滞后）
-        if (companyRoles.stream().anyMatch(role ->
-                RobotConstants.SUPER_ADMIN_ROLE_CODE.equals(role.getRoleCode()))) {
+        EffectiveRoles effective = effectiveRoleResolver.resolve(userId, companyId);
+        if (effective.superAdmin()) {
             return null;
         }
-
-        Set<String> roleIds = companyRoles.stream().map(SysRole::getId)
-                .collect(Collectors.toSet());
-        for (SysTempAuthorization tempAuth : activeTempAuthorizations(userId)) {
-            if (companyRoles.stream().anyMatch(r -> r.getId().equals(tempAuth.getRoleId()))) {
-                roleIds.add(tempAuth.getRoleId());
-            }
-        }
-        if (roleIds.isEmpty()) {
+        if (effective.isEmpty()) {
             return Set.of();
         }
         return roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
-                        .in(SysRoleMenu::getRoleId, roleIds))
+                        .in(SysRoleMenu::getRoleId, effective.roleIds()))
                 .stream().map(SysRoleMenu::getMenuId).collect(Collectors.toSet());
-    }
-
-    private List<SysTempAuthorization> activeTempAuthorizations(String userId) {
-        return tempAuthorizationMapper.selectList(new LambdaQueryWrapper<SysTempAuthorization>()
-                .eq(SysTempAuthorization::getUserId, userId)
-                .eq(SysTempAuthorization::getStatusFlag, 1)
-                .eq(SysTempAuthorization::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
-                .le(SysTempAuthorization::getEffectFrom, java.time.LocalDateTime.now())
-                .ge(SysTempAuthorization::getEffectTo, java.time.LocalDateTime.now()));
     }
 
     private List<MenuTreeNode> buildTree(List<SysMenu> menus, String parentId) {

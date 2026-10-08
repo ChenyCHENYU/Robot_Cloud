@@ -1,22 +1,16 @@
 package com.robot.system.permission.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.robot.common.core.constant.RobotConstants;
 import com.robot.common.redis.core.RedisHelper;
-import com.robot.system.support.SystemKeys;
 import com.robot.common.security.util.AuthUtil;
 import com.robot.system.api.entity.SysMenu;
 import com.robot.system.api.entity.SysMenuButton;
-import com.robot.system.api.entity.SysRole;
 import com.robot.system.api.entity.SysRoleMenu;
-import com.robot.system.api.entity.SysTempAuthorization;
-import com.robot.system.api.entity.SysUserRole;
 import com.robot.system.menu.mapper.SysMenuButtonMapper;
 import com.robot.system.menu.mapper.SysMenuMapper;
-import com.robot.system.role.mapper.SysRoleMapper;
+import com.robot.system.permission.service.EffectiveRoleResolver.EffectiveRoles;
 import com.robot.system.role.mapper.SysRoleMenuMapper;
-import com.robot.system.role.mapper.SysTempAuthorizationMapper;
-import com.robot.system.user.mapper.SysUserRoleMapper;
+import com.robot.system.support.SystemKeys;
 import cn.dev33.satoken.stp.StpInterface;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.RequiredArgsConstructor;
@@ -24,22 +18,21 @@ import lombok.ToString;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Sa-Token 权限数据源：@SaCheckPermission 的实现（权限码 = 页面码 + 按钮码）。
  *
- * <p>缓存设计：
+ * <p>缓存与角色事实源：
  * <ul>
- *   <li>缓存载荷 {@link CachedPermissions} 同时携带超管标志与权限码集合，
- *       命中路径零 DB 查询（超管判断随版本失效保持新鲜，撤销即时生效）；</li>
- *   <li>TTL 30 分钟 + 抖动；键携带版本段，角色/菜单/授权变更自增版本全量惰性失效；</li>
- *   <li>角色来源 = 绑定角色 + 生效中的临时授权角色并集。</li>
+ *   <li>有效角色一律经 {@link EffectiveRoleResolver}（RC01：超管只来自用户自身有效角色，
+ *       公司存在超管而用户未绑定不得获得通配）；</li>
+ *   <li>缓存载荷 {@link CachedPermissions}（超管标志 + 权限码）命中路径零 DB 查询；
+ *       键携带版本<b>实际值</b>（RC05：撤权随版本自增即时失效）；</li>
+ *   <li>临时授权的到期边界收敛属于第 3 批（RC10），当前 TTL 上限 30 分钟。</li>
  * </ul>
  */
 @Component
@@ -48,12 +41,10 @@ public class RobotStpInterface implements StpInterface {
 
     private static final Duration PERM_TTL = Duration.ofMinutes(30);
 
-    private final SysRoleMapper roleMapper;
-    private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysMenuMapper menuMapper;
     private final SysMenuButtonMapper menuButtonMapper;
-    private final SysTempAuthorizationMapper tempAuthorizationMapper;
+    private final EffectiveRoleResolver effectiveRoleResolver;
     private final RedisHelper redisHelper;
 
     /** 缓存载荷（Jackson 默认类型序列化，字段公开保证往返兼容）。 */
@@ -81,7 +72,8 @@ public class RobotStpInterface implements StpInterface {
             return List.of();
         }
         String userId = String.valueOf(loginId);
-        String cacheKey = SystemKeys.userPermissions(companyId, userId);
+        String cacheKey = SystemKeys.userPermissions(companyId, userId,
+                redisHelper.readVersion(SystemKeys.permissionVersion()));
 
         CachedPermissions cached = redisHelper.getObject(cacheKey,
                 CachedPermissions.class).orElse(null);
@@ -99,81 +91,54 @@ public class RobotStpInterface implements StpInterface {
         return roleCodes == null ? List.of() : roleCodes;
     }
 
-    /** 租户来源（登录态公司；package 缝：单测可覆写注入固定值）。 */
-    String currentCompanyId() {
-        return AuthUtil.getLoginCompanyId();
-    }
-
-    /** 回源构建：角色并集 → 超管标志 + 授权菜单/按钮权限码。 */
+    /** 回源构建：有效角色 → 超管标志 + 授权菜单/按钮权限码。 */
     private CachedPermissions load(String companyId, String userId) {
-        List<SysRole> companyRoles = roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
-                .eq(SysRole::getCompanyId, companyId)
-                .eq(SysRole::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
-                .eq(SysRole::getStatusFlag, 1));
-        if (companyRoles.isEmpty()) {
-            return new CachedPermissions(false, List.of());
-        }
-
-        Set<String> roleIds = resolveRoleIds(userId, companyRoles);
-        boolean superAdmin = companyRoles.stream().anyMatch(role ->
-                RobotConstants.SUPER_ADMIN_ROLE_CODE.equals(role.getRoleCode()));
-        if (superAdmin) {
+        EffectiveRoles effective = effectiveRoleResolver.resolve(userId, companyId);
+        if (effective.superAdmin()) {
             return new CachedPermissions(true, List.of());
         }
-        if (roleIds.isEmpty()) {
+        if (effective.isEmpty()) {
             return new CachedPermissions(false, List.of());
         }
 
         Set<String> permissions = new HashSet<>();
-        List<String> menuIds = roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
-                        .in(SysRoleMenu::getRoleId, roleIds))
-                .stream().map(SysRoleMenu::getMenuId).toList();
-        List<SysMenu> grantedMenus = menuIds.isEmpty() ? List.of()
-                : menuMapper.selectList(new LambdaQueryWrapper<SysMenu>()
-                .in(SysMenu::getId, menuIds)
-                .eq(SysMenu::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
-                .eq(SysMenu::getStatusFlag, 1));
+        List<SysMenu> grantedMenus = grantedMenus(effective.roleIds());
         for (SysMenu menu : grantedMenus) {
             if (menu.getPermCode() != null && !menu.getPermCode().isBlank()) {
                 permissions.add(menu.getPermCode());
             }
         }
         if (!grantedMenus.isEmpty()) {
-            for (SysMenuButton button : menuButtonMapper.selectList(
-                    new LambdaQueryWrapper<SysMenuButton>()
-                            .in(SysMenuButton::getMenuId,
-                                    grantedMenus.stream().map(SysMenu::getId).toList())
-                            .eq(SysMenuButton::getStatusFlag, 1)
-                            .eq(SysMenuButton::getDeleteFlag,
-                                    RobotConstants.DELETE_FLAG_ACTIVE))) {
+            for (SysMenuButton button : grantedButtons(grantedMenus)) {
                 permissions.add(button.getPermCode());
             }
         }
         return new CachedPermissions(false, new ArrayList<>(permissions));
     }
 
-    /** 有效角色并集：用户绑定 ∩ 本公司角色 + 生效中的临时授权角色。 */
-    private Set<String> resolveRoleIds(String userId, List<SysRole> companyRoles) {
-        Set<String> companyRoleIds = companyRoles.stream()
-                .map(SysRole::getId).collect(Collectors.toSet());
-        Set<String> bound = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
-                        .eq(SysUserRole::getUserId, userId)
-                        .eq(SysUserRole::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE))
-                .stream().map(SysUserRole::getRoleId).collect(Collectors.toSet());
-        Set<String> roleIds = companyRoleIds.stream()
-                .filter(bound::contains).collect(Collectors.toSet());
-        for (SysTempAuthorization tempAuth : tempAuthorizationMapper.selectList(
-                new LambdaQueryWrapper<SysTempAuthorization>()
-                        .eq(SysTempAuthorization::getUserId, userId)
-                        .eq(SysTempAuthorization::getStatusFlag, 1)
-                        .eq(SysTempAuthorization::getDeleteFlag,
-                                RobotConstants.DELETE_FLAG_ACTIVE)
-                        .le(SysTempAuthorization::getEffectFrom, LocalDateTime.now())
-                        .ge(SysTempAuthorization::getEffectTo, LocalDateTime.now()))) {
-            if (companyRoleIds.contains(tempAuth.getRoleId())) {
-                roleIds.add(tempAuth.getRoleId());
-            }
-        }
-        return roleIds;
+    private List<SysMenu> grantedMenus(Set<String> roleIds) {
+        List<String> menuIds = roleMenuMapper.selectList(
+                        new LambdaQueryWrapper<SysRoleMenu>()
+                                .in(SysRoleMenu::getRoleId, roleIds))
+                .stream().map(SysRoleMenu::getMenuId).toList();
+        return menuIds.isEmpty() ? List.of()
+                : menuMapper.selectList(new LambdaQueryWrapper<SysMenu>()
+                .in(SysMenu::getId, menuIds)
+                .eq(SysMenu::getDeleteFlag, 1)
+                .eq(SysMenu::getStatusFlag, 1));
+    }
+
+    /** RC11 前过渡语义：授权菜单仍隐含其全部按钮（精确绑定属紧随提交）。 */
+    private List<SysMenuButton> grantedButtons(List<SysMenu> grantedMenus) {
+        return menuButtonMapper.selectList(new LambdaQueryWrapper<SysMenuButton>()
+                .in(SysMenuButton::getMenuId,
+                        grantedMenus.stream().map(SysMenu::getId).toList())
+                .eq(SysMenuButton::getStatusFlag, 1)
+                .eq(SysMenuButton::getDeleteFlag, 1));
+    }
+
+    /** 租户来源（登录态公司；package 缝：单测可覆写注入固定值）。 */
+    String currentCompanyId() {
+        return AuthUtil.getLoginCompanyId();
     }
 }

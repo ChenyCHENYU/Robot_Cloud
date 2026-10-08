@@ -46,10 +46,15 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             traceId = UUID.randomUUID().toString().replace("-", "");
         }
         exchange.getResponse().getHeaders().set(RobotConstants.HEADER_TRACE_ID, traceId);
-        // 单次 mutate：写入 TraceId + 清洗客户端伪造的内部调用头
+        // 单次 mutate：写入 TraceId + 清洗客户端伪造的内部调用与委托头（RC07）
         ServerHttpRequest mutated = request.mutate()
                 .header(RobotConstants.HEADER_TRACE_ID, traceId)
-                .headers(headers -> headers.remove(RobotConstants.HEADER_INNER_CALL))
+                .headers(headers -> {
+                    headers.remove(RobotConstants.HEADER_INNER_CALL);
+                    headers.remove(RobotConstants.HEADER_INNER_USER);
+                    headers.remove(RobotConstants.HEADER_INNER_COMPANY);
+                    headers.remove(RobotConstants.HEADER_INNER_USERNAME);
+                })
                 .build();
 
         // 2. 内部接口屏蔽：/inner/** 只允许服务间调用，外部请求一律拒绝

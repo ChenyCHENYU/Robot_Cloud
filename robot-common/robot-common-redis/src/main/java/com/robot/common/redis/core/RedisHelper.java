@@ -128,28 +128,28 @@ public class RedisHelper {
     }
 
     /**
-     * 版本自增（惰性失效方案）：key 不存在时初始化为 1（7 天 TTL，避免无过期 Key）。
-     * 版本回落仅导致一次缓存重建，不影响正确性。
+     * 版本自增（RC06 部分修复：INCR 原子化，并发不丢递增；TTL 滚动续期防无过期 Key）。
+     * 事务内发布的时序问题（提交后才发布）仍属第 3 批整改范围。
      */
     public long bumpVersion(String versionKey) {
-        String current = stringTemplate.opsForValue().get(versionKey);
-        long next = current == null ? 1L : Long.parseLong(current) + 1L;
-        stringTemplate.opsForValue().set(versionKey, String.valueOf(next),
-                java.time.Duration.ofDays(7));
-        return next;
+        Long next = stringTemplate.opsForValue().increment(versionKey);
+        long value = next == null ? 1L : next;
+        stringTemplate.expire(versionKey, java.time.Duration.ofDays(7));
+        return value;
     }
 
-    /** 读取当前版本（缺失初始化为 1）。 */
+    /** 读取当前版本（缺失时以 SETNX 初始化为 1，不递增）。 */
     public long readVersion(String versionKey) {
         String current = stringTemplate.opsForValue().get(versionKey);
         if (current != null) {
             try {
                 return Long.parseLong(current);
             } catch (NumberFormatException ignored) {
-                // 脏值回落重建
+                // 脏值走重建
             }
         }
-        stringTemplate.opsForValue().set(versionKey, "1", java.time.Duration.ofDays(7));
+        stringTemplate.opsForValue().setIfAbsent(versionKey, "1",
+                java.time.Duration.ofDays(7));
         return 1L;
     }
 

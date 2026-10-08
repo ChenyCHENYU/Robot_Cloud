@@ -1,19 +1,14 @@
 package com.robot.system.permission.service;
 
-import com.robot.common.core.constant.RobotConstants;
 import com.robot.common.redis.core.RedisHelper;
-import com.robot.system.support.SystemKeys;
 import com.robot.system.api.entity.SysMenu;
 import com.robot.system.api.entity.SysMenuButton;
 import com.robot.system.api.entity.SysRole;
 import com.robot.system.api.entity.SysRoleMenu;
-import com.robot.system.api.entity.SysUserRole;
 import com.robot.system.menu.mapper.SysMenuButtonMapper;
 import com.robot.system.menu.mapper.SysMenuMapper;
-import com.robot.system.role.mapper.SysRoleMapper;
+import com.robot.system.permission.service.EffectiveRoleResolver.EffectiveRoles;
 import com.robot.system.role.mapper.SysRoleMenuMapper;
-import com.robot.system.role.mapper.SysTempAuthorizationMapper;
-import com.robot.system.user.mapper.SysUserRoleMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -36,15 +30,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 权限数据源测试：缓存载荷（超管标志 + 权限码）语义、命中零 DB、超管直通。
+ * 权限数据源测试（RC01/RC02/RC05 整改回归）：
+ * 超管只来自用户自身有效角色；缓存键携带版本实际值；命中零 DB。
  */
 @ExtendWith(MockitoExtension.class)
 class RobotStpInterfaceTest {
 
-    @Mock
-    private SysRoleMapper roleMapper;
-    @Mock
-    private SysUserRoleMapper userRoleMapper;
     @Mock
     private SysRoleMenuMapper roleMenuMapper;
     @Mock
@@ -52,14 +43,13 @@ class RobotStpInterfaceTest {
     @Mock
     private SysMenuButtonMapper menuButtonMapper;
     @Mock
-    private SysTempAuthorizationMapper tempAuthorizationMapper;
+    private EffectiveRoleResolver effectiveRoleResolver;
     @Mock
     private RedisHelper redisHelper;
 
-    /** 带租户缝的实现：单测注入固定公司上下文。 */
     private RobotStpInterface stpInterface() {
-        return new RobotStpInterface(roleMapper, userRoleMapper, roleMenuMapper,
-                menuMapper, menuButtonMapper, tempAuthorizationMapper, redisHelper) {
+        return new RobotStpInterface(roleMenuMapper, menuMapper, menuButtonMapper,
+                effectiveRoleResolver, redisHelper) {
             @Override
             String currentCompanyId() {
                 return "cmp-1";
@@ -67,84 +57,76 @@ class RobotStpInterfaceTest {
         };
     }
 
-    private SysRole role(String id, String code) {
-        SysRole role = new SysRole();
-        role.setId(id);
-        role.setRoleCode(code);
-        role.setCompanyId("cmp-1");
-        role.setStatusFlag(1);
-        role.setDeleteFlag(1);
-        return role;
-    }
-
-    @Test
-    @DisplayName("缓存命中：零 DB 查询直接返回载荷")
-    void cacheHitShouldSkipDatabase() {
+    private void cacheMiss() {
+        lenient().when(redisHelper.readVersion(anyString())).thenReturn(1L);
         when(redisHelper.getObject(anyString(),
                 eq(RobotStpInterface.CachedPermissions.class)))
-                .thenReturn(Optional.of(
-                        new RobotStpInterface.CachedPermissions(false,
-                                List.of("sys:user:list"))));
-        RobotStpInterface stp = stpInterface();
-
-        List<String> permissions = stp.getPermissionList("usr-1", "login");
-
-        assertEquals(List.of("sys:user:list"), permissions);
-        verify(roleMapper, never()).selectList(any());
+                .thenReturn(java.util.Optional.empty());
     }
 
+    /** RC01 核心负向：公司存在超管角色，但用户未绑定 → 绝无通配权限。 */
     @Test
-    @DisplayName("缓存超管载荷：返回 * 直通")
-    void cachedSuperAdminShouldReturnWildcard() {
-        when(redisHelper.getObject(anyString(),
-                eq(RobotStpInterface.CachedPermissions.class)))
-                .thenReturn(Optional.of(
-                        new RobotStpInterface.CachedPermissions(true, List.of())));
-        RobotStpInterface stp = stpInterface();
+    @DisplayName("RC01: 公司有超管而用户零绑定 → 无 * 且无任何权限码")
+    void companySuperAdminMustNotLeakToUnboundUser() {
+        when(effectiveRoleResolver.resolve("usr-1", "cmp-1"))
+                .thenReturn(EffectiveRoles.EMPTY);
+        cacheMiss();
 
-        assertEquals(List.of("*"), stp.getPermissionList("usr-1", "login"));
+        List<String> permissions = stpInterface().getPermissionList("usr-1", "login");
+
+        assertTrue(permissions.isEmpty(), "零绑定用户不得获得任何权限，实际: " + permissions);
+        verify(roleMenuMapper, never()).selectList(any());
+        verify(menuMapper, never()).selectList(any());
     }
 
+    /** RC01 正向：用户自身绑定超管 → 通配。 */
     @Test
-    @DisplayName("缓存 miss：聚合页面码 + 按钮码并回填缓存（含超管标志）")
-    void missShouldAggregateAndCache() {
-        SysRole staff = role("role-1", "STAFF");
-        lenient().when(roleMapper.selectList(any())).thenReturn(List.of(staff));
+    @DisplayName("用户自身绑定超管角色 → 返回 *")
+    void boundSuperAdminReturnsWildcard() {
+        SysRole superRole = new SysRole();
+        superRole.setId("role-super");
+        superRole.setRoleCode("SUPER_ADMIN");
+        when(effectiveRoleResolver.resolve("usr-1", "cmp-1"))
+                .thenReturn(new EffectiveRoles(true, List.of(superRole)));
+        cacheMiss();
 
-        SysUserRole binding = new SysUserRole();
-        binding.setUserId("usr-1");
-        binding.setRoleId("role-1");
-        binding.setDeleteFlag(1);
-        lenient().when(userRoleMapper.selectList(any())).thenReturn(List.of(binding));
-        lenient().when(tempAuthorizationMapper.selectList(any())).thenReturn(List.of());
+        assertEquals(List.of("*"), stpInterface().getPermissionList("usr-1", "login"));
+        verify(roleMenuMapper, never()).selectList(any());
+    }
+
+    /** 普通角色：只获得自身角色授权的页面码 + 按钮码。 */
+    @Test
+    @DisplayName("普通绑定用户 → 页面码 + 按钮码，回填缓存载荷")
+    void normalRoleGetsOwnPermissionsOnly() {
+        SysRole staff = new SysRole();
+        staff.setId("role-1");
+        when(effectiveRoleResolver.resolve("usr-1", "cmp-1"))
+                .thenReturn(new EffectiveRoles(false, List.of(staff)));
+        cacheMiss();
 
         SysRoleMenu grant = new SysRoleMenu();
         grant.setRoleId("role-1");
         grant.setMenuId("menu-1");
-        lenient().when(roleMenuMapper.selectList(any())).thenReturn(List.of(grant));
+        when(roleMenuMapper.selectList(any())).thenReturn(List.of(grant));
 
         SysMenu userMenu = new SysMenu();
         userMenu.setId("menu-1");
         userMenu.setPermCode("sys:user:list");
         userMenu.setStatusFlag(1);
         userMenu.setDeleteFlag(1);
-        lenient().when(menuMapper.selectList(any())).thenReturn(List.of(userMenu));
+        when(menuMapper.selectList(any())).thenReturn(List.of(userMenu));
 
         SysMenuButton saveButton = new SysMenuButton();
         saveButton.setMenuId("menu-1");
         saveButton.setPermCode("sys:user:save");
         saveButton.setStatusFlag(1);
         saveButton.setDeleteFlag(1);
-        lenient().when(menuButtonMapper.selectList(any())).thenReturn(List.of(saveButton));
+        when(menuButtonMapper.selectList(any())).thenReturn(List.of(saveButton));
 
-        when(redisHelper.getObject(anyString(),
-                eq(RobotStpInterface.CachedPermissions.class)))
-                .thenReturn(Optional.empty());
+        List<String> permissions = stpInterface().getPermissionList("usr-1", "login");
 
-        RobotStpInterface stp = stpInterface();
-        List<String> permissions = stp.getPermissionList("usr-1", "login");
-
-        assertTrue(permissions.containsAll(List.of("sys:user:list", "sys:user:save")));
+        assertTrue(permissions.contains("sys:user:list"));
+        assertTrue(permissions.contains("sys:user:save"));
 
         ArgumentCaptor<RobotStpInterface.CachedPermissions> captor =
                 ArgumentCaptor.forClass(RobotStpInterface.CachedPermissions.class);
@@ -153,21 +135,68 @@ class RobotStpInterfaceTest {
         assertTrue(captor.getValue().permissions.contains("sys:user:list"));
     }
 
+    /** RC05 回归：键携带版本实际值；版本自增后使用新键（旧缓存不再命中）。 */
     @Test
-    @DisplayName("新鲜 DB 角色判定超管（非会话快照）：超管直通且不再查菜单")
-    void freshSuperAdminShouldShortCircuit() {
-        lenient().when(roleMapper.selectList(any()))
-                .thenReturn(List.of(role("role-9", RobotConstants.SUPER_ADMIN_ROLE_CODE)));
-        lenient().when(userRoleMapper.selectList(any())).thenReturn(List.of());
+    @DisplayName("RC05: 版本自增后缓存键改变，旧版本缓存不命中")
+    void versionBumpChangesCacheKey() {
+        when(effectiveRoleResolver.resolve("usr-1", "cmp-1"))
+                .thenReturn(EffectiveRoles.EMPTY);
+        when(redisHelper.readVersion(anyString())).thenReturn(1L);
         when(redisHelper.getObject(anyString(),
                 eq(RobotStpInterface.CachedPermissions.class)))
-                .thenReturn(Optional.empty());
+                .thenReturn(java.util.Optional.empty());
 
-        RobotStpInterface stp = stpInterface();
-        assertEquals(List.of("*"), stp.getPermissionList("usr-1", "login"));
-
-        verify(roleMenuMapper, never()).selectList(any());
-        verify(redisHelper).setObject(eq(SystemKeys.userPermissions("cmp-1", "usr-1")),
+        stpInterface().getPermissionList("usr-1", "login");
+        verify(redisHelper).setObject(
+                eq(com.robot.system.support.SystemKeys.userPermissions("cmp-1", "usr-1", 1L)),
                 any(), any());
+
+        when(redisHelper.readVersion(anyString())).thenReturn(2L);
+        stpInterface().getPermissionList("usr-1", "login");
+        verify(redisHelper).setObject(
+                eq(com.robot.system.support.SystemKeys.userPermissions("cmp-1", "usr-1", 2L)),
+                any(), any());
+    }
+
+    /** 缓存命中：零 DB 查询直接返回载荷。 */
+    @Test
+    @DisplayName("缓存命中：零 DB 查询")
+    void cacheHitSkipsResolverAndDb() {
+        lenient().when(redisHelper.readVersion(anyString())).thenReturn(1L);
+        when(redisHelper.getObject(anyString(),
+                eq(RobotStpInterface.CachedPermissions.class)))
+                .thenReturn(java.util.Optional.of(
+                        new RobotStpInterface.CachedPermissions(false,
+                                List.of("sys:user:list"))));
+
+        List<String> permissions = stpInterface().getPermissionList("usr-1", "login");
+
+        assertEquals(List.of("sys:user:list"), permissions);
+        verify(effectiveRoleResolver, never()).resolve(anyString(), anyString());
+    }
+
+    /** 两公司隔离：解析器按 (userId, companyId) 取数，缓存键含公司段。 */
+    @Test
+    @DisplayName("两公司：各自解析互不串扰，缓存键按公司隔离")
+    void twoCompaniesAreIsolated() {
+        when(effectiveRoleResolver.resolve("usr-1", "cmp-A"))
+                .thenReturn(EffectiveRoles.EMPTY);
+        when(effectiveRoleResolver.resolve("usr-1", "cmp-B"))
+                .thenReturn(EffectiveRoles.EMPTY);
+        cacheMiss();
+
+        RobotStpInterface cmpA = new RobotStpInterface(roleMenuMapper, menuMapper,
+                menuButtonMapper, effectiveRoleResolver, redisHelper) {
+            @Override String currentCompanyId() { return "cmp-A"; }
+        };
+        RobotStpInterface cmpB = new RobotStpInterface(roleMenuMapper, menuMapper,
+                menuButtonMapper, effectiveRoleResolver, redisHelper) {
+            @Override String currentCompanyId() { return "cmp-B"; }
+        };
+
+        assertTrue(cmpA.getPermissionList("usr-1", "login").isEmpty());
+        assertTrue(cmpB.getPermissionList("usr-1", "login").isEmpty());
+        verify(effectiveRoleResolver).resolve("usr-1", "cmp-A");
+        verify(effectiveRoleResolver).resolve("usr-1", "cmp-B");
     }
 }

@@ -27,6 +27,12 @@
       <groupId>cn.dev33</groupId>
       <artifactId>sa-token-redis-jackson</artifactId>
     </dependency>
+    <!-- 内部委托透传拦截器（仅在消费方同时具备 Feign 时装配） -->
+    <dependency>
+      <groupId>io.github.openfeign</groupId>
+      <artifactId>feign-core</artifactId>
+      <optional>true</optional>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-configuration-processor</artifactId>

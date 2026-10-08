@@ -8,6 +8,7 @@ import com.robot.system.api.entity.SysRole;
 import com.robot.system.api.entity.SysTenant;
 import com.robot.system.api.entity.SysUserCompany;
 import com.robot.system.api.entity.SysUserRole;
+import com.robot.common.mybatis.tenant.TenantQueryScope;
 import com.robot.system.mapper.SysCompanyMapper;
 import com.robot.system.mapper.SysTenantMapper;
 import com.robot.system.role.mapper.SysRoleMapper;
@@ -41,12 +42,24 @@ public class UserContextAssembler {
         return contexts.isEmpty() ? null : contexts.get(0);
     }
 
-    /** 批量装配：公司、租户、角色绑定、角色实体各一次查询。 */
+    /**
+     * 批量装配：公司、租户、角色绑定、角色实体各一次查询。
+     *
+     * <p>RC07：该装配服务于登录前内部供给（无登录态/委托态），租户行级过滤
+     * 会向角色查询追加 company_id = NULL 导致查空；故在受控作用域内关闭租户行——
+     * 查询自带显式谓词（成员关系的公司集合 + 角色 companyId 分组），
+     * 并受 /inner/** 密钥校验保护（禁止全局白名单修复）。
+     */
     public List<RemoteUserContextDTO> assembleAll(String userId,
                                                   List<SysUserCompany> memberships) {
         if (memberships.isEmpty()) {
             return List.of();
         }
+        return TenantQueryScope.withoutTenantLine(() -> doAssemble(userId, memberships));
+    }
+
+    private List<RemoteUserContextDTO> doAssemble(String userId,
+                                                  List<SysUserCompany> memberships) {
         // 1. 公司批量 + 有效性过滤
         List<String> companyIds = memberships.stream()
                 .map(SysUserCompany::getCompanyId).distinct().toList();
