@@ -44,6 +44,28 @@ public class UserService extends ServiceImpl<SysUserMapper, SysUser> {
     /** 内置管理员账号（种子数据），禁止删除/停用，防系统自锁。 */
     public static final String BUILTIN_ADMIN_USERNAME = "admin";
 
+    /**
+     * 成员归属约束（RC08/T05）：公司管理域内的用户操作必须确认目标是本公司
+     * 活跃成员——A 公司管理员猜 B 公司用户 ID 的列表外操作（详情/编辑/重置/
+     * 启停/删除）一律拒绝。平台级账号动作（跨公司全局禁用等）后续按独立
+     * 平台权限单独设计（见 remaining.md）。
+     */
+    private void assertCompanyMember(String userId, String action) {
+        String companyId = AuthUtil.getLoginCompanyId();
+        if (companyId == null) {
+            return; // 系统任务/内部委托上下文缺失时不阻断（由调用链上层保护）
+        }
+        Long memberships = userCompanyMapper.selectCount(
+                new LambdaQueryWrapper<SysUserCompany>()
+                        .eq(SysUserCompany::getUserId, userId)
+                        .eq(SysUserCompany::getCompanyId, companyId)
+                        .eq(SysUserCompany::getStatusFlag, 1)
+                        .eq(SysUserCompany::getDeleteFlag,
+                                RobotConstants.DELETE_FLAG_ACTIVE));
+        ServiceAssert.isTrue(memberships != null && memberships > 0,
+                ResultCode.FORBIDDEN, "目标用户不属于当前公司，禁止" + action);
+    }
+
     private final SysUserCompanyMapper userCompanyMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMapper roleMapper;
@@ -68,6 +90,7 @@ public class UserService extends ServiceImpl<SysUserMapper, SysUser> {
     }
 
     public UserVO getDetail(String id) {
+        assertCompanyMember(id, "查看详情");
         SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
         return toVos(List.of(user)).get(0);
     }
@@ -105,6 +128,7 @@ public class UserService extends ServiceImpl<SysUserMapper, SysUser> {
 
     @Transactional(rollbackFor = Exception.class)
     public void update(String id, UserSaveRequest request) {
+        assertCompanyMember(id, "编辑");
         SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
         ServiceAssert.isTrue(count(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, request.getUsername())
@@ -130,6 +154,7 @@ public class UserService extends ServiceImpl<SysUserMapper, SysUser> {
 
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
+        assertCompanyMember(id, "删除");
         SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
         guardBuiltinAccount(user, "删除");
         ServiceAssert.isTrue(!id.equals(AuthUtil.getLoginUserId()),
@@ -152,6 +177,7 @@ public class UserService extends ServiceImpl<SysUserMapper, SysUser> {
         ServiceAssert.notNull(password, ResultCode.PARAM_INVALID, "新密码不能为空");
         ServiceAssert.isTrue(password.length() >= 6 && password.length() <= 32,
                 ResultCode.PARAM_INVALID, "密码长度 6~32");
+        assertCompanyMember(id, "重置密码");
         SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
         user.setPasswordHash(passwordEncoder.encode(password));
         updateById(user);
@@ -162,6 +188,7 @@ public class UserService extends ServiceImpl<SysUserMapper, SysUser> {
     public void toggleStatus(String id, Integer status) {
         ServiceAssert.isTrue(status != null && (status == 0 || status == 1),
                 ResultCode.PARAM_INVALID, "状态值只允许 0/1");
+        assertCompanyMember(id, "启停");
         SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
         if (status == 0) {
             guardBuiltinAccount(user, "停用");
