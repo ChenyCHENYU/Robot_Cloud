@@ -1,0 +1,44 @@
+spring:
+  config:
+    import: ""
+  autoconfigure:
+    exclude:
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+    sentinel:
+      eager: false
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:robot_system;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password: ""
+  flyway:
+    enabled: false
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+
+robot:
+  mybatis:
+    tenant:
+      enabled: true
+      ignore-tables:
+        - sys_tenant
+        - sys_company
+        - sys_user
+        - sys_user_company
+        - sys_menu
+        - sys_role_menu
+        - sys_menu_button
+        - sys_dict_type
+        - sys_dict_item
+
+logging:
+  level:
+    root: warn

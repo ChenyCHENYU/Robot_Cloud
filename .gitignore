@@ -1,0 +1,31 @@
+# ---- Build ----
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# ---- IDE ----
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+logs/
+*.log
+
+# ---- Local env overrides（本地敏感配置不入库）----
+application-local.yml
+application-local.yaml
+*.local.yml
+
+# ---- Secrets ----
+*.pem
+*.keystore
+.env

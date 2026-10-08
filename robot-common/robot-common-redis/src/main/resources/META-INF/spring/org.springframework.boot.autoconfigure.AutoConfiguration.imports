@@ -1,0 +1,2 @@
+com.robot.common.redis.core.RobotRedisAutoConfiguration
+com.robot.common.redis.core.RobotRedisHelperAutoConfiguration

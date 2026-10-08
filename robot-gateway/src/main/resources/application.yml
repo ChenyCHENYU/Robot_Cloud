@@ -1,0 +1,81 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: robot-gateway
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  config:
+    import:
+      - optional:nacos:robot-gateway.yml?group=ROBOT_CLOUD&refreshEnabled=true
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ROBOT_CLOUD
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+      eager: false
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origin-patterns: "${ROBOT_CORS_ORIGINS:http://localhost:*}"
+            allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+            allowed-headers: "*"
+            exposed-headers: "Authorization,X-Trace-Id"
+            allow-credentials: false
+            max-age: 3600
+      routes:
+        - id: robot-auth
+          uri: lb://robot-auth
+          predicates:
+            - Path=/auth/**
+          filters:
+            - name: RequestSize
+              args:
+                maxSize: 5242880
+        - id: robot-system
+          uri: lb://robot-system
+          predicates:
+            - Path=/sys/**,/account/**
+          filters:
+            - name: RequestSize
+              args:
+                maxSize: 10485760
+      httpclient:
+        connect-timeout: 3000
+        response-timeout: 15s
+
+robot:
+  gateway:
+    auth:
+      white-paths:
+        - /auth/login
+        - /auth/login-companies
+        - /auth/refresh-token
+        - /auth/context/activate
+        - /actuator/health
+        - /actuator/prometheus
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,gateway
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    root: info
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5level [%X{traceId:-}] [%thread] %logger{40} - %msg%n"

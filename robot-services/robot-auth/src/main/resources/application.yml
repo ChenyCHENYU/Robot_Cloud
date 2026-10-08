@@ -1,0 +1,82 @@
+server:
+  port: 9201
+
+spring:
+  application:
+    name: robot-auth
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  config:
+    import:
+      - optional:nacos:robot-auth.yml?group=ROBOT_CLOUD&refreshEnabled=true
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ROBOT_CLOUD
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+      eager: false
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 3000
+            read-timeout: 8000
+            retryer: com.robot.auth.config.FeignNoRetryer
+      circuitbreaker:
+        enabled: false
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      timeout: 3s
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+sa-token:
+  token-name: Authorization
+  token-prefix: Bearer
+  timeout: 1800
+  active-timeout: -1
+  is-concurrent: true
+  is-log: false
+  token-style: uuid
+  is-read-cookie: false
+  is-read-header: true
+
+robot:
+  security:
+    inner-secret: ${ROBOT_INNER_SECRET:robot-inner-dev-secret}
+    exclude-paths:
+      - /auth/login
+      - /auth/login-companies
+      - /auth/refresh-token
+      - /auth/context/activate
+      - /actuator/**
+      - /v3/api-docs/**
+      - /doc.html
+      - /webjars/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    root: info
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5level [%X{traceId:-}] [%thread] %logger{40} - %msg%n"

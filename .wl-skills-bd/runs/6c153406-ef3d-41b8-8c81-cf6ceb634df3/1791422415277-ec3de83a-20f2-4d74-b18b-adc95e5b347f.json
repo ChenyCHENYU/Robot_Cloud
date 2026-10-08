@@ -1,0 +1,187 @@
+{
+  "recordVersion": 1,
+  "kind": "task-decision",
+  "packageName": "@agile-team/wl-skills-bd",
+  "packageVersion": "0.32.0",
+  "runId": "6c153406-ef3d-41b8-8c81-cf6ceb634df3",
+  "recordedAt": "2026-10-08T01:20:15.276Z",
+  "eventId": "9c2d9797-d134-48f8-a678-8c93c1866aed",
+  "task": "深入只读审查 Robot_Cloud 后端微服务架构、代码质量、安全、租户、数据、Robot Admin接口及运维，结合 skills-bd 非平台定制规则，输出整改执行计划与验收建议，不修改源码",
+  "decision": {
+    "recordVersion": 1,
+    "applicable": true,
+    "status": "gap",
+    "routingStatus": "matched",
+    "reasons": [
+      "trigger-threshold-and-margin-satisfied",
+      "required-canonical-files-missing"
+    ],
+    "selectedSkills": [
+      "code-fix-be",
+      "convention-audit-be"
+    ],
+    "requiredFiles": [],
+    "requiredRules": [
+      "B5",
+      "B6",
+      "B8",
+      "B9",
+      "B10",
+      "B11",
+      "B12",
+      "B23",
+      "B24",
+      "B25",
+      "B26",
+      "B28",
+      "B30",
+      "B31",
+      "B32"
+    ],
+    "missingInputs": [
+      "code-fix-be",
+      "convention-audit-be",
+      "02",
+      "05",
+      "15",
+      "16",
+      "17",
+      "19",
+      "28",
+      "29"
+    ],
+    "selectionEvidence": "deterministic-routing",
+    "hostDiscovery": "unverified",
+    "contentLoaded": "unverified",
+    "candidates": [
+      {
+        "id": "refactor",
+        "name": "重构/优化",
+        "score": 4,
+        "hits": [
+          "代码质量"
+        ]
+      },
+      {
+        "id": "add-api",
+        "name": "加一个接口/方法",
+        "score": 1,
+        "hits": []
+      },
+      {
+        "id": "audit",
+        "name": "审计/体检",
+        "score": 1,
+        "hits": []
+      },
+      {
+        "id": "fix-bug",
+        "name": "修 bug/修复问题",
+        "score": 1,
+        "hits": []
+      },
+      {
+        "id": "new-service",
+        "name": "新开发完整后端服务",
+        "score": 1,
+        "hits": []
+      }
+    ],
+    "applicableRules": [
+      "B5",
+      "B6",
+      "B8",
+      "B9",
+      "B10",
+      "B11",
+      "B12",
+      "B23",
+      "B24",
+      "B25",
+      "B26",
+      "B28",
+      "B30",
+      "B31",
+      "B32"
+    ],
+    "requiredChecks": [
+      "B5",
+      "B6",
+      "B8",
+      "B9",
+      "B10",
+      "B11",
+      "B12",
+      "B23",
+      "B24",
+      "B25",
+      "B26",
+      "B28",
+      "B30",
+      "B31",
+      "B32",
+      "J1",
+      "J2",
+      "J3",
+      "J8"
+    ],
+    "gaps": [
+      {
+        "kind": "asset",
+        "reason": "required-canonical-files-missing",
+        "suggestion": "修复本包安装缺失后重新判定，不借用其他包同名规则"
+      }
+    ],
+    "unverified": [
+      "host-discovery",
+      "model-selected-skill",
+      "model-read-canonical-files",
+      "planned-actions-not-executed",
+      "B5",
+      "B6",
+      "B8",
+      "B9",
+      "B10",
+      "B11",
+      "B12",
+      "B23",
+      "B24",
+      "B25",
+      "B26",
+      "B28",
+      "B30",
+      "B31",
+      "B32",
+      "J1",
+      "J2",
+      "J3",
+      "J8"
+    ]
+  },
+  "targets": [],
+  "inputSnapshot": {
+    "targets": [],
+    "files": [],
+    "omitted": [],
+    "complete": true,
+    "sha256": "49c25bf2d4e7a3ee5722dbdf58688f05bc541f191b1651f4a61fd22942c4a3f9"
+  },
+  "ruleSnapshot": {
+    "targets": [],
+    "files": [],
+    "omitted": [],
+    "complete": true,
+    "sha256": "49c25bf2d4e7a3ee5722dbdf58688f05bc541f191b1651f4a61fd22942c4a3f9",
+    "resolution": "project-internal-realpath"
+  },
+  "configSnapshot": {
+    "targets": [],
+    "files": [],
+    "omitted": [],
+    "complete": true,
+    "sha256": "49c25bf2d4e7a3ee5722dbdf58688f05bc541f191b1651f4a61fd22942c4a3f9",
+    "resolution": "project-internal-realpath"
+  },
+  "executionStatus": "not-executed",
+  "validationStatus": "unverified"
+}

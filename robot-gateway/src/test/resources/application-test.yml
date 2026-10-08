@@ -1,0 +1,17 @@
+spring:
+  config:
+    import: ""
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+    sentinel:
+      eager: false
+      transport:
+        dashboard: 127.0.0.1:8858
+
+logging:
+  level:
+    root: warn

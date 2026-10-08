@@ -1,0 +1,114 @@
+server:
+  port: 9202
+
+spring:
+  application:
+    name: robot-system
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  config:
+    import:
+      - optional:nacos:robot-system.yml?group=ROBOT_CLOUD&refreshEnabled=true
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ROBOT_CLOUD
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+      eager: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:robot_cloud}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:root}
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      pool-name: robot-system-hikari
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 5000
+      connection-test-query: SELECT 1
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+    out-of-order: false
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      timeout: 3s
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.robot.system.api.entity
+  global-config:
+    banner: false
+    db-config:
+      id-type: assign_uuid
+      logic-delete-field: deleteFlag
+      logic-delete-value: 0
+      logic-not-delete-value: 1
+  configuration:
+    map-underscore-to-camel-case: true
+
+sa-token:
+  token-name: Authorization
+  token-prefix: Bearer
+  timeout: 1800
+  active-timeout: -1
+  is-concurrent: true
+  is-log: false
+  token-style: uuid
+  is-read-cookie: false
+  is-read-header: true
+
+robot:
+  security:
+    inner-secret: ${ROBOT_INNER_SECRET:robot-inner-dev-secret}
+    exclude-paths:
+      - /actuator/**
+      - /v3/api-docs/**
+      - /doc.html
+      - /webjars/**
+      - /inner/**
+  mybatis:
+    tenant:
+      enabled: true
+      ignore-tables:
+        - sys_tenant
+        - sys_company
+        - sys_user
+        - sys_user_company
+        - sys_menu
+        - sys_role_menu
+        - sys_menu_button
+        - sys_dict_type
+        - sys_dict_item
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    root: info
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5level [%X{traceId:-}] [%thread] %logger{40} - %msg%n"

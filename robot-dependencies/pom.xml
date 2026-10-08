@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- ==================== 版本治理 BOM（唯一版本注册处） ==================== -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.2.12</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.robot</groupId>
+  <artifactId>robot-dependencies</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>robot-dependencies</name>
+  <description>Robot Cloud 依赖版本治理 BOM：第三方版本只允许在本文件登记（对齐 wl-skills-bd B27 父 BOM 依赖版本门）</description>
+
+  <properties>
+    <!-- 基础平台（与 spring-cloud-alibaba 2023.0.3.3 官方矩阵对齐） -->
+    <spring-boot.version>3.2.12</spring-boot.version>
+    <spring-cloud.version>2023.0.3</spring-cloud.version>
+    <spring-cloud-alibaba.version>2023.0.3.3</spring-cloud-alibaba.version>
+
+    <!-- 持久层 -->
+    <mybatis-plus.version>3.5.12</mybatis-plus.version>
+    <dynamic-ds.version>4.3.1</dynamic-ds.version>
+
+    <!-- 认证授权 -->
+    <sa-token.version>1.44.0</sa-token.version>
+
+    <!-- 缓存与分布式协调 -->
+    <redisson.version>3.44.0</redisson.version>
+
+    <!-- 文档 -->
+    <knife4j.version>4.5.0</knife4j.version>
+
+    <!-- 工具 -->
+    <hutool.version>5.8.38</hutool.version>
+    <mapstruct.version>1.6.3</mapstruct.version>
+    <lombok.version>1.18.38</lombok.version>
+
+    <!-- 可选扩展（默认不启用，启用方式见 docs/tech-selection.md） -->
+    <seata.version>2.2.0</seata.version>
+    <rocketmq-spring.version>2.3.4</rocketmq-spring.version>
+    <!-- springdoc 2.3.x ↔ Boot 3.2（2.6+ 需 Boot 3.4，勿升） -->
+    <springdoc.version>2.3.0</springdoc.version>
+
+    <!-- 编码 -->
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <java.version>17</java.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Spring Cloud（含 loadbalancer / gateway / openfeign / circuitbreaker） -->
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- Spring Cloud Alibaba（Nacos / Sentinel / RocketMQ / Seata 适配） -->
+      <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+        <version>${spring-cloud-alibaba.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- MyBatis-Plus（Boot3 专用 starter；3.5.9+ 分页需额外引入 jsqlparser 模块） -->
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        <version>${mybatis-plus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-jsqlparser</artifactId>
+        <version>${mybatis-plus.version}</version>
+      </dependency>
+
+      <!-- Sa-Token（认证）+ Redis 集成 -->
+      <dependency>
+        <groupId>cn.dev33</groupId>
+        <artifactId>sa-token-spring-boot3-starter</artifactId>
+        <version>${sa-token.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>cn.dev33</groupId>
+        <artifactId>sa-token-reactor-spring-boot3-starter</artifactId>
+        <version>${sa-token.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>cn.dev33</groupId>
+        <artifactId>sa-token-redis-jackson</artifactId>
+        <version>${sa-token.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>cn.dev33</groupId>
+        <artifactId>sa-token-core</artifactId>
+        <version>${sa-token.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>cn.dev33</groupId>
+        <artifactId>sa-token-bom</artifactId>
+        <version>${sa-token.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- Redisson（分布式锁唯一允许实现） -->
+      <dependency>
+        <groupId>org.redisson</groupId>
+        <artifactId>redisson-spring-boot-starter</artifactId>
+        <version>${redisson.version}</version>
+      </dependency>
+
+      <!-- OpenAPI 3 / Knife4j -->
+      <dependency>
+        <groupId>com.github.xiaoymin</groupId>
+        <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+        <version>${knife4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        <version>${springdoc.version}</version>
+      </dependency>
+
+      <!-- 工具 -->
+      <dependency>
+        <groupId>cn.hutool</groupId>
+        <artifactId>hutool-all</artifactId>
+        <version>${hutool.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mapstruct</groupId>
+        <artifactId>mapstruct</artifactId>
+        <version>${mapstruct.version}</version>
+      </dependency>
+
+      <!-- 可选扩展：Seata / RocketMQ（登记版本，业务按 docs 启用） -->
+      <dependency>
+        <groupId>org.apache.seata</groupId>
+        <artifactId>seata-spring-boot-starter</artifactId>
+        <version>${seata.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.rocketmq</groupId>
+        <artifactId>rocketmq-spring-boot-starter</artifactId>
+        <version>${rocketmq-spring.version}</version>
+      </dependency>
+
+      <!-- Robot Cloud 内部模块 -->
+      <dependency>
+        <groupId>com.robot</groupId>
+        <artifactId>robot-common-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.robot</groupId>
+        <artifactId>robot-common-web</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.robot</groupId>
+        <artifactId>robot-common-security</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.robot</groupId>
+        <artifactId>robot-common-redis</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.robot</groupId>
+        <artifactId>robot-common-mybatis</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.robot</groupId>
+        <artifactId>robot-api-system</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <repositories>
+    <repository>
+      <id>aliyun-public</id>
+      <name>Aliyun Public</name>
+      <url>https://maven.aliyun.com/repository/public</url>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>false</enabled></snapshots>
+    </repository>
+    <repository>
+      <id>central</id>
+      <name>Maven Central</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>false</enabled></snapshots>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>aliyun-plugin</id>
+      <name>Aliyun Plugin</name>
+      <url>https://maven.aliyun.com/repository/public</url>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>false</enabled></snapshots>
+    </pluginRepository>
+    <pluginRepository>
+      <id>central-plugin</id>
+      <name>Maven Central Plugin</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>false</enabled></snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+</project>

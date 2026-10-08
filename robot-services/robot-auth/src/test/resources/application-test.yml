@@ -1,0 +1,25 @@
+spring:
+  config:
+    import: ""
+  autoconfigure:
+    exclude:
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+    sentinel:
+      eager: false
+    openfeign:
+      circuitbreaker:
+        enabled: false
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+
+logging:
+  level:
+    root: warn
