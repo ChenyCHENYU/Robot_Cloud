@@ -13,19 +13,24 @@ import com.robot.system.mapper.SysCompanyMapper;
 import com.robot.system.mapper.SysTenantMapper;
 import com.robot.system.role.mapper.SysRoleMapper;
 import com.robot.system.user.mapper.SysUserRoleMapper;
+import com.robot.system.user.mapper.SysUserCompanyMapper;
+import com.robot.common.security.util.AuthUtil;
+import com.robot.common.security.exception.InnerAccessDeniedException;
+import com.robot.system.security.InnerSystemAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * 用户上下文装配器：成员关系 → 公司/租户信息 + 该公司下角色清单。
- * 公司/租户/角色全部批量查询（登录链路固定 5 次查询，与上下文数量无关）；
- * 公司缺失/停用直接过滤，防止其继续作为可登录上下文。
+ * 成员/公司/租户/角色全部批量查询，与上下文数量无关；
+ * 公司或租户缺失/停用直接过滤，防止其继续作为可登录上下文。
  */
 @Component
 @RequiredArgsConstructor
@@ -35,6 +40,7 @@ public class UserContextAssembler {
     private final SysTenantMapper tenantMapper;
     private final SysRoleMapper roleMapper;
     private final SysUserRoleMapper userRoleMapper;
+    private final SysUserCompanyMapper userCompanyMapper;
 
     /** 装配单个上下文；公司无效时返回 null（调用方过滤）。 */
     public RemoteUserContextDTO assemble(String userId, SysUserCompany membership) {
@@ -52,10 +58,30 @@ public class UserContextAssembler {
      */
     public List<RemoteUserContextDTO> assembleAll(String userId,
                                                   List<SysUserCompany> memberships) {
+        var context = AuthUtil.requireTrustedService();
+        if (context.hasDelegate() && !Objects.equals(userId, AuthUtil.getLoginUserId())) {
+            throw new InnerAccessDeniedException();
+        }
         if (memberships.isEmpty()) {
             return List.of();
         }
-        return TenantQueryScope.withoutTenantLine(() -> doAssemble(userId, memberships));
+        if (memberships.stream().anyMatch(membership -> membership == null
+                || !Objects.equals(userId, membership.getUserId())
+                || membership.getId() == null || membership.getCompanyId() == null
+                || !InnerSystemAccess.active(membership.getDeleteFlag(), membership.getStatusFlag()))) {
+            throw new InnerAccessDeniedException();
+        }
+        // 以当前数据库中的有效成员关系为准，不能由传入实体制造跨公司集合。
+        List<SysUserCompany> activeMemberships = userCompanyMapper.selectList(
+                new LambdaQueryWrapper<SysUserCompany>()
+                        .eq(SysUserCompany::getUserId, userId)
+                        .in(SysUserCompany::getId, memberships.stream().map(SysUserCompany::getId).toList())
+                        .eq(SysUserCompany::getStatusFlag, 1)
+                        .eq(SysUserCompany::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE));
+        if (activeMemberships.isEmpty()) {
+            return List.of();
+        }
+        return TenantQueryScope.withoutTenantLine(() -> doAssemble(userId, activeMemberships));
     }
 
     private List<RemoteUserContextDTO> doAssemble(String userId,
@@ -64,10 +90,7 @@ public class UserContextAssembler {
         List<String> companyIds = memberships.stream()
                 .map(SysUserCompany::getCompanyId).distinct().toList();
         Map<String, SysCompany> companies = companyMapper.selectBatchIds(companyIds).stream()
-                .filter(company -> company.getDeleteFlag()
-                        .equals(RobotConstants.DELETE_FLAG_ACTIVE)
-                        && company.getStatusFlag() != null
-                        && company.getStatusFlag() == 1)
+                .filter(company -> InnerSystemAccess.active(company.getDeleteFlag(), company.getStatusFlag()))
                 .collect(Collectors.toMap(SysCompany::getId, Function.identity()));
 
         // 2. 租户批量（一次查询）
@@ -77,32 +100,48 @@ public class UserContextAssembler {
                 .distinct().toList();
         Map<String, SysTenant> tenants = tenantIds.isEmpty() ? Map.of()
                 : tenantMapper.selectBatchIds(tenantIds).stream()
+                .filter(tenant -> InnerSystemAccess.active(tenant.getDeleteFlag(), tenant.getStatusFlag()))
                 .collect(Collectors.toMap(SysTenant::getId, Function.identity()));
 
+        Set<String> availableCompanyIds = companies.values().stream()
+                .filter(company -> tenants.containsKey(company.getTenantId()))
+                .map(SysCompany::getId).collect(Collectors.toSet());
+        if (availableCompanyIds.isEmpty()) {
+            return List.of();
+        }
+
         // 3. 角色绑定（一次）+ 角色实体（一次），按公司分组
-        Set<String> boundRoleIds = userRoleMapper.selectList(
+        List<SysUserRole> bindings = userRoleMapper.selectList(
                         new LambdaQueryWrapper<SysUserRole>()
                                 .eq(SysUserRole::getUserId, userId)
+                                .in(SysUserRole::getCompanyId, availableCompanyIds)
                                 .eq(SysUserRole::getDeleteFlag,
-                                        RobotConstants.DELETE_FLAG_ACTIVE))
-                .stream().map(SysUserRole::getRoleId).collect(Collectors.toSet());
+                                        RobotConstants.DELETE_FLAG_ACTIVE));
+        Map<String, Set<String>> boundIdsByCompany = bindings.stream().collect(Collectors.groupingBy(
+                SysUserRole::getCompanyId, Collectors.mapping(SysUserRole::getRoleId, Collectors.toSet())));
+        Set<String> boundRoleIds = bindings.stream().map(SysUserRole::getRoleId).collect(Collectors.toSet());
         Map<String, List<SysRole>> rolesByCompany = boundRoleIds.isEmpty() ? Map.of()
-                : roleMapper.selectBatchIds(boundRoleIds).stream()
-                .filter(role -> role.getDeleteFlag().equals(RobotConstants.DELETE_FLAG_ACTIVE)
-                        && role.getStatusFlag() != null && role.getStatusFlag() == 1)
+                : roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+                        .in(SysRole::getId, boundRoleIds)
+                        .in(SysRole::getCompanyId, availableCompanyIds)
+                        .eq(SysRole::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
+                        .eq(SysRole::getStatusFlag, 1)).stream()
+                .filter(role -> boundIdsByCompany.getOrDefault(role.getCompanyId(), Set.of())
+                        .contains(role.getId()))
                 .collect(Collectors.groupingBy(SysRole::getCompanyId));
 
         // 4. 拼装
         return memberships.stream()
                 .map(membership -> {
                     SysCompany company = companies.get(membership.getCompanyId());
-                    if (company == null) {
+                    if (company == null || !availableCompanyIds.contains(company.getId())) {
                         return null;
                     }
                     SysTenant tenant = company.getTenantId() == null
                             ? null : tenants.get(company.getTenantId());
                     return RemoteUserContextDTO.builder()
                             .contextId(membership.getId())
+                            .securityVersion(membership.getSecurityVersion())
                             .primaryFlag(membership.getPrimaryFlag() != null
                                     && membership.getPrimaryFlag() == 1)
                             .tenantId(company.getTenantId())

@@ -13,6 +13,7 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.core.type.filter.TypeFilter;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -60,19 +61,20 @@ class EntityDdlAlignmentTest {
     private static final Set<String> NON_COLUMN_PREFIXES = Set.of(
             "PRIMARY", "UNIQUE", "KEY", "INDEX", "CONSTRAINT", "FOREIGN");
 
+    private static final Pattern ALTER_ADD_COLUMN = Pattern.compile(
+            "ALTER\\s+TABLE\\s+`?(\\w+)`?\\s+ADD\\s+COLUMN\\s+`?(\\w+)`?\\s+",
+            Pattern.CASE_INSENSITIVE);
+
     private static Map<String, Set<String>> ddlColumns;
 
     @BeforeAll
     static void loadDdl() throws IOException {
         ddlColumns = new HashMap<>();
-        for (String file : List.of("db/migration/V1__init_schema.sql",
-                "db/migration/V2__seed_data.sql",
-                "db/migration/V3__login_log.sql",
-                "db/migration/V4__permission_buttons_expansion.sql",
-                "db/migration/V5__role_button.sql")) {
-            String sql = new String(Objects.requireNonNull(
-                    Thread.currentThread().getContextClassLoader().getResourceAsStream(file),
-                    "缺少迁移文件: " + file).readAllBytes(), StandardCharsets.UTF_8);
+        for (var file : new PathMatchingResourcePatternResolver().getResources("classpath*:db/migration/V*__*.sql")) {
+            String sql;
+            try (var stream = file.getInputStream()) {
+                sql = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            }
             Matcher matcher = CREATE_TABLE.matcher(sql);
             while (matcher.find()) {
                 Set<String> columns = ddlColumns.computeIfAbsent(
@@ -86,6 +88,11 @@ class EntityDdlAlignmentTest {
                         }
                     }
                 }
+            }
+            Matcher additions = ALTER_ADD_COLUMN.matcher(sql);
+            while (additions.find()) {
+                ddlColumns.computeIfAbsent(additions.group(1).toLowerCase(), key -> new TreeSet<>())
+                        .add(additions.group(2).toLowerCase());
             }
         }
         assertFalse(ddlColumns.isEmpty(), "DDL 解析结果为空，测试自身失效");

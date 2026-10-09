@@ -21,6 +21,7 @@ public class LoginRequest implements Serializable {
     private String username;
 
     @NotBlank(message = "密码不能为空")
+    @lombok.ToString.Exclude
     private String password;
 
     /** 登录前选择的公司上下文 ID；认证服务必须再次校验成员关系。 */

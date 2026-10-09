@@ -17,6 +17,11 @@ public class SysDictItem extends BaseEntity {
 
     private String itemValue;
 
+    /** 项编码与存储值独立，修改显示标签不能改写编码。 */
+    private String itemCode;
+
+    private String remark;
+
     private Integer sortNo;
 
     /** 1=启用，0=停用。 */

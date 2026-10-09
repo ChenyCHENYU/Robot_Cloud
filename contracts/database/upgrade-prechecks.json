@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "fromVersion": 5,
+  "mode": "read-only SELECT; run before any V6+ DDL",
+  "checks": [
+    {
+      "id": "sys_user.username",
+      "sql": "SELECT username,COUNT(*) AS duplicates FROM sys_user WHERE delete_flag = 1 GROUP BY username HAVING COUNT(*) > 1",
+      "requiresManualDecision": true,
+      "reason": "active duplicate blocks generated unique index; never delete or merge automatically"
+    },
+    {
+      "id": "sys_role.company_id.role_code",
+      "sql": "SELECT company_id,role_code,COUNT(*) AS duplicates FROM sys_role WHERE delete_flag = 1 GROUP BY company_id,role_code HAVING COUNT(*) > 1",
+      "requiresManualDecision": true,
+      "reason": "active duplicate blocks generated unique index; never delete or merge automatically"
+    },
+    {
+      "id": "sys_user_company.company_id.user_id",
+      "sql": "SELECT company_id,user_id,COUNT(*) AS duplicates FROM sys_user_company WHERE delete_flag = 1 GROUP BY company_id,user_id HAVING COUNT(*) > 1",
+      "requiresManualDecision": true,
+      "reason": "active duplicate blocks generated unique index; never delete or merge automatically"
+    },
+    {
+      "id": "sys_user_company.user_id",
+      "sql": "SELECT user_id,COUNT(*) AS duplicates FROM sys_user_company WHERE delete_flag = 1 AND primary_flag = 1 GROUP BY user_id HAVING COUNT(*) > 1",
+      "requiresManualDecision": true,
+      "reason": "active duplicate blocks generated unique index; never delete or merge automatically"
+    },
+    {
+      "id": "sys_user_role.company_id.user_id.role_id",
+      "sql": "SELECT company_id,user_id,role_id,COUNT(*) AS duplicates FROM sys_user_role WHERE delete_flag = 1 GROUP BY company_id,user_id,role_id HAVING COUNT(*) > 1",
+      "requiresManualDecision": true,
+      "reason": "active duplicate blocks generated unique index; never delete or merge automatically"
+    },
+    {
+      "id": "sys_role_menu.role_id.menu_id",
+      "sql": "SELECT role_id,menu_id,COUNT(*) AS duplicates FROM sys_role_menu WHERE delete_flag = 1 GROUP BY role_id,menu_id HAVING COUNT(*) > 1",
+      "requiresManualDecision": true,
+      "reason": "active duplicate blocks generated unique index; never delete or merge automatically"
+    },
+    {
+      "id": "sys_role_button.role_id.button_id",
+      "sql": "SELECT role_id,button_id,COUNT(*) AS duplicates FROM sys_role_button WHERE delete_flag = 1 GROUP BY role_id,button_id HAVING COUNT(*) > 1",
+      "requiresManualDecision": true,
+      "reason": "active duplicate blocks generated unique index; never delete or merge automatically"
+    },
+    {
+      "id": "sys_dict_type.type_code",
+      "sql": "SELECT type_code,COUNT(*) AS duplicates FROM sys_dict_type WHERE delete_flag = 1 GROUP BY type_code HAVING COUNT(*) > 1",
+      "requiresManualDecision": true,
+      "reason": "active duplicate blocks generated unique index; never delete or merge automatically"
+    },
+    {
+      "id": "sys_dict_item.type_id.item_value",
+      "sql": "SELECT type_id,item_value,COUNT(*) AS duplicates FROM sys_dict_item WHERE delete_flag = 1 GROUP BY type_id,item_value HAVING COUNT(*) > 1",
+      "requiresManualDecision": true,
+      "reason": "active duplicate blocks generated unique index; never delete or merge automatically"
+    }
+  ]
+}

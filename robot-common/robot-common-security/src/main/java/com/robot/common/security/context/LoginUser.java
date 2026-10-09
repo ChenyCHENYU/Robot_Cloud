@@ -43,6 +43,12 @@ public class LoginUser implements Serializable {
     /** 当前上下文对应的成员关系 ID（sys_user_company.ID）。 */
     private String contextId;
 
+    /** 签发时的账号撤销版本；改密后旧会话永久失效。 */
+    private Long userSecurityVersion;
+
+    /** 签发时的成员撤销版本；停用、移出后旧上下文永久失效。 */
+    private Long contextSecurityVersion;
+
     /** 当前公司下授予的角色编码列表。 */
     @Builder.Default
     private List<String> roleCodes = Collections.emptyList();

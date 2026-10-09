@@ -1,6 +1,14 @@
 spring:
+  config:
+    import:
+      - optional:nacos:robot-system.yml?group=ROBOT_CLOUD&refreshEnabled=true
   cloud:
     nacos:
+      config:
+        enabled: true
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ROBOT_CLOUD
       discovery:
         enabled: true
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "releasedThrough": 5,
+  "hashAlgorithm": "SHA-256",
+  "migrations": [
+    {
+      "version": 1,
+      "file": "V1__init_schema.sql",
+      "sha256": "cb1d6c2c94f1d58a4b3f53a145e06c2b65099de48df4e50780f4a186aaf027e6",
+      "bytes": 18563
+    },
+    {
+      "version": 2,
+      "file": "V2__seed_data.sql",
+      "sha256": "154718527d5af73d14dc1b913aa3a854b746698c2c07f36d66783cbe937fd823",
+      "bytes": 6712
+    },
+    {
+      "version": 3,
+      "file": "V3__login_log.sql",
+      "sha256": "526409783df1aa3549e0ad500666a3bd449c90e5d178cf5d5f9cf08d192759e5",
+      "bytes": 1605
+    },
+    {
+      "version": 4,
+      "file": "V4__permission_buttons_expansion.sql",
+      "sha256": "63883f604437c1ec9741e76c5e9241d863308381d39a3b3ce026e3f91bdbbed2",
+      "bytes": 1200
+    },
+    {
+      "version": 5,
+      "file": "V5__role_button.sql",
+      "sha256": "d1cf9ff97c6dfc8354f083d38d902c46b11ddb24da63e91d267bfae671305314",
+      "bytes": 2507
+    },
+    {
+      "version": 6,
+      "file": "V6__cache_epoch_outbox.sql",
+      "sha256": "ae70ea774005503467eb535f1ab27b7f4e851ac63cf51afa95af686445fc6beb",
+      "bytes": 1553
+    },
+    {
+      "version": 7,
+      "file": "V7__session_revocation_and_active_unique.sql",
+      "sha256": "c1a0e2aa022a7c003a26b7011d186585f6bf5622a1643c951fe6b75b4cad7769",
+      "bytes": 1180
+    },
+    {
+      "version": 8,
+      "file": "V8__dictionary_contract.sql",
+      "sha256": "5ec76ec736276b5da8f047d106525521b560e17544e2812f1d1f622c20b929f2",
+      "bytes": 1412
+    },
+    {
+      "version": 9,
+      "file": "V9__active_relation_uniqueness.sql",
+      "sha256": "e9a009f0d6d04277f57b2bd2e3380c1c288135c8c780bef74079a05f3eaac6ce",
+      "bytes": 1374
+    },
+    {
+      "version": 10,
+      "file": "V10__cache_outbox_governance.sql",
+      "sha256": "fecd7d2951d42aa55e48d6a7c66524ce810c9b65bf2fcf4adb3fa7d2a1a81b23",
+      "bytes": 1429
+    }
+  ]
+}

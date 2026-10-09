@@ -18,5 +18,6 @@ public class RefreshTokenRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @NotBlank(message = "刷新令牌不能为空")
+    @lombok.ToString.Exclude
     private String refreshToken;
 }

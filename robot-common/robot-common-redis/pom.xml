@@ -26,6 +26,17 @@
     <dependency>
       <groupId>org.redisson</groupId>
       <artifactId>redisson-spring-boot-starter</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.redisson</groupId>
+          <artifactId>redisson-spring-data-34</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- Boot 3.2 对应 Spring Data Redis 3.2；starter 默认的 3.4 适配器引用不存在的类型。 -->
+    <dependency>
+      <groupId>org.redisson</groupId>
+      <artifactId>redisson-spring-data-32</artifactId>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>

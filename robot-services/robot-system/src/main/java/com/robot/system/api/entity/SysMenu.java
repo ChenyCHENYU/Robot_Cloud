@@ -41,4 +41,6 @@ public class SysMenu extends BaseEntity {
 
     /** 1=启用，0=停用。 */
     private Integer statusFlag;
+
+    private String remark;
 }

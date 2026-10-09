@@ -25,6 +25,8 @@ spring:
       port: 6379
 
 robot:
+  cache-outbox:
+    enabled: false
   mybatis:
     tenant:
       enabled: true

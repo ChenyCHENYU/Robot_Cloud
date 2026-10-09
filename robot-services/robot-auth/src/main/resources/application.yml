@@ -6,11 +6,10 @@ spring:
     name: robot-auth
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
-  config:
-    import:
-      - optional:nacos:robot-auth.yml?group=ROBOT_CLOUD&refreshEnabled=true
   cloud:
     nacos:
+      config:
+        enabled: false
       discovery:
         enabled: false
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
@@ -61,6 +60,8 @@ robot:
       - /auth/login-companies
       - /auth/refresh-token
       - /auth/context/activate
+      # 注销由 family 索引验证持有权，支持 access 已自然过期但 refresh 尚有效。
+      - /auth/logout
       - /actuator/**
       - /v3/api-docs/**
       - /doc.html
@@ -80,3 +81,29 @@ logging:
     root: info
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5level [%X{traceId:-}] [%thread] %logger{40} - %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  cloud:
+    sentinel:
+      enabled: false
+    nacos:
+      config:
+        enabled: false
+      discovery:
+        enabled: false
+    openfeign:
+      client:
+        config:
+          remoteSystemService:
+            url: ${ROBOT_SYSTEM_URL:http://127.0.0.1:9202}
+
+management:
+  health:
+    sentinel:
+      enabled: false
+    nacos-discovery:
+      enabled: false

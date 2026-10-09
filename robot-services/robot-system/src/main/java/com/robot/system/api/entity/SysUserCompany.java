@@ -18,4 +18,7 @@ public class SysUserCompany extends TenantEntity {
 
     /** 成员状态：1=有效，0=移除。 */
     private Integer statusFlag;
+
+    /** 成员撤销版本，只增不减；移出或停用时递增。 */
+    private Long securityVersion = 0L;
 }

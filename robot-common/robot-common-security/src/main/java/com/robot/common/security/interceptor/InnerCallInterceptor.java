@@ -3,12 +3,16 @@ package com.robot.common.security.interceptor;
 import com.robot.common.core.constant.RobotConstants;
 import com.robot.common.security.config.RobotSecurityProperties;
 import com.robot.common.security.context.InnerTrustContext;
+import com.robot.common.security.context.LoginUser;
+import com.robot.common.security.util.AuthHolder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Collections;
+import java.util.Objects;
 
 /**
  * 内部接口鉴权拦截器：/inner/** 仅允许携带正确 X-Inner-Call 密钥的服务间调用。
@@ -22,7 +26,7 @@ import java.security.MessageDigest;
  *       使租户拦截器与审计填充在服务间调用中获得与登录态一致的上下文。</li>
  * </ul>
  */
-public class InnerCallInterceptor implements HandlerInterceptor {
+public class InnerCallInterceptor implements AsyncHandlerInterceptor {
 
     private final RobotSecurityProperties properties;
 
@@ -33,30 +37,124 @@ public class InnerCallInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
                              Object handler) throws Exception {
-        String secret = request.getHeader(RobotConstants.HEADER_INNER_CALL);
-        // 常量时间比较，防时序侧信道探测密钥
-        if (secret == null || !MessageDigest.isEqual(
-                secret.getBytes(StandardCharsets.UTF_8),
-                properties.getInnerSecret().getBytes(StandardCharsets.UTF_8))) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write(
-                    "{\"code\":403,\"message\":\"内部接口调用未授权\"}");
-            return false;
+        InnerTrustContext.clear();
+        if (!verifiedServiceSecret(request)) {
+            return reject(response);
         }
-        // 密钥通过后绑定委托上下文（登录后用户委托调用；登录前供给接口不带这些头）
-        String userId = request.getHeader(RobotConstants.HEADER_INNER_USER);
-        String companyId = request.getHeader(RobotConstants.HEADER_INNER_COMPANY);
-        String username = request.getHeader(RobotConstants.HEADER_INNER_USERNAME);
-        if (userId != null && !userId.isBlank() && companyId != null && !companyId.isBlank()) {
-            InnerTrustContext.bind(userId, companyId, username);
+        Delegation delegation = readDelegation(request);
+        if (!validDelegation(delegation) || !matchesLogin(delegation)) {
+            return reject(response);
         }
+        bindDelegation(delegation);
         return true;
+    }
+
+    /** 只读取服务凭据；通过常量时间比较后，才允许读取用户委托头。 */
+    private boolean verifiedServiceSecret(HttpServletRequest request) {
+        Header secret = readHeader(request, RobotConstants.HEADER_INNER_CALL);
+        String configured = properties.getInnerSecret();
+        return secret.isSingle() && secret.value() != null && configured != null
+                && !configured.isBlank() && MessageDigest.isEqual(
+                secret.value().getBytes(StandardCharsets.UTF_8), configured.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static Delegation readDelegation(HttpServletRequest request) {
+        return new Delegation(readHeader(request, RobotConstants.HEADER_INNER_USER),
+                readHeader(request, RobotConstants.HEADER_INNER_COMPANY),
+                readHeader(request, RobotConstants.HEADER_INNER_USERNAME));
+    }
+
+    /** 无委托是服务身份；只要提交任一委托字段，就必须有唯一且完整的用户/公司身份。 */
+    private static boolean validDelegation(Delegation delegation) {
+        if (!delegation.hasHeaders()) {
+            return true;
+        }
+        return validIdentityHeader(delegation.user()) && validIdentityHeader(delegation.company())
+                && validUsernameHeader(delegation.username());
+    }
+
+    private static boolean validIdentityHeader(Header header) {
+        return header.isSingle() && validId(header.value());
+    }
+
+    private static boolean validUsernameHeader(Header header) {
+        if (!header.isPresent()) {
+            return true;
+        }
+        return header.isSingle() && header.value() != null
+                && !header.value().isBlank() && header.value().length() <= 128;
+    }
+
+    /** 请求已有登录态时，委托必须与 token Session 的账号、公司及可选用户名一致。 */
+    private static boolean matchesLogin(Delegation delegation) {
+        Object loginId = AuthHolder.getLoginId();
+        if (loginId == null) {
+            return true;
+        }
+        LoginUser loginUser = AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER, LoginUser.class);
+        return delegation.hasHeaders() && loginUser != null
+                && Objects.equals(String.valueOf(loginId), delegation.user().value())
+                && Objects.equals(loginUser.getUserId(), delegation.user().value())
+                && Objects.equals(loginUser.getCompanyId(), delegation.company().value())
+                && matchesUsername(loginUser, delegation.username());
+    }
+
+    private static boolean matchesUsername(LoginUser loginUser, Header username) {
+        return !username.isPresent() || Objects.equals(loginUser.getUsername(), username.value());
+    }
+
+    private static void bindDelegation(Delegation delegation) {
+        InnerTrustContext.bindVerifiedService(delegation.user().value(),
+                delegation.company().value(), delegation.username().value());
+    }
+
+    private static boolean validId(String value) {
+        return value != null && !value.isBlank() && value.length() <= 64
+                && value.equals(value.trim());
+    }
+
+    private static Header readHeader(HttpServletRequest request, String name) {
+        return new Header(request.getHeader(name), Collections.list(request.getHeaders(name)).size());
+    }
+
+    private record Header(String value, int count) {
+        boolean isPresent() {
+            return count > 0;
+        }
+
+        boolean isSingle() {
+            return count == 1;
+        }
+
+        @Override
+        public String toString() {
+            return "Header[count=" + count + "]";
+        }
+    }
+
+    private record Delegation(Header user, Header company, Header username) {
+        boolean hasHeaders() {
+            return user.isPresent() || company.isPresent() || username.isPresent();
+        }
+    }
+
+    private static boolean reject(HttpServletResponse response) throws Exception {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"code\":403,\"message\":\"内部接口调用未授权\"}");
+        return false;
     }
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
                                 Object handler, Exception ex) {
+        InnerTrustContext.clear();
+    }
+
+    @Override
+    public void afterConcurrentHandlingStarted(HttpServletRequest request,
+                                               HttpServletResponse response, Object handler) {
+        // 不把请求权限隐式继承到异步工作线程。
         InnerTrustContext.clear();
     }
 }

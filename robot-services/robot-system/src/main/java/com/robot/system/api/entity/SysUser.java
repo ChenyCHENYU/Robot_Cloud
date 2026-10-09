@@ -26,4 +26,7 @@ public class SysUser extends BaseEntity {
 
     /** 1=启用，0=停用（停用账号禁止登录）。 */
     private Integer statusFlag;
+
+    /** 账号撤销版本，只增不减，与业务 revision 分离。 */
+    private Long securityVersion = 0L;
 }

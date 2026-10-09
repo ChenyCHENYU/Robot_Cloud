@@ -20,6 +20,10 @@
       <artifactId>robot-common-core</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.robot</groupId>
+      <artifactId>robot-common-redis</artifactId>
+    </dependency>
+    <dependency>
       <groupId>cn.dev33</groupId>
       <artifactId>sa-token-spring-boot3-starter</artifactId>
     </dependency>

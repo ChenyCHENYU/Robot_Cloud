@@ -1,0 +1,537 @@
+{
+  "schemaVersion": 1,
+  "scope": "server contract; does not assert real Robot_Admin integration",
+  "envelope": {
+    "successCode": 0,
+    "pageFields": [
+      "list",
+      "total",
+      "page",
+      "pageSize"
+    ],
+    "numericCounters": [
+      "total",
+      "page",
+      "pageSize"
+    ],
+    "dateTimePattern": "yyyy-MM-dd HH:mm:ss"
+  },
+  "forbiddenResponseFields": [
+    "password",
+    "passwordHash",
+    "securityVersion",
+    "userSecurityVersion",
+    "contextSecurityVersion"
+  ],
+  "unknownRequestFields": "ignored by Jackson; never bind domain entity/governance fields",
+  "authorization": "SaCheckPermission metadata checked here; effective authorization/tenant/transaction behavior checked by service and MVC tests",
+  "productPending": [
+    "temporary-role product model",
+    "global directory write boundary"
+  ],
+  "controller": "com.robot.system.user.controller.UserController",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/sys/users",
+      "permission": "sys:user:list",
+      "response": "Result<PageResult<UserVO>>",
+      "body": null,
+      "validBody": false,
+      "query": [],
+      "pathVariables": []
+    },
+    {
+      "method": "POST",
+      "path": "/sys/users",
+      "permission": "sys:user:save",
+      "response": "Result<String>",
+      "body": "UserSaveRequest",
+      "validBody": true,
+      "query": [],
+      "pathVariables": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/sys/users/{id}",
+      "permission": "sys:user:delete",
+      "response": "Result<Void>",
+      "body": null,
+      "validBody": false,
+      "query": [
+        {
+          "name": "expectedRevision",
+          "javaType": "Integer",
+          "required": true,
+          "validation": {
+            "Min": {
+              "value": 0
+            }
+          }
+        }
+      ],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/sys/users/{id}",
+      "permission": "sys:user:query",
+      "response": "Result<UserVO>",
+      "body": null,
+      "validBody": false,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/sys/users/{id}",
+      "permission": "sys:user:update",
+      "response": "Result<Void>",
+      "body": "UserSaveRequest",
+      "validBody": true,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/sys/users/{id}/reset-password",
+      "permission": "sys:user:resetPassword",
+      "response": "Result<Void>",
+      "body": "UserPasswordResetRequest",
+      "validBody": true,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/sys/users/{id}/status",
+      "permission": "sys:user:update",
+      "response": "Result<Void>",
+      "body": "UserStatusRequest",
+      "validBody": true,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    }
+  ],
+  "requests": {
+    "com.robot.system.api.dto.user.UserSaveRequest": {
+      "fields": {
+        "id": {
+          "javaType": "String",
+          "aliases": [],
+          "validation": {},
+          "semanticId": "account.opaque-id",
+          "sourceOfTruth": "sys_user.id",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "编辑资源ID；PUT由路径ID覆盖，新增ID由服务端生成。"
+        },
+        "username": {
+          "javaType": "String",
+          "aliases": [],
+          "validation": {
+            "NotBlank": {},
+            "Size": {
+              "min": 3,
+              "max": 30
+            },
+            "Pattern": {
+              "regexp": "^[a-zA-Z0-9_]+$"
+            }
+          },
+          "semanticId": "account.username",
+          "sourceOfTruth": "sys_user.username",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "全局登录名：3至30位字母数字下划线；未删除账号唯一。"
+        },
+        "password": {
+          "javaType": "String",
+          "aliases": [],
+          "validation": {
+            "Pattern": {
+              "regexp": "^(?:$|[\\s\\S]{6,32})$"
+            }
+          },
+          "semanticId": "account.password-input-never-output",
+          "sourceOfTruth": "BCrypt → sys_user.password_hash",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "写入时的明文密码输入；仅BCrypt后存储，永不成为公共响应字段。新增必填；编辑可留空；重置须6至32字符。"
+        },
+        "nickname": {
+          "javaType": "String",
+          "aliases": [],
+          "validation": {
+            "NotBlank": {},
+            "Size": {
+              "min": 0,
+              "max": 30
+            }
+          },
+          "semanticId": "account.nickname",
+          "sourceOfTruth": "sys_user.nickname",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "账号全局昵称，非公司成员别名。"
+        },
+        "email": {
+          "javaType": "String",
+          "aliases": [],
+          "validation": {
+            "Email": {
+              "regexp": ".*"
+            },
+            "Size": {
+              "min": 0,
+              "max": 100
+            }
+          },
+          "semanticId": "account.email",
+          "sourceOfTruth": "sys_user.email",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "账号全局邮箱，可空，最大100字符并校验邮箱格式。"
+        },
+        "phone": {
+          "javaType": "String",
+          "aliases": [],
+          "validation": {
+            "Size": {
+              "min": 0,
+              "max": 20
+            }
+          },
+          "semanticId": "account.phone",
+          "sourceOfTruth": "sys_user.phone",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "账号全局联系电话，可空，最大20字符。"
+        },
+        "departmentId": {
+          "javaType": "String",
+          "aliases": [
+            "deptId"
+          ],
+          "validation": {
+            "Size": {
+              "min": 0,
+              "max": 64
+            }
+          },
+          "semanticId": "membership.department-reference",
+          "sourceOfTruth": "sys_user.department_id",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "账号行部门引用；兼容deptId；写侧需验证部门属于当前可信公司。"
+        },
+        "status": {
+          "javaType": "Integer",
+          "aliases": [],
+          "validation": {
+            "Min": {
+              "value": 0
+            },
+            "Max": {
+              "value": 1
+            }
+          },
+          "semanticId": "membership.enabled-state-1-enabled-0-disabled",
+          "sourceOfTruth": "sys_user_company.status_flag",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "公司成员启停（用户动作）或角色启停（角色动作），1启用、0停用；不是软删值。"
+        },
+        "roleIds": {
+          "javaType": "List<String>",
+          "aliases": [],
+          "validation": {
+            "Size": {
+              "min": 0,
+              "max": 500
+            }
+          },
+          "semanticId": "membership.permanent-role-ids",
+          "sourceOfTruth": "sys_user_role",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "当前公司永久角色绑定配置，最大500项；每项为非空不透明ID并由服务端检查公司归属/授权边界。",
+          "elementValidation": {
+            "NotBlank": {},
+            "Size": {
+              "min": 0,
+              "max": 64
+            }
+          }
+        },
+        "revision": {
+          "javaType": "Integer",
+          "aliases": [],
+          "validation": {
+            "Min": {
+              "value": 0
+            }
+          },
+          "semanticId": "account.update-cas-version",
+          "sourceOfTruth": "sys_user.revision",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "编辑账户或角色聚合的CAS版本；用户成员动作另用membershipRevision。新增由服务端初始化，不能伪造版本。"
+        },
+        "membershipRevision": {
+          "javaType": "Integer",
+          "aliases": [],
+          "validation": {
+            "Min": {
+              "value": 0
+            }
+          },
+          "semanticId": "membership.update-cas-version",
+          "sourceOfTruth": "sys_user_company.revision",
+          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "当前公司成员聚合CAS版本；用户角色重绑、成员状态变化需匹配此版本。"
+        }
+      },
+      "classValidation": {}
+    },
+    "com.robot.system.api.dto.user.UserStatusRequest": {
+      "fields": {
+        "status": {
+          "javaType": "Integer",
+          "aliases": [],
+          "validation": {
+            "NotNull": {},
+            "Min": {
+              "value": 0
+            },
+            "Max": {
+              "value": 1
+            }
+          },
+          "semanticId": "membership.enabled-state-1-enabled-0-disabled",
+          "sourceOfTruth": "sys_user_company.status_flag",
+          "constraintSource": "com/robot/system/api/dto/user/UserStatusRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "公司成员启停（用户动作）或角色启停（角色动作），1启用、0停用；不是软删值。"
+        },
+        "expectedRevision": {
+          "javaType": "Integer",
+          "aliases": [],
+          "validation": {
+            "NotNull": {},
+            "Min": {
+              "value": 0
+            }
+          },
+          "semanticId": "membership.action-cas-version",
+          "sourceOfTruth": "UserVO.membershipRevision → sys_user_company.revision",
+          "constraintSource": "com/robot/system/api/dto/user/UserStatusRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "sys_user_company成员CAS版本，取UserVO.membershipRevision。"
+        }
+      },
+      "classValidation": {}
+    },
+    "com.robot.system.api.dto.user.UserPasswordResetRequest": {
+      "fields": {
+        "password": {
+          "javaType": "String",
+          "aliases": [],
+          "validation": {
+            "NotBlank": {},
+            "Size": {
+              "min": 6,
+              "max": 32
+            }
+          },
+          "semanticId": "account.reset-password-input",
+          "sourceOfTruth": "BCrypt → sys_user.password_hash",
+          "constraintSource": "com/robot/system/api/dto/user/UserPasswordResetRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "写入时的明文密码输入；仅BCrypt后存储，永不成为公共响应字段。新增必填；编辑可留空；重置须6至32字符。"
+        },
+        "expectedRevision": {
+          "javaType": "Integer",
+          "aliases": [],
+          "validation": {
+            "NotNull": {},
+            "Min": {
+              "value": 0
+            }
+          },
+          "semanticId": "account.reset-cas-version",
+          "sourceOfTruth": "UserVO.revision → sys_user.revision",
+          "constraintSource": "com/robot/system/api/dto/user/UserPasswordResetRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "sys_user平台账户CAS版本，取UserVO.revision。"
+        },
+        "expectedMembershipRevision": {
+          "javaType": "Integer",
+          "aliases": [],
+          "validation": {
+            "NotNull": {},
+            "Min": {
+              "value": 0
+            }
+          },
+          "semanticId": "membership.reset-cas-version",
+          "sourceOfTruth": "UserVO.membershipRevision → sys_user_company.revision",
+          "constraintSource": "com/robot/system/api/dto/user/UserPasswordResetRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "definition": "密码重置的当前公司成员CAS版本，取UserVO.membershipRevision；与账户版本同时检查。"
+        }
+      },
+      "classValidation": {}
+    }
+  },
+  "responses": {
+    "com.robot.system.api.vo.user.UserVO": {
+      "id": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "account.id",
+        "sourceOfTruth": "sys_user.id",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "账号公开只读投影；字符串ID/规范时间格式按Jackson真实序列化校验。"
+      },
+      "username": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "account.username",
+        "sourceOfTruth": "sys_user.username",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "账号公开只读投影；字符串ID/规范时间格式按Jackson真实序列化校验。"
+      },
+      "nickname": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "account.nickname",
+        "sourceOfTruth": "sys_user.nickname",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "账号公开只读投影；字符串ID/规范时间格式按Jackson真实序列化校验。"
+      },
+      "email": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "account.email",
+        "sourceOfTruth": "sys_user.email",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "账号公开只读投影；字符串ID/规范时间格式按Jackson真实序列化校验。"
+      },
+      "phone": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "account.phone",
+        "sourceOfTruth": "sys_user.phone",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "账号公开只读投影；字符串ID/规范时间格式按Jackson真实序列化校验。"
+      },
+      "departmentId": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "account.departmentId",
+        "sourceOfTruth": "sys_user.department_id",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前账号行的部门引用，未声称成员独立部门模型。"
+      },
+      "deptId": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "account.deptId",
+        "sourceOfTruth": "sys_user.department_id",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "departmentId兼容读别名；当前为账号行部门引用。"
+      },
+      "revision": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "account.revision",
+        "sourceOfTruth": "sys_user.revision",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "平台账户CAS版本；用于账户更新/密码重置。"
+      },
+      "membershipRevision": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "account.membershipRevision",
+        "sourceOfTruth": "sys_user_company.revision",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司成员聚合CAS版本；用于成员移出、状态、角色重绑。"
+      },
+      "status": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "account.status",
+        "sourceOfTruth": "sys_user_company.status_flag",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司成员启停（1启用、0停用），不是平台账号全局状态。"
+      },
+      "statusFlag": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "account.statusFlag",
+        "sourceOfTruth": "sys_user_company.status_flag",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "status的兼容别名；仍为当前公司成员启停。"
+      },
+      "roleIds": {
+        "javaType": "List<String>",
+        "jsonType": "array",
+        "semanticId": "account.roleIds",
+        "sourceOfTruth": "sys_user_role + sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司未删除永久角色的绑定配置ID集合，包含配置读取所需的停用角色；并非运行时有效角色清单。"
+      },
+      "roleNames": {
+        "javaType": "List<String>",
+        "jsonType": "array",
+        "semanticId": "account.roleNames",
+        "sourceOfTruth": "sys_user_role + sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "roleIds所引用角色的显示名。"
+      },
+      "createDateTime": {
+        "javaType": "LocalDateTime",
+        "jsonType": "string",
+        "semanticId": "account.createDateTime",
+        "sourceOfTruth": "sys_user.create_date_time",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "账号公开只读投影；字符串ID/规范时间格式按Jackson真实序列化校验。"
+      },
+      "updateDateTime": {
+        "javaType": "LocalDateTime",
+        "jsonType": "string",
+        "semanticId": "account.updateDateTime",
+        "sourceOfTruth": "sys_user.update_date_time",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "账号公开只读投影；字符串ID/规范时间格式按Jackson真实序列化校验。"
+      },
+      "createTime": {
+        "javaType": "LocalDateTime",
+        "jsonType": "string",
+        "semanticId": "account.createTime",
+        "sourceOfTruth": "sys_user.create_date_time",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "账号公开只读投影；字符串ID/规范时间格式按Jackson真实序列化校验。"
+      },
+      "updateTime": {
+        "javaType": "LocalDateTime",
+        "jsonType": "string",
+        "semanticId": "account.updateTime",
+        "sourceOfTruth": "sys_user.update_date_time",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "账号公开只读投影；字符串ID/规范时间格式按Jackson真实序列化校验。"
+      }
+    }
+  },
+  "queryModels": {
+    "com.robot.system.api.dto.user.UserPageQuery": {
+      "page": "Integer",
+      "pageSize": "Integer",
+      "keyword": "String",
+      "status": "Integer",
+      "deptId": "String"
+    }
+  },
+  "actionVersions": {
+    "delete": "UserVO.membershipRevision",
+    "status": "UserVO.membershipRevision",
+    "resetPassword.expectedRevision": "UserVO.revision",
+    "resetPassword.expectedMembershipRevision": "UserVO.membershipRevision"
+  }
+}

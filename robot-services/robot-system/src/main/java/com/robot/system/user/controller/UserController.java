@@ -5,12 +5,16 @@ import com.robot.common.core.domain.PageResult;
 import com.robot.common.core.domain.Result;
 import com.robot.system.api.dto.user.UserPageQuery;
 import com.robot.system.api.dto.user.UserSaveRequest;
+import com.robot.system.api.dto.user.UserStatusRequest;
+import com.robot.system.api.dto.user.UserPasswordResetRequest;
 import com.robot.system.api.vo.user.UserVO;
 import com.robot.system.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,15 +22,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
-
 /**
- * 用户管理接口（对齐 Robot_Admin 前端 /sys/users 契约：GET 分页 + REST 风格增删改）。
+ * 用户管理接口；成员动作使用客户端版本，账号与成员版本分别取自详情。
+ *
+ * @author Robot Cloud
+ * @since 1.0.0-SNAPSHOT
  */
 @Tag(name = "用户管理")
 @RestController
+@Validated
 @RequestMapping("/sys/users")
 @RequiredArgsConstructor
 public class UserController {
@@ -64,11 +71,12 @@ public class UserController {
         return Result.success();
     }
 
-    @Operation(summary = "删除用户（软删）")
+    @Operation(summary = "按成员版本移出当前公司")
     @SaCheckPermission("sys:user:delete")
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable String id) {
-        userService.delete(id);
+    public Result<Void> delete(@PathVariable String id,
+                               @RequestParam("expectedRevision") @Min(0) Integer expectedRevision) {
+        userService.delete(id, expectedRevision);
         return Result.success();
     }
 
@@ -76,8 +84,8 @@ public class UserController {
     @SaCheckPermission("sys:user:resetPassword")
     @PostMapping("/{id}/reset-password")
     public Result<Void> resetPassword(@PathVariable String id,
-                                      @RequestBody Map<String, String> body) {
-        userService.resetPassword(id, body.get("password"));
+                                      @Valid @RequestBody UserPasswordResetRequest body) {
+        userService.resetPassword(id, body);
         return Result.success();
     }
 
@@ -85,8 +93,8 @@ public class UserController {
     @SaCheckPermission("sys:user:update")
     @PutMapping("/{id}/status")
     public Result<Void> toggleStatus(@PathVariable String id,
-                                     @RequestBody Map<String, Integer> body) {
-        userService.toggleStatus(id, body.get("status"));
+                                     @Valid @RequestBody UserStatusRequest body) {
+        userService.toggleStatus(id, body);
         return Result.success();
     }
 }

@@ -7,12 +7,23 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** 用户列表/详情视图（禁止携带 passwordHash）。 */
+/**
+ * 用户列表/详情视图（禁止携带 passwordHash）。
+ *
+ * @author Robot Cloud
+ * @since 1.0.0-SNAPSHOT
+ */
 @Data
 @Builder
 public class UserVO {
 
     private String id;
+
+    private Integer revision;
+
+    private Integer membershipRevision;
+
+    private List<String> roleIds;
 
     private String username;
 
@@ -31,12 +42,27 @@ public class UserVO {
 
     private LocalDateTime createDateTime;
 
+    private LocalDateTime updateDateTime;
+
     /** 所属角色名称集合（展示用）。 */
     private List<String> roleNames;
+
+    public String getDeptId() {
+        return departmentId;
+    }
+
+    public LocalDateTime getCreateTime() {
+        return createDateTime;
+    }
+
+    public LocalDateTime getUpdateTime() {
+        return updateDateTime;
+    }
 
     public static UserVO from(SysUser user, List<String> roleNames) {
         return UserVO.builder()
                 .id(user.getId())
+                .revision(user.getRevision())
                 .username(user.getUsername())
                 .nickname(user.getNickname())
                 .email(user.getEmail())
@@ -45,6 +71,7 @@ public class UserVO {
                 .status(user.getStatusFlag())
                 .statusFlag(user.getStatusFlag())
                 .createDateTime(user.getCreateDateTime())
+                .updateDateTime(user.getUpdateDateTime())
                 .roleNames(roleNames)
                 .build();
     }

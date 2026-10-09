@@ -8,6 +8,15 @@ public final class AuthHolder {
 
     public static final String SESSION_LOGIN_USER = "robot:session:login-user";
 
+    /** 独立 token 会话所属刷新族；业务服务可据此复验会话是否已撤销。 */
+    public static final String SESSION_AUTH_FAMILY = "robot:session:auth-family";
+
+    /** 当前访问令牌的 SHA-256，用于与刷新族的当前访问令牌核对。 */
+    public static final String SESSION_AUTH_ACCESS_DIGEST = "robot:session:access-digest";
+
+    /** 登录时的凭据指纹；只保存在服务端，改密后不得继续刷新旧会话。 */
+    public static final String SESSION_CREDENTIAL_FINGERPRINT = "robot:session:credential-fingerprint";
+
     private static AuthAccessor accessor = new SaTokenAuthAccessor();
 
     private AuthHolder() {
@@ -73,7 +82,7 @@ public final class AuthHolder {
         @SuppressWarnings("unchecked")
         public <T> T getSessionAttr(String key, Class<T> type) {
             try {
-                Object value = cn.dev33.satoken.stp.StpUtil.getSession()
+                Object value = cn.dev33.satoken.stp.StpUtil.getTokenSession()
                         .get(key);
                 if (value == null) {
                     return null;
@@ -89,7 +98,7 @@ public final class AuthHolder {
 
         @Override
         public void setSessionAttr(String key, Object value) {
-            cn.dev33.satoken.stp.StpUtil.getSession().set(key, value);
+            cn.dev33.satoken.stp.StpUtil.getTokenSession().set(key, value);
         }
 
         @Override

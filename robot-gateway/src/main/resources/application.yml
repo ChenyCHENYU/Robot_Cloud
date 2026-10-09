@@ -6,11 +6,10 @@ spring:
     name: robot-gateway
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
-  config:
-    import:
-      - optional:nacos:robot-gateway.yml?group=ROBOT_CLOUD&refreshEnabled=true
   cloud:
     nacos:
+      config:
+        enabled: false
       discovery:
         enabled: false
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
@@ -35,7 +34,7 @@ spring:
             max-age: 3600
       routes:
         - id: robot-auth
-          uri: lb://robot-auth
+          uri: ${robot.gateway.routes.auth-uri}
           predicates:
             - Path=/auth/**
           filters:
@@ -43,7 +42,7 @@ spring:
               args:
                 maxSize: 5242880
         - id: robot-system
-          uri: lb://robot-system
+          uri: ${robot.gateway.routes.system-uri}
           predicates:
             - Path=/sys/**,/account/**
           filters:
@@ -56,6 +55,9 @@ spring:
 
 robot:
   gateway:
+    routes:
+      auth-uri: ${ROBOT_AUTH_URI:http://127.0.0.1:9201}
+      system-uri: ${ROBOT_SYSTEM_URI:http://127.0.0.1:9202}
     auth:
       white-paths:
         - /auth/login
@@ -79,3 +81,24 @@ logging:
     root: info
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5level [%X{traceId:-}] [%thread] %logger{40} - %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  cloud:
+    sentinel:
+      enabled: false
+    nacos:
+      config:
+        enabled: false
+      discovery:
+        enabled: false
+
+management:
+  health:
+    sentinel:
+      enabled: false
+    nacos-discovery:
+      enabled: false

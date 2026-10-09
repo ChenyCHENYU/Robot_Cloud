@@ -16,6 +16,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>com.robot</groupId>
       <artifactId>robot-common-core</artifactId>
     </dependency>
@@ -29,6 +34,10 @@
       <groupId>com.alibaba.cloud</groupId>
       <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.alibaba.cloud</groupId>
+      <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+    </dependency>
     <!-- Sentinel 网关流控 -->
     <dependency>
       <groupId>com.alibaba.cloud</groupId>
@@ -37,6 +46,10 @@
     <dependency>
       <groupId>com.alibaba.csp</groupId>
       <artifactId>sentinel-spring-cloud-gateway-adapter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.alibaba.csp</groupId>
+      <artifactId>sentinel-datasource-nacos</artifactId>
     </dependency>
     <!-- 负载均衡器 -->
     <dependency>

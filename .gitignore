@@ -29,3 +29,11 @@ application-local.yaml
 *.pem
 *.keystore
 .env
+
+# ---- Local skill execution receipts ----
+.wl-skills-bd/runs/
+.wl-skills-bd/.state/
+
+# ---- Python verification helpers ----
+__pycache__/
+*.py[cod]

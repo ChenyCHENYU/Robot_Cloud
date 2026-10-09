@@ -29,10 +29,12 @@ public class LoginResponse implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** 访问令牌（未激活形态为空串）。 */
+    @lombok.ToString.Exclude
     private String token;
 
     /** 刷新令牌（未激活形态为空串）。 */
     @Builder.Default
+    @lombok.ToString.Exclude
     private String refreshToken = "";
 
     /** 访问令牌有效期（秒；未激活形态为 0）。 */
@@ -40,6 +42,7 @@ public class LoginResponse implements Serializable {
     private long expiresIn = 0L;
 
     /** 登录票据：身份已验证、待选择公司的短时一次性凭据。 */
+    @lombok.ToString.Exclude
     private String loginTicket;
 
     /** 可进入的企业工作上下文清单（角色只在激活后授予）。 */

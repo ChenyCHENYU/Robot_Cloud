@@ -12,5 +12,12 @@ public record MenuButtonVO(
         String name,
         String permCode,
         Integer sort,
-        Integer status) {
+        Integer status,
+        String permission,
+        String remark,
+        Integer revision) {
+
+    public MenuButtonVO(String id, String menuId, String name, String permCode, Integer sort, Integer status) {
+        this(id, menuId, name, permCode, sort, status, permCode, null, null);
+    }
 }

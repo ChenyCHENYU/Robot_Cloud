@@ -3,23 +3,36 @@ package com.robot.common.security.config;
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
 import com.robot.common.security.handler.NotLoginExceptionHandler;
+import com.robot.common.security.filter.InnerTrustContextFilter;
+import com.robot.common.redis.core.RedisHelper;
+import com.robot.common.security.interceptor.InnerCallInterceptor;
+import com.robot.common.security.interceptor.LoginSessionValidationInterceptor;
+import com.robot.common.security.session.SessionStateVerifier;
+import com.robot.common.security.session.RedisSessionStateVerifier;
+import com.robot.common.security.session.SessionSubjectVerifier;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * 安全自动装配：注册 Sa-Token 拦截器（注解式鉴权）与未登录异常处理。
+ * 安全自动装配：默认登录校验、注解式授权、刷新族复验与内部服务鉴权。
  *
  * <p>策略：拦截器只做「注解有效性 + 登录校验」；
- * 路由级白名单（/auth/login 等）由网关负责，服务侧通过
- * {@code robot.security.exclude-paths} 排除内部接口。
+ * 服务侧公共路径通过 {@code robot.security.exclude-paths} 显式排除；
+ * 内部接口先验证服务凭据，已有登录态仍须复验刷新族，才进入授权/业务读取。
  */
 @AutoConfiguration
 @ConditionalOnClass(StpUtil.class)
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableConfigurationProperties(RobotSecurityProperties.class)
 public class RobotSecurityAutoConfiguration {
 
@@ -29,26 +42,42 @@ public class RobotSecurityAutoConfiguration {
         return new NotLoginExceptionHandler();
     }
 
-    /** 登录后的 Feign 委托上下文透传（仅消费方具备 Feign 时装配）。 */
+    /** 所有 HTTP 调度的入口/出口清理，不依赖 MVC handler 成功匹配或放行。 */
     @Bean
-    @ConditionalOnClass(feign.RequestInterceptor.class)
-    @ConditionalOnMissingBean(com.robot.common.security.interceptor.InnerTrustRelayInterceptor.class)
-    public feign.RequestInterceptor innerTrustRelayInterceptor() {
-        return new com.robot.common.security.interceptor.InnerTrustRelayInterceptor();
+    public FilterRegistrationBean<InnerTrustContextFilter> innerTrustContextFilter() {
+        FilterRegistrationBean<InnerTrustContextFilter> registration =
+                new FilterRegistrationBean<>(new InnerTrustContextFilter());
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        registration.setAsyncSupported(true);
+        registration.setDispatcherTypes(jakarta.servlet.DispatcherType.REQUEST,
+                jakarta.servlet.DispatcherType.ASYNC, jakarta.servlet.DispatcherType.ERROR);
+        return registration;
     }
 
     @Bean
-    public WebMvcConfigurer robotSaTokenInterceptorConfigurer(RobotSecurityProperties properties) {
+    @ConditionalOnMissingBean(SessionStateVerifier.class)
+    public SessionStateVerifier sessionStateVerifier(RedisHelper redisHelper, ObjectMapper objectMapper,
+            ObjectProvider<SessionSubjectVerifier> subjectVerifiers) {
+        return new RedisSessionStateVerifier(redisHelper, objectMapper, subjectVerifiers);
+    }
+
+    @Bean
+    public WebMvcConfigurer robotSaTokenInterceptorConfigurer(RobotSecurityProperties properties,
+            SessionStateVerifier sessionStateVerifier) {
         return new WebMvcConfigurer() {
             @Override
             public void addInterceptors(InterceptorRegistry registry) {
-                registry.addInterceptor(new SaInterceptor())
+                registry.addInterceptor(new InnerCallInterceptor(properties))
+                        .addPathPatterns("/inner/**").order(Ordered.HIGHEST_PRECEDENCE);
+                registry.addInterceptor(new SaInterceptor(handler -> StpUtil.checkLogin()))
                         .addPathPatterns("/**")
+                        .excludePathPatterns("/inner/**")
                         .excludePathPatterns(properties.getExcludePaths());
-                // 内部接口（/inner/**）不走登录态，改走服务间密钥校验
-                registry.addInterceptor(new com.robot.common.security.interceptor.InnerCallInterceptor(
-                                properties))
-                        .addPathPatterns("/inner/**");
+                registry.addInterceptor(new LoginSessionValidationInterceptor(sessionStateVerifier))
+                        .addPathPatterns("/**")
+                        .order(Ordered.HIGHEST_PRECEDENCE + 1)
+                        .excludePathPatterns(properties.getExcludePaths().stream()
+                                .filter(path -> !path.startsWith("/inner")).toList());
             }
         };
     }

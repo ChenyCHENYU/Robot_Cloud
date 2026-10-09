@@ -17,4 +17,7 @@ public class SysDictType extends BaseEntity {
     private String typeName;
 
     private String remark;
+
+    /** 类型停用时，全部子项不向业务接口供给。 */
+    private Integer statusFlag = 1;
 }

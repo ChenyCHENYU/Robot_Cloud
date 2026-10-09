@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  *   <li>CREATE_USER_NO / CREATE_DATE_TIME / DELETE_FLAG / REVISION 仅插入时填充；</li>
  *   <li>UPDATE_USER_NO / UPDATE_DATE_TIME 插入与更新都填充；</li>
  *   <li>COMPANY_ID 只取 {@code AuthUtil.getLoginCompanyId()}（登录态），未登录写入由租户拦截器兜底拦截；</li>
- *   <li>字段已有值时不覆盖（支持数据修复等显式赋值场景）。</li>
+ *   <li>更新人/时间每次写入覆盖旧值；创建字段保持不变。</li>
  * </ul>
  */
 public class AuditMetaObjectHandler implements MetaObjectHandler {
@@ -38,9 +38,8 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
 
     @Override
     public void updateFill(MetaObject metaObject) {
-        strictUpdateFill(metaObject, "updateUserNo", String.class, currentActor());
-        strictUpdateFill(metaObject, "updateDateTime", LocalDateTime.class,
-                LocalDateTime.now());
+        setFieldValByName("updateUserNo", currentActor(), metaObject);
+        setFieldValByName("updateDateTime", LocalDateTime.now(), metaObject);
     }
 
     /** 当前操作人工号：登录态取登录名，系统任务取 SYSTEM。 */

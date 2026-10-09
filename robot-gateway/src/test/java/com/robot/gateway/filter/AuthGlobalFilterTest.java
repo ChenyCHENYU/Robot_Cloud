@@ -4,6 +4,7 @@ import com.robot.gateway.properties.AuthProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.http.HttpMethod;
@@ -95,6 +96,66 @@ class AuthGlobalFilterTest {
     }
 
     @Test
+    void legalTraceIdsArePreservedInForwardedAndResponseHeaders() {
+        for (String traceId : new String[]{"x", "TRACE_2026-10", "A".repeat(64)}) {
+            MockServerWebExchange exchange = MockServerWebExchange.from(
+                    MockServerHttpRequest.post("/auth/login").header("X-Trace-Id", traceId).build());
+            filter.filter(exchange, forwarded -> {
+                assertThat(forwarded.getRequest().getHeaders().getFirst("X-Trace-Id")).isEqualTo(traceId);
+                return Mono.empty();
+            }).block();
+            assertThat(exchange.getResponse().getHeaders().getFirst("X-Trace-Id")).isEqualTo(traceId);
+        }
+    }
+
+    @Test
+    void invalidTraceHeadersAreReplacedBeforeForwarding() {
+        for (String traceId : new String[]{"", " ", "A".repeat(65), "trace\r\npassword=fixture",
+                "http://downstream.fixture?token=fixture"}) {
+            MockServerWebExchange exchange = MockServerWebExchange.from(
+                    MockServerHttpRequest.post("/auth/login").header("X-Trace-Id", traceId).build());
+            filter.filter(exchange, forwarded -> {
+                assertThat(forwarded.getRequest().getHeaders().getFirst("X-Trace-Id"))
+                        .matches("[a-f0-9]{32}").isNotEqualTo(traceId)
+                        .isEqualTo(exchange.getResponse().getHeaders().getFirst("X-Trace-Id"));
+                return Mono.empty();
+            }).block();
+        }
+    }
+
+    @Test
+    void invalidTraceHeaderIsNotEchoedByRejectedRequest() {
+        String supplied = "http://downstream.fixture?password=fixture";
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/sys/users").header("X-Trace-Id", supplied).build());
+        filter.filter(exchange, forwarded -> Mono.error(new AssertionError("rejected request must not forward"))).block();
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(exchange.getResponse().getHeaders().getFirst("X-Trace-Id")).matches("[a-f0-9]{32}");
+        assertThat(exchange.getResponse().getBodyAsString().block()).contains("\"traceId\"")
+                .doesNotContain(supplied, "downstream.fixture", "password=fixture");
+    }
+
+    @Test
+    void reactiveTracePropagationDoesNotLeaveThreadMdcAfterChainFailure() {
+        java.util.Map<String, String> previous = MDC.getCopyOfContextMap();
+        MDC.clear();
+        try {
+            MockServerWebExchange exchange = MockServerWebExchange.from(
+                    MockServerHttpRequest.post("/auth/login").header("X-Trace-Id", "safe-trace").build());
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> filter.filter(exchange, forwarded -> {
+                assertThat(MDC.get("traceId")).isNull();
+                return Mono.error(new IllegalStateException("fixture failure"));
+            }).block()).isInstanceOf(IllegalStateException.class);
+            assertThat(MDC.get("traceId")).isNull();
+        } finally {
+            MDC.clear();
+            if (previous != null) {
+                MDC.setContextMap(previous);
+            }
+        }
+    }
+
+    @Test
     @DisplayName("OPTIONS 预检请求免鉴权放行（CORS）")
     void optionsPreflightShouldPass() {
         MockServerWebExchange exchange = exchange(HttpMethod.OPTIONS, "/sys/users");
@@ -112,5 +173,30 @@ class AuthGlobalFilterTest {
                         .build());
         filter.filter(exchange, this::passThroughChain).block();
         assertThat(innerHeaderSeen.get()).isNull();
+    }
+
+    @Test
+    void allInternalHeadersAreStrippedOnProtectedPublicAndPreflightRoutes() {
+        for (String path : new String[]{"/auth/login", "/auth/menu-list", "/sys/users"}) {
+            for (HttpMethod method : new HttpMethod[]{HttpMethod.GET, HttpMethod.OPTIONS}) {
+                MockServerWebExchange exchange = MockServerWebExchange.from(
+                        MockServerHttpRequest.method(method, path)
+                                .header("Authorization", "Bearer t")
+                                .header("x-INNER-call", "secret", "second-secret")
+                                .header("X-Inner-User-Id", "forged-user")
+                                .header("x-inner-company-id", "forged-company")
+                                .header("X-Inner-Username", "forged-username")
+                                .header("X-Inner-Future-Claim", "forged-future")
+                                .build());
+                filter.filter(exchange, forwarded -> {
+                    assertThat(forwarded.getRequest().getHeaders().keySet())
+                            .noneMatch(name -> name.toLowerCase(java.util.Locale.ROOT).startsWith("x-inner-"));
+                    assertThat(forwarded.getRequest().getHeaders().getFirst("Authorization"))
+                            .isEqualTo("Bearer t");
+                    return Mono.empty();
+                }).block();
+                assertThat(exchange.getResponse().getStatusCode()).isNull();
+            }
+        }
     }
 }

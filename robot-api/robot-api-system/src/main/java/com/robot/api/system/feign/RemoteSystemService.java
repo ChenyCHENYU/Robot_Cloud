@@ -26,6 +26,7 @@ import java.util.Map;
  * </ul>
  */
 @FeignClient(name = "robot-system", contextId = "remoteSystemService",
+        configuration = com.robot.api.system.config.RemoteSystemFeignConfiguration.class,
         fallbackFactory = RemoteSystemServiceFallbackFactory.class)
 public interface RemoteSystemService {
 

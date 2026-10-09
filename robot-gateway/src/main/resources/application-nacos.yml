@@ -1,6 +1,14 @@
 spring:
+  config:
+    import:
+      - optional:nacos:robot-gateway.yml?group=ROBOT_CLOUD&refreshEnabled=true
   cloud:
     nacos:
+      config:
+        enabled: true
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ROBOT_CLOUD
       discovery:
         enabled: true
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
@@ -15,3 +23,9 @@ spring:
             groupId: SENTINEL_GATEWAY_GROUP
             dataId: robot-gateway-flow-rules
             rule-type: gw-flow
+
+robot:
+  gateway:
+    routes:
+      auth-uri: ${ROBOT_AUTH_URI:lb://robot-auth}
+      system-uri: ${ROBOT_SYSTEM_URI:lb://robot-system}

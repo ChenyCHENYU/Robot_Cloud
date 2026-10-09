@@ -1,0 +1,905 @@
+{
+  "schemaVersion": 1,
+  "scope": "complete columns + unique indexes of user/role aggregate tables, not all system tables",
+  "tables": {
+    "sys_user": {
+      "entity": "com.robot.system.api.entity.SysUser",
+      "columns": {
+        "id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.id",
+          "sourceOfTruth": "sys_user.id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "服务端生成的不透明字符串技术主键（最长64字符）；不能按数值ID序列化或计算。",
+          "length": 64
+        },
+        "username": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.username",
+          "sourceOfTruth": "sys_user.username",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "全局登录名（3至30位字母数字下划线）；未删除账号按MySQL当前不区分大小写排序规则唯一。",
+          "length": 30
+        },
+        "password_hash": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.password_hash",
+          "sourceOfTruth": "sys_user.password_hash",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "BCrypt密码摘要；仅内部登录供给和服务端密码校验使用，禁止公共用户/角色响应输出。",
+          "length": 100
+        },
+        "nickname": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.nickname",
+          "sourceOfTruth": "sys_user.nickname",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "账号全局昵称；非公司成员别名。",
+          "length": 30
+        },
+        "email": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.email",
+          "sourceOfTruth": "sys_user.email",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "账号全局邮箱，可空；写接口进行邮箱格式与长度校验。",
+          "length": 100
+        },
+        "phone": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.phone",
+          "sourceOfTruth": "sys_user.phone",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "账号全局联系电话，可空；最大20字符。",
+          "length": 20
+        },
+        "department_id": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.department_id",
+          "sourceOfTruth": "sys_user.department_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "账号行上的部门引用；当前实现为跨公司共享的账户字段，写侧必须验证部门属于当前公司，不能伪称成员独立部门模型。",
+          "length": 64
+        },
+        "status_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "1",
+          "generated": false,
+          "semanticId": "sys_user.status_flag",
+          "sourceOfTruth": "sys_user.status_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "平台账号启停：1启用、0停用；与成员启停独立，停用后所有该账号登录上下文均被拒绝。"
+        },
+        "create_user_no": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.create_user_no",
+          "sourceOfTruth": "sys_user.create_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "创建者审计值：登录或可信委托的用户名；没有用户身份的系统任务为SYSTEM。更新时保留原值。",
+          "length": 64
+        },
+        "create_date_time": {
+          "type": "datetime",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.create_date_time",
+          "sourceOfTruth": "sys_user.create_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "服务端创建时间（DATETIME）；更新时保留原值，不接受客户端审计覆盖。"
+        },
+        "update_user_no": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.update_user_no",
+          "sourceOfTruth": "sys_user.update_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "每次写入由审计填充器覆盖为当前可信操作者用户名（无用户身份系统任务为SYSTEM）。",
+          "length": 64
+        },
+        "update_date_time": {
+          "type": "datetime",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user.update_date_time",
+          "sourceOfTruth": "sys_user.update_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "每次写入由服务端覆盖的更新时间（DATETIME）；不以旧实体值冒充本次审计时间。"
+        },
+        "delete_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "1",
+          "generated": false,
+          "semanticId": "sys_user.delete_flag",
+          "sourceOfTruth": "sys_user.delete_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "软删：1表示未删除，0表示已删除；独立于status_flag启停；普通MyBatis查询过滤为1。"
+        },
+        "revision": {
+          "type": "int",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_user.revision",
+          "sourceOfTruth": "sys_user.revision",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "平台账户资料/密码的CAS版本；UserVO.revision映射此列，不能用于成员移出或角色绑定CAS。"
+        },
+        "security_version": {
+          "type": "bigint",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_user.security-version",
+          "sourceOfTruth": "sys_user.security_version",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V7__session_revocation_and_active_unique.sql + SystemSessionSubjectVerifier + UserService",
+          "definition": "账号会话撤销代数（初始0，只增不减）；密码/账号安全状态变化推进，与业务revision分离，用于让旧family/access永久失效。"
+        },
+        "active_username": {
+          "type": "varchar",
+          "length": 30,
+          "nullable": true,
+          "default": null,
+          "generated": true,
+          "semanticId": "sys_user.active_username",
+          "sourceOfTruth": "MySQL generated column",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V7__session_revocation_and_active_unique.sql",
+          "definition": "MySQL STORED生成的活跃业务键：delete_flag=1时保留对应业务值，其余为NULL，供唯一索引阻止活跃重复且允许多条历史软删。"
+        }
+      },
+      "uniqueIndexes": {
+        "PRIMARY": [
+          "id"
+        ],
+        "uk_sys_user_active_username": [
+          "active_username"
+        ]
+      }
+    },
+    "sys_user_company": {
+      "entity": "com.robot.system.api.entity.SysUserCompany",
+      "columns": {
+        "id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_company.id",
+          "sourceOfTruth": "sys_user_company.id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "服务端生成的不透明字符串技术主键（最长64字符）；不能按数值ID序列化或计算。",
+          "length": 64
+        },
+        "user_id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_company.user_id",
+          "sourceOfTruth": "sys_user_company.user_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "全局账号sys_user.id的字符串引用；授权/成员关联还必须匹配公司上下文，不单凭ID授予访问。",
+          "length": 64
+        },
+        "company_id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_company.company_id",
+          "sourceOfTruth": "sys_user_company.company_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "公司隔离键：只由当前可信登录/内部委托上下文或服务端已验证关联赋值；禁止请求方任意指定。",
+          "length": 64
+        },
+        "primary_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_user_company.primary_flag",
+          "sourceOfTruth": "sys_user_company.primary_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "是否主公司：1是、0否；V9限制同一账号最多一条未删除主公司成员记录（约束不依赖status_flag）。"
+        },
+        "status_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "1",
+          "generated": false,
+          "semanticId": "sys_user_company.status_flag",
+          "sourceOfTruth": "sys_user_company.status_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "公司成员启停：1启用、0停用；UserVO.status/statusFlag投影此列；不改变平台账户status_flag。"
+        },
+        "create_user_no": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_company.create_user_no",
+          "sourceOfTruth": "sys_user_company.create_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "创建者审计值：登录或可信委托的用户名；没有用户身份的系统任务为SYSTEM。更新时保留原值。",
+          "length": 64
+        },
+        "create_date_time": {
+          "type": "datetime",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_company.create_date_time",
+          "sourceOfTruth": "sys_user_company.create_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "服务端创建时间（DATETIME）；更新时保留原值，不接受客户端审计覆盖。"
+        },
+        "update_user_no": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_company.update_user_no",
+          "sourceOfTruth": "sys_user_company.update_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "每次写入由审计填充器覆盖为当前可信操作者用户名（无用户身份系统任务为SYSTEM）。",
+          "length": 64
+        },
+        "update_date_time": {
+          "type": "datetime",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_company.update_date_time",
+          "sourceOfTruth": "sys_user_company.update_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "每次写入由服务端覆盖的更新时间（DATETIME）；不以旧实体值冒充本次审计时间。"
+        },
+        "delete_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "1",
+          "generated": false,
+          "semanticId": "sys_user_company.delete_flag",
+          "sourceOfTruth": "sys_user_company.delete_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "软删：1表示未删除，0表示已删除；独立于status_flag启停；普通MyBatis查询过滤为1。"
+        },
+        "revision": {
+          "type": "int",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_user_company.revision",
+          "sourceOfTruth": "sys_user_company.revision",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "公司成员聚合CAS版本；UserVO.membershipRevision及成员删除/状态expectedRevision来源，角色重绑和密码重置也必须检查。"
+        },
+        "security_version": {
+          "type": "bigint",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_user_company.security-version",
+          "sourceOfTruth": "sys_user_company.security_version",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V7__session_revocation_and_active_unique.sql + SystemSessionSubjectVerifier + UserService",
+          "definition": "成员上下文撤销代数（初始0，只增不减）；移出/停用推进，重新启用或另建成员不能恢复旧context/access。"
+        },
+        "active_user_id": {
+          "type": "varchar",
+          "length": 64,
+          "nullable": true,
+          "default": null,
+          "generated": true,
+          "semanticId": "sys_user_company.active_user_id",
+          "sourceOfTruth": "MySQL generated column",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V9__active_relation_uniqueness.sql",
+          "definition": "MySQL STORED生成的活跃业务键：delete_flag=1时保留对应业务值，其余为NULL，供唯一索引阻止活跃重复且允许多条历史软删。"
+        },
+        "primary_user_id": {
+          "type": "varchar",
+          "length": 64,
+          "nullable": true,
+          "default": null,
+          "generated": true,
+          "semanticId": "sys_user_company.primary_user_id",
+          "sourceOfTruth": "MySQL generated column",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V9__active_relation_uniqueness.sql",
+          "definition": "MySQL STORED生成的主公司账号键：仅delete_flag=1且primary_flag=1时取user_id，否则NULL；跨公司最多一条未删除主公司记录。"
+        }
+      },
+      "uniqueIndexes": {
+        "PRIMARY": [
+          "id"
+        ],
+        "uk_sys_member_active": [
+          "company_id",
+          "active_user_id"
+        ],
+        "uk_sys_member_primary": [
+          "primary_user_id"
+        ]
+      }
+    },
+    "sys_role": {
+      "entity": "com.robot.system.api.entity.SysRole",
+      "columns": {
+        "id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role.id",
+          "sourceOfTruth": "sys_role.id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "服务端生成的不透明字符串技术主键（最长64字符）；不能按数值ID序列化或计算。",
+          "length": 64
+        },
+        "company_id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role.company_id",
+          "sourceOfTruth": "sys_role.company_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "公司隔离键：只由当前可信登录/内部委托上下文或服务端已验证关联赋值；禁止请求方任意指定。",
+          "length": 64
+        },
+        "role_name": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role.role_name",
+          "sourceOfTruth": "sys_role.role_name",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "当前公司内的角色显示名称（最大30字符）。",
+          "length": 30
+        },
+        "role_code": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role.role_code",
+          "sourceOfTruth": "sys_role.role_code",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "当前公司内角色业务编码（大写字母开头、字母数字下划线、最多50字符）；同公司未删除角色唯一。",
+          "length": 50
+        },
+        "data_scope": {
+          "type": "varchar",
+          "nullable": false,
+          "default": "self",
+          "generated": false,
+          "semanticId": "sys_role.data_scope",
+          "sourceOfTruth": "sys_role.data_scope",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "角色用户读取范围：self/department/department_below/all；旧custom记录保留读取，不允许通过当前写DTO新增尚未定义的custom配置。",
+          "length": 20
+        },
+        "sort_no": {
+          "type": "int",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_role.sort_no",
+          "sourceOfTruth": "sys_role.sort_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "角色列表排序整数；与ID共同形成稳定顺序，不授予权限。"
+        },
+        "status_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "1",
+          "generated": false,
+          "semanticId": "sys_role.status_flag",
+          "sourceOfTruth": "sys_role.status_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "角色启停：1启用、0停用；有效角色解析排除停用角色，永久授权管理不能借临时角色委托放大。"
+        },
+        "remark": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role.remark",
+          "sourceOfTruth": "sys_role.remark",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "角色备注（最大255字符），兼容前端description。",
+          "length": 255
+        },
+        "create_user_no": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role.create_user_no",
+          "sourceOfTruth": "sys_role.create_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "创建者审计值：登录或可信委托的用户名；没有用户身份的系统任务为SYSTEM。更新时保留原值。",
+          "length": 64
+        },
+        "create_date_time": {
+          "type": "datetime",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role.create_date_time",
+          "sourceOfTruth": "sys_role.create_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "服务端创建时间（DATETIME）；更新时保留原值，不接受客户端审计覆盖。"
+        },
+        "update_user_no": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role.update_user_no",
+          "sourceOfTruth": "sys_role.update_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "每次写入由审计填充器覆盖为当前可信操作者用户名（无用户身份系统任务为SYSTEM）。",
+          "length": 64
+        },
+        "update_date_time": {
+          "type": "datetime",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role.update_date_time",
+          "sourceOfTruth": "sys_role.update_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "每次写入由服务端覆盖的更新时间（DATETIME）；不以旧实体值冒充本次审计时间。"
+        },
+        "delete_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "1",
+          "generated": false,
+          "semanticId": "sys_role.delete_flag",
+          "sourceOfTruth": "sys_role.delete_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "软删：1表示未删除，0表示已删除；独立于status_flag启停；普通MyBatis查询过滤为1。"
+        },
+        "revision": {
+          "type": "int",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_role.revision",
+          "sourceOfTruth": "sys_role.revision",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "角色与权限关联聚合CAS版本；RoleVO.revision对应角色编辑、精确授权重绑、角色删除expectedRevision。"
+        },
+        "active_role_code": {
+          "type": "varchar",
+          "length": 50,
+          "nullable": true,
+          "default": null,
+          "generated": true,
+          "semanticId": "sys_role.active_role_code",
+          "sourceOfTruth": "MySQL generated column",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V9__active_relation_uniqueness.sql",
+          "definition": "MySQL STORED生成的活跃业务键：delete_flag=1时保留对应业务值，其余为NULL，供唯一索引阻止活跃重复且允许多条历史软删。"
+        }
+      },
+      "uniqueIndexes": {
+        "PRIMARY": [
+          "id"
+        ],
+        "uk_sys_role_active_code": [
+          "company_id",
+          "active_role_code"
+        ]
+      }
+    },
+    "sys_user_role": {
+      "entity": "com.robot.system.api.entity.SysUserRole",
+      "columns": {
+        "id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_role.id",
+          "sourceOfTruth": "sys_user_role.id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "服务端生成的不透明字符串技术主键（最长64字符）；不能按数值ID序列化或计算。",
+          "length": 64
+        },
+        "company_id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_role.company_id",
+          "sourceOfTruth": "sys_user_role.company_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "公司隔离键：只由当前可信登录/内部委托上下文或服务端已验证关联赋值；禁止请求方任意指定。",
+          "length": 64
+        },
+        "user_id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_role.user_id",
+          "sourceOfTruth": "sys_user_role.user_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "全局账号sys_user.id的字符串引用；授权/成员关联还必须匹配公司上下文，不单凭ID授予访问。",
+          "length": 64
+        },
+        "role_id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_role.role_id",
+          "sourceOfTruth": "sys_user_role.role_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "sys_role.id的字符串引用；绑定命令验证角色所属公司，记录代表永久角色授予。",
+          "length": 64
+        },
+        "create_user_no": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_role.create_user_no",
+          "sourceOfTruth": "sys_user_role.create_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "创建者审计值：登录或可信委托的用户名；没有用户身份的系统任务为SYSTEM。更新时保留原值。",
+          "length": 64
+        },
+        "create_date_time": {
+          "type": "datetime",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_role.create_date_time",
+          "sourceOfTruth": "sys_user_role.create_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "服务端创建时间（DATETIME）；更新时保留原值，不接受客户端审计覆盖。"
+        },
+        "update_user_no": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_role.update_user_no",
+          "sourceOfTruth": "sys_user_role.update_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "每次写入由审计填充器覆盖为当前可信操作者用户名（无用户身份系统任务为SYSTEM）。",
+          "length": 64
+        },
+        "update_date_time": {
+          "type": "datetime",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_role.update_date_time",
+          "sourceOfTruth": "sys_user_role.update_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "每次写入由服务端覆盖的更新时间（DATETIME）；不以旧实体值冒充本次审计时间。"
+        },
+        "delete_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "1",
+          "generated": false,
+          "semanticId": "sys_user_role.delete_flag",
+          "sourceOfTruth": "sys_user_role.delete_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "软删：1表示未删除，0表示已删除；独立于status_flag启停；普通MyBatis查询过滤为1。"
+        },
+        "revision": {
+          "type": "int",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_user_role.revision",
+          "sourceOfTruth": "sys_user_role.revision",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "MyBatis乐观锁版本，初始0；提交期CAS匹配客户端读取的版本并推进，更新0行返回并发冲突。"
+        },
+        "active_role_id": {
+          "type": "varchar",
+          "length": 64,
+          "nullable": true,
+          "default": null,
+          "generated": true,
+          "semanticId": "sys_user_role.active_role_id",
+          "sourceOfTruth": "MySQL generated column",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V9__active_relation_uniqueness.sql",
+          "definition": "MySQL STORED生成的活跃业务键：delete_flag=1时保留对应业务值，其余为NULL，供唯一索引阻止活跃重复且允许多条历史软删。"
+        }
+      },
+      "uniqueIndexes": {
+        "PRIMARY": [
+          "id"
+        ],
+        "uk_sys_user_role_active": [
+          "company_id",
+          "user_id",
+          "active_role_id"
+        ]
+      }
+    },
+    "sys_role_menu": {
+      "entity": "com.robot.system.api.entity.SysRoleMenu",
+      "columns": {
+        "id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_menu.id",
+          "sourceOfTruth": "sys_role_menu.id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "服务端生成的不透明字符串技术主键（最长64字符）；不能按数值ID序列化或计算。",
+          "length": 64
+        },
+        "role_id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_menu.role_id",
+          "sourceOfTruth": "sys_role_menu.role_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "sys_role.id的字符串引用；绑定命令验证角色所属公司，记录代表永久角色授予。",
+          "length": 64
+        },
+        "menu_id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_menu.menu_id",
+          "sourceOfTruth": "sys_role_menu.menu_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "sys_menu.id的精确菜单资源引用；菜单绑定提供可达导航，不能隐含按钮操作权限。",
+          "length": 64
+        },
+        "create_user_no": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_menu.create_user_no",
+          "sourceOfTruth": "sys_role_menu.create_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "创建者审计值：登录或可信委托的用户名；没有用户身份的系统任务为SYSTEM。更新时保留原值。",
+          "length": 64
+        },
+        "create_date_time": {
+          "type": "datetime",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_menu.create_date_time",
+          "sourceOfTruth": "sys_role_menu.create_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "服务端创建时间（DATETIME）；更新时保留原值，不接受客户端审计覆盖。"
+        },
+        "update_user_no": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_menu.update_user_no",
+          "sourceOfTruth": "sys_role_menu.update_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "每次写入由审计填充器覆盖为当前可信操作者用户名（无用户身份系统任务为SYSTEM）。",
+          "length": 64
+        },
+        "update_date_time": {
+          "type": "datetime",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_menu.update_date_time",
+          "sourceOfTruth": "sys_role_menu.update_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "每次写入由服务端覆盖的更新时间（DATETIME）；不以旧实体值冒充本次审计时间。"
+        },
+        "delete_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "1",
+          "generated": false,
+          "semanticId": "sys_role_menu.delete_flag",
+          "sourceOfTruth": "sys_role_menu.delete_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "软删：1表示未删除，0表示已删除；独立于status_flag启停；普通MyBatis查询过滤为1。"
+        },
+        "revision": {
+          "type": "int",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_role_menu.revision",
+          "sourceOfTruth": "sys_role_menu.revision",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
+          "definition": "MyBatis乐观锁版本，初始0；提交期CAS匹配客户端读取的版本并推进，更新0行返回并发冲突。"
+        },
+        "active_menu_id": {
+          "type": "varchar",
+          "length": 64,
+          "nullable": true,
+          "default": null,
+          "generated": true,
+          "semanticId": "sys_role_menu.active_menu_id",
+          "sourceOfTruth": "MySQL generated column",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V9__active_relation_uniqueness.sql",
+          "definition": "MySQL STORED生成的活跃业务键：delete_flag=1时保留对应业务值，其余为NULL，供唯一索引阻止活跃重复且允许多条历史软删。"
+        }
+      },
+      "uniqueIndexes": {
+        "PRIMARY": [
+          "id"
+        ],
+        "uk_sys_role_menu_active": [
+          "role_id",
+          "active_menu_id"
+        ]
+      }
+    },
+    "sys_role_button": {
+      "entity": "com.robot.system.api.entity.SysRoleButton",
+      "columns": {
+        "id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_button.id",
+          "sourceOfTruth": "sys_role_button.id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V5__role_button.sql",
+          "definition": "服务端生成的不透明字符串技术主键（最长64字符）；不能按数值ID序列化或计算。",
+          "length": 64
+        },
+        "role_id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_button.role_id",
+          "sourceOfTruth": "sys_role_button.role_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V5__role_button.sql",
+          "definition": "sys_role.id的字符串引用；绑定命令验证角色所属公司，记录代表永久角色授予。",
+          "length": 64
+        },
+        "button_id": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_button.button_id",
+          "sourceOfTruth": "sys_role_button.button_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V5__role_button.sql",
+          "definition": "sys_menu_button.id的精确按钮资源引用；按钮权限独立绑定，不通过任意通配权限码放大。",
+          "length": 64
+        },
+        "create_user_no": {
+          "type": "varchar",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_button.create_user_no",
+          "sourceOfTruth": "sys_role_button.create_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V5__role_button.sql",
+          "definition": "创建者审计值：登录或可信委托的用户名；没有用户身份的系统任务为SYSTEM。更新时保留原值。",
+          "length": 64
+        },
+        "create_date_time": {
+          "type": "datetime",
+          "nullable": false,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_button.create_date_time",
+          "sourceOfTruth": "sys_role_button.create_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V5__role_button.sql",
+          "definition": "服务端创建时间（DATETIME）；更新时保留原值，不接受客户端审计覆盖。"
+        },
+        "update_user_no": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_button.update_user_no",
+          "sourceOfTruth": "sys_role_button.update_user_no",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V5__role_button.sql",
+          "definition": "每次写入由审计填充器覆盖为当前可信操作者用户名（无用户身份系统任务为SYSTEM）。",
+          "length": 64
+        },
+        "update_date_time": {
+          "type": "datetime",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_role_button.update_date_time",
+          "sourceOfTruth": "sys_role_button.update_date_time",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V5__role_button.sql",
+          "definition": "每次写入由服务端覆盖的更新时间（DATETIME）；不以旧实体值冒充本次审计时间。"
+        },
+        "delete_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "1",
+          "generated": false,
+          "semanticId": "sys_role_button.delete_flag",
+          "sourceOfTruth": "sys_role_button.delete_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V5__role_button.sql",
+          "definition": "软删：1表示未删除，0表示已删除；独立于status_flag启停；普通MyBatis查询过滤为1。"
+        },
+        "revision": {
+          "type": "int",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_role_button.revision",
+          "sourceOfTruth": "sys_role_button.revision",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V5__role_button.sql",
+          "definition": "MyBatis乐观锁版本，初始0；提交期CAS匹配客户端读取的版本并推进，更新0行返回并发冲突。"
+        },
+        "active_button_id": {
+          "type": "varchar",
+          "length": 64,
+          "nullable": true,
+          "default": null,
+          "generated": true,
+          "semanticId": "sys_role_button.active_button_id",
+          "sourceOfTruth": "MySQL generated column",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V7__session_revocation_and_active_unique.sql",
+          "definition": "MySQL STORED生成的活跃业务键：delete_flag=1时保留对应业务值，其余为NULL，供唯一索引阻止活跃重复且允许多条历史软删。"
+        }
+      },
+      "uniqueIndexes": {
+        "PRIMARY": [
+          "id"
+        ],
+        "uk_sys_role_button_active": [
+          "role_id",
+          "active_button_id"
+        ]
+      }
+    }
+  },
+  "behaviorAssertions": [
+    "V5 row values and audit timestamps survive upgrade",
+    "active duplicates rejected",
+    "same deleted business key may repeat",
+    "transaction rollback restores row and revision",
+    "successful Flyway history matches every current version and checksum"
+  ]
+}

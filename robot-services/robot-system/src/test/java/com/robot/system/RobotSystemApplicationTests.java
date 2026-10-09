@@ -27,7 +27,13 @@ class RobotSystemApplicationTests {
     private com.robot.system.user.service.UserService userService;
 
     @Autowired
-    private com.robot.system.role.service.RoleService roleService;
+    private com.robot.system.role.service.RoleCommandService roleCommands;
+
+    @Autowired
+    private com.robot.system.role.service.RoleQueryService roleQueries;
+
+    @Autowired
+    private com.robot.system.role.service.TemporaryAuthorizationCommandService temporaryCommands;
 
     @Autowired
     private com.robot.system.menu.service.MenuService menuService;
@@ -45,7 +51,9 @@ class RobotSystemApplicationTests {
     @DisplayName("核心 Bean 全部装配成功")
     void contextLoadsCoreBeans() {
         assertNotNull(userService);
-        assertNotNull(roleService);
+        assertNotNull(roleCommands);
+        assertNotNull(roleQueries);
+        assertNotNull(temporaryCommands);
         assertNotNull(menuService);
         assertNotNull(menuQueryService);
         assertNotNull(changeRecorder);

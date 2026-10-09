@@ -3,9 +3,11 @@ package com.robot.common.redis.core;
 import com.robot.common.redis.key.RedisKeys;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
@@ -21,6 +23,31 @@ import java.util.function.Supplier;
  * </ul>
  */
 public class RedisHelper {
+
+    private static final DefaultRedisScript<String> CONSUME = new DefaultRedisScript<>(
+            "local v = redis.call('GET', KEYS[1]); "
+                    + "if v then redis.call('DEL', KEYS[1]); end; return v", String.class);
+    private static final DefaultRedisScript<Long> COMPARE_AND_SET = new DefaultRedisScript<>(
+            "if redis.call('GET', KEYS[1]) == ARGV[1] then "
+                    + "redis.call('SET', KEYS[1], ARGV[2], 'PX', ARGV[3]); return 1; "
+                    + "end; return 0", Long.class);
+    private static final DefaultRedisScript<Long> INCREMENT_VERSION = new DefaultRedisScript<>(
+            "local v = redis.call('INCR', KEYS[1]); "
+                    + "redis.call('PEXPIRE', KEYS[1], ARGV[1]); return v", Long.class);
+    private static final DefaultRedisScript<Long> READ_VERSION = new DefaultRedisScript<>(
+            "local v = redis.call('GET', KEYS[1]); "
+                    + "if not v then redis.call('SET', KEYS[1], '1', 'PX', ARGV[1]); return 1; end; "
+                    + "local n = tonumber(v); if not n or n < 1 then "
+                    + "return redis.error_reply('Invalid version value'); end; return n", Long.class);
+    private static final Duration VERSION_TTL = Duration.ofDays(7);
+    private static final DefaultRedisScript<Long> ADVANCE_VERSION = new DefaultRedisScript<>(
+            "local v = redis.call('GET', KEYS[1]); local n = ARGV[1]; "
+                    + "if v and not string.match(v, '^[1-9][0-9]*$') then "
+                    + "return redis.error_reply('Invalid version value'); end; "
+                    + "if not v or string.len(n) > string.len(v) or "
+                    + "(string.len(n) == string.len(v) and n > v) then "
+                    + "redis.call('SET', KEYS[1], n, 'PX', ARGV[2]); return 1; end; "
+                    + "redis.call('PEXPIRE', KEYS[1], ARGV[2]); return 0", Long.class);
 
     /** 空值占位：命中该值表示「数据库确认不存在」，避免穿透。 */
     public static final String NULL_PLACEHOLDER = "@robot:null@";
@@ -52,11 +79,37 @@ public class RedisHelper {
         return Optional.ofNullable(stringTemplate.opsForValue().get(key));
     }
 
+    /** 安全凭据的精确期限，不增加缓存抖动。 */
+    public void setStringExact(String key, String value, Duration ttl) {
+        requireTtl(ttl);
+        stringTemplate.opsForValue().set(key, value, ttl);
+    }
+
+    /** 原子创建状态；只有不存在时写入，期限不附加抖动。 */
+    public boolean setStringIfAbsentExact(String key, String value, Duration ttl) {
+        requireTtl(ttl);
+        return Boolean.TRUE.equals(stringTemplate.opsForValue().setIfAbsent(key, value, ttl));
+    }
+
+    /** 原子取走一次性状态；单 key Lua 兼容集群和不支持 GETDEL 的 Redis。 */
+    public Optional<String> consumeString(String key) {
+        return Optional.ofNullable(stringTemplate.execute(CONSUME, List.of(key)));
+    }
+
+    /** 单 key 状态迁移，比较、更新与期限设置在 Redis 内一次完成。 */
+    public boolean compareAndSetStringExact(String key, String expected, String replacement,
+                                            Duration ttl) {
+        requireTtl(ttl);
+        Long changed = stringTemplate.execute(COMPARE_AND_SET, List.of(key), expected,
+                replacement, String.valueOf(Math.max(1, ttl.toMillis())));
+        return Long.valueOf(1).equals(changed);
+    }
+
     public boolean delete(String key) {
         return Boolean.TRUE.equals(stringTemplate.unlink(key));
     }
 
-    /** 过期时间（Key 不存在返回 -1；无过期返回 -2）。 */
+    /** 过期时间（Key 不存在返回 -2；无过期返回 -1）。 */
     public long ttlSeconds(String key) {
         Long ttl = stringTemplate.getExpire(key);
         return ttl == null ? -2 : ttl;
@@ -67,6 +120,12 @@ public class RedisHelper {
     public void setObject(String key, Object value, Duration ttl) {
         requireTtl(ttl);
         objectTemplate.opsForValue().set(key, value, withJitter(ttl));
+    }
+
+    /** 有授权截止时间的缓存不允许加正抖动。 */
+    public void setObjectExact(String key, Object value, Duration ttl) {
+        requireTtl(ttl);
+        objectTemplate.opsForValue().set(key, value, ttl);
     }
 
     @SuppressWarnings("unchecked")
@@ -93,7 +152,13 @@ public class RedisHelper {
         requireTtl(ttl);
         Object cached = objectTemplate.opsForValue().get(key);
         if (cached != null) {
-            return NULL_PLACEHOLDER.equals(cached) ? null : (T) cached;
+            if (NULL_PLACEHOLDER.equals(cached)) {
+                return null;
+            }
+            if (type.isInstance(cached)) {
+                return type.cast(cached);
+            }
+            objectTemplate.unlink(key);
         }
         if (lockTemplate != null) {
             return lockTemplate.execute(com.robot.common.redis.key.RedisKeys.rebuildLock(key),
@@ -101,7 +166,13 @@ public class RedisHelper {
                         // 双检：持锁期间可能已被并发请求回填
                         Object filled = objectTemplate.opsForValue().get(key);
                         if (filled != null) {
-                            return NULL_PLACEHOLDER.equals(filled) ? null : (T) filled;
+                            if (NULL_PLACEHOLDER.equals(filled)) {
+                                return null;
+                            }
+                            if (type.isInstance(filled)) {
+                                return type.cast(filled);
+                            }
+                            objectTemplate.unlink(key);
                         }
                         return loadAndFill(key, ttl, loader);
                     });
@@ -128,29 +199,39 @@ public class RedisHelper {
     }
 
     /**
-     * 版本自增（RC06 部分修复：INCR 原子化，并发不丢递增；TTL 滚动续期防无过期 Key）。
-     * 事务内发布的时序问题（提交后才发布）仍属第 3 批整改范围。
+     * 原子递增并续期。安全授权的权威版本应持久化在业务数据库；
+     * 可过期 Redis 数字只作为缓存通知，不能用于跨重启的唯一 epoch。
      */
     public long bumpVersion(String versionKey) {
-        Long next = stringTemplate.opsForValue().increment(versionKey);
-        long value = next == null ? 1L : next;
-        stringTemplate.expire(versionKey, java.time.Duration.ofDays(7));
+        Long next = stringTemplate.execute(INCREMENT_VERSION, List.of(versionKey),
+                String.valueOf(VERSION_TTL.toMillis()));
+        if (next == null) {
+            throw new IllegalStateException("Redis 未返回版本递增结果");
+        }
+        return next;
+    }
+
+    /** 读取/初始化在 Redis 内原子完成；不返回竞争中落败的初始值。 */
+    public long readVersion(String versionKey) {
+        Long value = stringTemplate.execute(READ_VERSION, List.of(versionKey),
+                String.valueOf(VERSION_TTL.toMillis()));
+        if (value == null) {
+            throw new IllegalStateException("Redis 未返回版本读取结果");
+        }
         return value;
     }
 
-    /** 读取当前版本（缺失时以 SETNX 初始化为 1，不递增）。 */
-    public long readVersion(String versionKey) {
-        String current = stringTemplate.opsForValue().get(versionKey);
-        if (current != null) {
-            try {
-                return Long.parseLong(current);
-            } catch (NumberFormatException ignored) {
-                // 脏值走重建
-            }
+    /** 幂等发布数据库版本，迟到事件不能把通知版本写小；字符串比较避免 Lua 大整数精度丢失。 */
+    public void advanceVersionTo(String versionKey, long version, Duration ttl) {
+        requireTtl(ttl);
+        if (version < 1) {
+            throw new IllegalArgumentException("缓存版本必须为正数");
         }
-        stringTemplate.opsForValue().setIfAbsent(versionKey, "1",
-                java.time.Duration.ofDays(7));
-        return 1L;
+        Long changed = stringTemplate.execute(ADVANCE_VERSION, List.of(versionKey),
+                String.valueOf(version), String.valueOf(Math.max(1, ttl.toMillis())));
+        if (changed == null) {
+            throw new IllegalStateException("Redis 未确认版本发布结果");
+        }
     }
 
     /* ==================== 工具 ==================== */

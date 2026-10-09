@@ -7,7 +7,7 @@ import feign.RequestTemplate;
 import java.util.function.Supplier;
 
 /**
- * 内部调用凭据透传：所有 Feign 调用自动携带 X-Inner-Call 密钥，
+ * 内部调用凭据透传：仅 RemoteSystemService 的 /inner/** 请求携带密钥，
  * 与提供方 InnerCallInterceptor 配对。
  *
  * <p>密钥来源优先级（与提供方 robot.security.inner-secret 完全同源，
@@ -25,6 +25,12 @@ public class InnerCallRelayInterceptor implements RequestInterceptor {
 
     @Override
     public void apply(RequestTemplate template) {
+        template.removeHeader(RobotConstants.HEADER_INNER_CALL);
+        if (template.feignTarget() == null
+                || template.feignTarget().type() != RemoteSystemService.class
+                || !template.path().startsWith("/inner/")) {
+            return;
+        }
         String secret = secretSupplier.get();
         if (secret != null && !secret.isBlank()) {
             template.header(RobotConstants.HEADER_INNER_CALL, secret);

@@ -24,6 +24,9 @@ public class RemoteUserContextDTO implements Serializable {
     /** 成员关系 ID（sys_user_company.ID，即前端 contextId）。 */
     private String contextId;
 
+    /** 持久化成员撤销版本，停用再启用不能恢复旧会话。 */
+    private Long securityVersion;
+
     /** 是否主公司。 */
     private Boolean primaryFlag;
 

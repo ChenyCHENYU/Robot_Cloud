@@ -6,11 +6,10 @@ spring:
     name: robot-system
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
-  config:
-    import:
-      - optional:nacos:robot-system.yml?group=ROBOT_CLOUD&refreshEnabled=true
   cloud:
     nacos:
+      config:
+        enabled: false
       discovery:
         enabled: false
         server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
@@ -35,7 +34,8 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
+    # 非空无历史的数据库必须经迁移评审，不能由应用启动自动接管。
+    baseline-on-migrate: false
     validate-on-migrate: true
     out-of-order: false
   data:
@@ -113,3 +113,24 @@ logging:
     root: info
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5level [%X{traceId:-}] [%thread] %logger{40} - %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  cloud:
+    sentinel:
+      enabled: false
+    nacos:
+      config:
+        enabled: false
+      discovery:
+        enabled: false
+
+management:
+  health:
+    sentinel:
+      enabled: false
+    nacos-discovery:
+      enabled: false

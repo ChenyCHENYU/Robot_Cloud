@@ -1,0 +1,641 @@
+{
+  "schemaVersion": 1,
+  "scope": "server contract; does not assert real Robot_Admin integration",
+  "envelope": {
+    "successCode": 0,
+    "pageFields": [
+      "list",
+      "total",
+      "page",
+      "pageSize"
+    ],
+    "numericCounters": [
+      "total",
+      "page",
+      "pageSize"
+    ],
+    "dateTimePattern": "yyyy-MM-dd HH:mm:ss"
+  },
+  "forbiddenResponseFields": [
+    "password",
+    "passwordHash",
+    "securityVersion",
+    "userSecurityVersion",
+    "contextSecurityVersion"
+  ],
+  "unknownRequestFields": "ignored by Jackson; never bind domain entity/governance fields",
+  "authorization": "SaCheckPermission metadata checked here; effective authorization/tenant/transaction behavior checked by service and MVC tests",
+  "productPending": [
+    "temporary-role product model",
+    "global directory write boundary"
+  ],
+  "controller": "com.robot.system.role.controller.RoleController",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/sys/roles",
+      "permission": "sys:role:list",
+      "response": "Result<PageResult<RoleVO>>",
+      "body": null,
+      "validBody": false,
+      "query": [],
+      "pathVariables": []
+    },
+    {
+      "method": "POST",
+      "path": "/sys/roles",
+      "permission": "sys:role:save",
+      "response": "Result<String>",
+      "body": "RoleSaveRequest",
+      "validBody": true,
+      "query": [],
+      "pathVariables": []
+    },
+    {
+      "method": "GET",
+      "path": "/sys/roles/options",
+      "permission": null,
+      "response": "Result<List<RoleOptionVO>>",
+      "body": null,
+      "validBody": false,
+      "query": [],
+      "pathVariables": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/sys/roles/{id}",
+      "permission": "sys:role:delete",
+      "response": "Result<Void>",
+      "body": null,
+      "validBody": false,
+      "query": [
+        {
+          "name": "expectedRevision",
+          "javaType": "Integer",
+          "required": true,
+          "validation": {
+            "Min": {
+              "value": 0
+            }
+          }
+        }
+      ],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/sys/roles/{id}",
+      "permission": "sys:role:query",
+      "response": "Result<RoleVO>",
+      "body": null,
+      "validBody": false,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/sys/roles/{id}",
+      "permission": "sys:role:update",
+      "response": "Result<Void>",
+      "body": "RoleSaveRequest",
+      "validBody": true,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/sys/roles/{id}/data-scopes",
+      "permission": "sys:role:query",
+      "response": "Result<List<DataScopeVO>>",
+      "body": null,
+      "validBody": false,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/sys/roles/{id}/permissions",
+      "permission": "sys:role:update",
+      "response": "Result<Void>",
+      "body": "PermissionAssignRequest",
+      "validBody": true,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/sys/roles/{id}/temp-authorizations",
+      "permission": "sys:role:query",
+      "response": "Result<List<SysTempAuthorization>>",
+      "body": null,
+      "validBody": false,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/sys/roles/{id}/users",
+      "permission": "sys:role:query",
+      "response": "Result<List<RoleUserVO>>",
+      "body": null,
+      "validBody": false,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    }
+  ],
+  "requests": {
+    "com.robot.system.api.dto.role.RoleSaveRequest": {
+      "fields": {
+        "id": {
+          "javaType": "String",
+          "aliases": [],
+          "validation": {},
+          "semanticId": "role.opaque-id",
+          "sourceOfTruth": "sys_role.id",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "编辑资源ID；PUT由路径ID覆盖，新增ID由服务端生成。"
+        },
+        "roleName": {
+          "javaType": "String",
+          "aliases": [
+            "name"
+          ],
+          "validation": {
+            "NotBlank": {},
+            "Size": {
+              "min": 0,
+              "max": 30
+            }
+          },
+          "semanticId": "role.display-name",
+          "sourceOfTruth": "sys_role.role_name",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "当前公司角色显示名称；兼容name。"
+        },
+        "roleCode": {
+          "javaType": "String",
+          "aliases": [
+            "code"
+          ],
+          "validation": {
+            "NotBlank": {},
+            "Pattern": {
+              "regexp": "^[A-Z][A-Z0-9_]{1,49}$"
+            }
+          },
+          "semanticId": "role.permanent-code",
+          "sourceOfTruth": "sys_role.role_code",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "当前公司角色编码；兼容code；大写字母开头并限制字符集/长度。"
+        },
+        "dataScope": {
+          "javaType": "String",
+          "aliases": [],
+          "validation": {
+            "Pattern": {
+              "regexp": "self|department|department_below|all"
+            }
+          },
+          "semanticId": "role.read-scope",
+          "sourceOfTruth": "sys_role.data_scope",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "明确支持self/department/department_below/all；custom未有配置模型，当前写入拒绝。"
+        },
+        "sortNo": {
+          "javaType": "Integer",
+          "aliases": [
+            "sort"
+          ],
+          "validation": {},
+          "semanticId": "role.order",
+          "sourceOfTruth": "sys_role.sort_no",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "排序整数，兼容sort；不代表权限层级。"
+        },
+        "status": {
+          "javaType": "Integer",
+          "aliases": [],
+          "validation": {
+            "Min": {
+              "value": 0
+            },
+            "Max": {
+              "value": 1
+            }
+          },
+          "semanticId": "role.enabled-state",
+          "sourceOfTruth": "sys_role.status_flag",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "公司成员启停（用户动作）或角色启停（角色动作），1启用、0停用；不是软删值。"
+        },
+        "remark": {
+          "javaType": "String",
+          "aliases": [
+            "description"
+          ],
+          "validation": {
+            "Size": {
+              "min": 0,
+              "max": 255
+            }
+          },
+          "semanticId": "role.remark",
+          "sourceOfTruth": "sys_role.remark",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "角色备注，最大255字符，兼容description。"
+        },
+        "revision": {
+          "javaType": "Integer",
+          "aliases": [],
+          "validation": {
+            "Min": {
+              "value": 0
+            }
+          },
+          "semanticId": "role.update-cas-version",
+          "sourceOfTruth": "sys_role.revision",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "编辑账户或角色聚合的CAS版本；用户成员动作另用membershipRevision。新增由服务端初始化，不能伪造版本。"
+        },
+        "permissionIds": {
+          "javaType": "List<String>",
+          "aliases": [],
+          "validation": {
+            "Size": {
+              "min": 0,
+              "max": 500
+            }
+          },
+          "semanticId": "role.exact-resource-permissionIds",
+          "sourceOfTruth": "sys_role_menu + sys_role_button",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "菜单ID与按钮ID的精确资源集合；写侧按真实类型分流；空集合清空，未提供则保留；不得与menuIds/buttonIds混用。",
+          "elementValidation": {
+            "NotBlank": {},
+            "Size": {
+              "min": 0,
+              "max": 64
+            }
+          }
+        },
+        "menuIds": {
+          "javaType": "List<String>",
+          "aliases": [],
+          "validation": {
+            "Size": {
+              "min": 0,
+              "max": 500
+            }
+          },
+          "semanticId": "role.exact-resource-menuIds",
+          "sourceOfTruth": "sys_role_menu + sys_role_button",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "旧菜单资源字段；与buttonIds合并；不得与permissionIds混用；不隐含按钮授权。",
+          "elementValidation": {
+            "NotBlank": {},
+            "Size": {
+              "min": 0,
+              "max": 64
+            }
+          }
+        },
+        "buttonIds": {
+          "javaType": "List<String>",
+          "aliases": [],
+          "validation": {
+            "Size": {
+              "min": 0,
+              "max": 500
+            }
+          },
+          "semanticId": "role.exact-resource-buttonIds",
+          "sourceOfTruth": "sys_role_menu + sys_role_button",
+          "constraintSource": "com/robot/system/api/dto/role/RoleSaveRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "旧按钮资源字段；与menuIds合并；每项必须为精确有效按钮资源ID。",
+          "elementValidation": {
+            "NotBlank": {},
+            "Size": {
+              "min": 0,
+              "max": 64
+            }
+          }
+        }
+      },
+      "classValidation": {
+        "permissionIdsConsistent": {
+          "AssertTrue": {}
+        }
+      }
+    },
+    "com.robot.system.api.dto.role.PermissionAssignRequest": {
+      "fields": {
+        "permissionIds": {
+          "javaType": "List<String>",
+          "aliases": [],
+          "validation": {
+            "NotNull": {},
+            "Size": {
+              "min": 0,
+              "max": 500
+            }
+          },
+          "semanticId": "role.exact-permissions-rebind",
+          "sourceOfTruth": "sys_role_menu + sys_role_button",
+          "constraintSource": "com/robot/system/api/dto/role/PermissionAssignRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "菜单ID与按钮ID的精确资源集合；写侧按真实类型分流；空集合清空，未提供则保留；不得与menuIds/buttonIds混用。",
+          "elementValidation": {
+            "NotBlank": {},
+            "Size": {
+              "min": 0,
+              "max": 64
+            }
+          }
+        },
+        "revision": {
+          "javaType": "Integer",
+          "aliases": [],
+          "validation": {
+            "NotNull": {},
+            "Min": {
+              "value": 0
+            }
+          },
+          "semanticId": "role.permissions-cas-version",
+          "sourceOfTruth": "RoleVO.revision → sys_role.revision",
+          "constraintSource": "com/robot/system/api/dto/role/PermissionAssignRequest.java Jakarta Bean Validation + RoleCommandService/PermissionGrantPolicy transaction guard",
+          "definition": "编辑账户或角色聚合的CAS版本；用户成员动作另用membershipRevision。新增由服务端初始化，不能伪造版本。"
+        }
+      },
+      "classValidation": {}
+    }
+  },
+  "responses": {
+    "com.robot.system.api.vo.role.RoleVO": {
+      "id": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.id",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "roleName": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.roleName",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "roleCode": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.roleCode",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "dataScope": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.dataScope",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "remark": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.remark",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "name": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.name",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "code": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.code",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "description": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.description",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "revision": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "role.revision",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "角色与权限关联聚合CAS版本，用于编辑、授权重绑及删除动作。"
+      },
+      "sortNo": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "role.sortNo",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "sort": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "role.sort",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "status": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "role.status",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "角色启停（1启用、0停用）。"
+      },
+      "statusFlag": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "role.statusFlag",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "角色启停兼容读字段。"
+      },
+      "createDateTime": {
+        "javaType": "LocalDateTime",
+        "jsonType": "string",
+        "semanticId": "role.createDateTime",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "updateDateTime": {
+        "javaType": "LocalDateTime",
+        "jsonType": "string",
+        "semanticId": "role.updateDateTime",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "createTime": {
+        "javaType": "LocalDateTime",
+        "jsonType": "string",
+        "semanticId": "role.createTime",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "updateTime": {
+        "javaType": "LocalDateTime",
+        "jsonType": "string",
+        "semanticId": "role.updateTime",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "menuIds": {
+        "javaType": "List<String>",
+        "jsonType": "array",
+        "semanticId": "role.menuIds",
+        "sourceOfTruth": "sys_role_menu + sys_role_button",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "显式绑定的菜单资源ID集合，菜单不隐含按钮操作权限。"
+      },
+      "buttonIds": {
+        "javaType": "List<String>",
+        "jsonType": "array",
+        "semanticId": "role.buttonIds",
+        "sourceOfTruth": "sys_role_menu + sys_role_button",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "显式绑定的按钮资源ID集合。"
+      },
+      "permissionIds": {
+        "javaType": "List<String>",
+        "jsonType": "array",
+        "semanticId": "role.permissionIds",
+        "sourceOfTruth": "sys_role_menu + sys_role_button",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "角色精确菜单/按钮资源ID合并集合，不隐含通配授权。"
+      }
+    },
+    "com.robot.system.api.vo.role.RoleOptionVO": {
+      "id": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.id",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleOptionVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "name": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.name",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleOptionVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "code": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.code",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleOptionVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      }
+    },
+    "com.robot.system.api.vo.role.RoleUserVO": {
+      "id": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.id",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleUserVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "username": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.username",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleUserVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "name": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.name",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleUserVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "status": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.status",
+        "sourceOfTruth": "com.robot.system.api.vo.role.RoleUserVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "角色启停（1启用、0停用）。"
+      }
+    },
+    "com.robot.system.api.vo.permission.DataScopeVO": {
+      "module": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.module",
+        "sourceOfTruth": "com.robot.system.api.vo.permission.DataScopeVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      },
+      "scope": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "role.scope",
+        "sourceOfTruth": "com.robot.system.api.vo.permission.DataScopeVO public projection / sys_role",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+      }
+    }
+  },
+  "queryModels": {
+    "com.robot.system.api.dto.role.RolePageQuery": {
+      "page": "Integer",
+      "pageSize": "Integer",
+      "keyword": "String",
+      "status": "Integer"
+    }
+  },
+  "actionVersions": {
+    "delete": "RoleVO.revision",
+    "assignPermissions": "RoleVO.revision"
+  },
+  "legacyResponseBoundary": "temp-authorizations still returns SysTempAuthorization; product model retained, not claimed full VO convergence"
+}

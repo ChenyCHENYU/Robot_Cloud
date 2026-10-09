@@ -20,13 +20,16 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import java.util.stream.Collectors;
 
 /**
- * 全局异常处理器：所有异常统一转 Result 包装，禁止把堆栈/SQL 泄露给前端。
+ * 全局异常处理器：技术异常响应使用固定提示，日志只记录受控类别、业务码和 traceId。
  *
  * <p>traceId 从 MDC 读取并写入响应（wl-skills-bd standards/09：异常响应必带 traceId）。
+ * 业务和字段校验消息仍遵守其面向用户的契约，不把拒绝值、下游异常或请求 URI 附加到日志。
  */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private enum FailureCategory { BUSINESS, DUPLICATE_KEY, OPTIMISTIC_LOCK, UNEXPECTED }
 
     private String traceId() {
         return MDC.get("traceId");
@@ -35,8 +38,8 @@ public class GlobalExceptionHandler {
     /** 业务异常：预期内失败，warn 级别即可。 */
     @ExceptionHandler(ServiceException.class)
     public Result<Void> handleServiceException(ServiceException e, HttpServletRequest request) {
-        log.warn("[{}] business error {} on {}: {}",
-                traceId(), e.getCode(), request.getRequestURI(), e.getMessage());
+        log.warn("HTTP request rejected category={} code={} traceId={}",
+                FailureCategory.BUSINESS, e.getCode(), traceId());
         return Result.failed(e.getCode(), e.getMessage(), traceId());
     }
 
@@ -61,7 +64,12 @@ public class GlobalExceptionHandler {
     /** @Validated 单参数校验失败。 */
     @ExceptionHandler(ConstraintViolationException.class)
     public Result<Void> handleConstraintViolation(ConstraintViolationException e) {
-        return Result.failed(ResultCode.PARAM_INVALID, e.getMessage(), traceId());
+        String detail = e.getConstraintViolations().stream()
+                .map(violation -> violation.getPropertyPath() + " " + violation.getMessage())
+                .sorted()
+                .collect(Collectors.joining("；"));
+        return Result.failed(ResultCode.PARAM_INVALID,
+                detail.isEmpty() ? ResultCode.PARAM_INVALID.getMessage() : detail, traceId());
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
@@ -88,8 +96,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class)
     public Result<Void> handleDuplicateKey(org.springframework.dao.DuplicateKeyException e,
                                            HttpServletRequest request) {
-        log.warn("[{}] duplicate key on {}: {}", traceId(), request.getRequestURI(),
-                e.getMostSpecificCause().getMessage());
+        log.warn("HTTP request rejected category={} traceId={}", FailureCategory.DUPLICATE_KEY, traceId());
         return Result.failed(ResultCode.DATA_DUPLICATED,
                 ResultCode.DATA_DUPLICATED.getMessage(), traceId());
     }
@@ -99,7 +106,7 @@ public class GlobalExceptionHandler {
     public Result<Void> handleOptimisticLock(
             org.springframework.dao.OptimisticLockingFailureException e,
             HttpServletRequest request) {
-        log.warn("[{}] optimistic lock conflict on {}", traceId(), request.getRequestURI());
+        log.warn("HTTP request rejected category={} traceId={}", FailureCategory.OPTIMISTIC_LOCK, traceId());
         return Result.failed(ResultCode.DATA_CONCURRENT_CONFLICT,
                 ResultCode.DATA_CONCURRENT_CONFLICT.getMessage(), traceId());
     }
@@ -109,10 +116,10 @@ public class GlobalExceptionHandler {
         return Result.failed(ResultCode.NOT_FOUND, "请求的资源不存在", traceId());
     }
 
-    /** 兜底异常：error 级别带堆栈；对外只暴露统一话术 + traceId。 */
+    /** 兜底异常不展开 Throwable；固定错误类别与 traceId 用于关联排查。 */
     @ExceptionHandler(Exception.class)
     public Result<Void> handleUnexpected(Exception e, HttpServletRequest request) {
-        log.error("[{}] unexpected error on {}", traceId(), request.getRequestURI(), e);
+        log.error("HTTP request failed category={} traceId={}", FailureCategory.UNEXPECTED, traceId());
         return Result.failed(ResultCode.FAILED, ResultCode.FAILED.getMessage(), traceId());
     }
 }

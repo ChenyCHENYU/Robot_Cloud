@@ -20,6 +20,7 @@ public class ActivateContextRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @NotBlank(message = "登录票据不能为空")
+    @lombok.ToString.Exclude
     private String loginTicket;
 
     @NotBlank(message = "上下文 ID 不能为空")

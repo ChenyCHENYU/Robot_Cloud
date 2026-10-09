@@ -4,6 +4,9 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.robot.common.core.domain.Result;
 import com.robot.system.api.vo.dict.DictNode;
 import com.robot.system.dict.service.DictService;
+import com.robot.system.api.dto.dict.DictionarySaveRequest;
+import com.robot.system.api.dto.dict.DictionaryStatusRequest;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -47,24 +50,24 @@ public class DictController {
     @Operation(summary = "新增字典（类型或项）")
     @SaCheckPermission("sys:dict:save")
     @PostMapping
-    public Result<String> create(@RequestBody Map<String, Object> body) {
+    public Result<String> create(@Valid @RequestBody DictionarySaveRequest body) {
         return Result.success(dictService.create(body));
     }
 
     @Operation(summary = "更新字典（类型或项）")
     @SaCheckPermission("sys:dict:save")
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable String id, @RequestBody Map<String, Object> body) {
+    public Result<Void> update(@PathVariable String id, @Valid @RequestBody DictionarySaveRequest body) {
         dictService.update(id, body);
         return Result.success();
     }
 
-    @Operation(summary = "启用/停用字典项")
+    @Operation(summary = "启用/停用字典类型或项")
     @SaCheckPermission("sys:dict:save")
     @PutMapping("/{id}/status")
     public Result<Void> toggleStatus(@PathVariable String id,
-                                     @RequestBody Map<String, Integer> body) {
-        dictService.toggleStatus(id, body.get("status"));
+                                     @Valid @RequestBody DictionaryStatusRequest body) {
+        dictService.toggleStatus(id, body);
         return Result.success();
     }
 

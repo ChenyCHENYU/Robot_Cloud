@@ -16,6 +16,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>com.robot</groupId>
       <artifactId>robot-common-web</artifactId>
     </dependency>
@@ -38,6 +43,10 @@
     <dependency>
       <groupId>com.alibaba.cloud</groupId>
       <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.alibaba.cloud</groupId>
+      <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
     </dependency>
     <dependency>
       <groupId>com.alibaba.cloud</groupId>
@@ -85,11 +94,57 @@
   </dependencies>
 
   <build>
+    <testResources>
+      <testResource><directory>src/test/resources</directory></testResource>
+      <testResource>
+        <directory>${project.basedir}/../../contracts</directory>
+        <targetPath>contracts</targetPath>
+      </testResource>
+    </testResources>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>verification-test-classpath</id>
+            <phase>test</phase>
+            <goals><goal>build-classpath</goal></goals>
+            <configuration>
+              <includeScope>test</includeScope>
+              <outputFile>${project.build.directory}/test-classpath.txt</outputFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>mysql-upgrade</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <argLine>${test.jvm.args} -Dfile.encoding=UTF-8</argLine>
+              <includes><include>**/ExistingDatabaseUpgradeIT.java</include></includes>
+              <failIfNoTests>true</failIfNoTests>
+              <systemPropertyVariables>
+                <robot.verify.mysql.enabled>true</robot.verify.mysql.enabled>
+              </systemPropertyVariables>
+            </configuration>
+            <executions>
+              <execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

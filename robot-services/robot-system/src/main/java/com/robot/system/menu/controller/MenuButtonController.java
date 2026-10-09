@@ -2,13 +2,14 @@ package com.robot.system.menu.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.robot.common.core.domain.Result;
-import com.robot.system.api.entity.SysMenuButton;
+import com.robot.system.api.dto.menu.MenuButtonSaveRequest;
 import com.robot.system.api.vo.menu.MenuButtonVO;
 import com.robot.system.menu.service.MenuQueryService;
 import com.robot.system.menu.service.MenuService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,14 +41,14 @@ public class MenuButtonController {
     @Operation(summary = "新增按钮权限")
     @SaCheckPermission("sys:menu:save")
     @PostMapping
-    public Result<String> create(@RequestBody SysMenuButton button) {
+    public Result<String> create(@Valid @RequestBody MenuButtonSaveRequest button) {
         return Result.success(menuService.createButton(button));
     }
 
     @Operation(summary = "编辑按钮权限")
     @SaCheckPermission("sys:menu:save")
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable String id, @RequestBody SysMenuButton button) {
+    public Result<Void> update(@PathVariable String id, @Valid @RequestBody MenuButtonSaveRequest button) {
         menuService.updateButton(id, button);
         return Result.success();
     }

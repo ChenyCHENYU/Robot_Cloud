@@ -1,6 +1,5 @@
 package com.robot.common.web.config;
 
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.robot.common.web.filter.TraceIdFilter;
@@ -19,7 +18,7 @@ import java.time.format.DateTimeFormatter;
  * <p>序列化约定（前后端契约）：
  * <ul>
  *   <li>时间统一 {@code yyyy-MM-dd HH:mm:ss} 字符串；</li>
- *   <li>Long 超 JS 安全整数范围，统一转字符串防精度丢失（ID 已是 String，此为兜底）；</li>
+ *   <li>ID 由合同使用 String；计数、页码和令牌期限保持 JSON number。</li>
  *   <li>反序列化忽略未知字段，保证契约向后兼容。</li>
  * </ul>
  */
@@ -35,8 +34,6 @@ public class RobotWebAutoConfiguration implements WebMvcConfigurer {
         return builder -> builder
                 .serializers(new LocalDateTimeSerializer(formatter))
                 .deserializers(new LocalDateTimeDeserializer(formatter))
-                .serializerByType(Long.class, ToStringSerializer.instance)
-                .serializerByType(Long.TYPE, ToStringSerializer.instance)
                 .failOnUnknownProperties(false);
     }
 

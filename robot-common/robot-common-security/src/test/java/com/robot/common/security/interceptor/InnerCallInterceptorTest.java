@@ -4,6 +4,7 @@ import com.robot.common.core.constant.RobotConstants;
 import com.robot.common.security.config.RobotSecurityProperties;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -23,11 +24,17 @@ class InnerCallInterceptorTest {
 
     @BeforeEach
     void setUp() {
+        com.robot.common.security.context.InnerTrustContext.clear();
         RobotSecurityProperties properties = new RobotSecurityProperties();
         properties.setInnerSecret("test-secret");
         interceptor = new InnerCallInterceptor(properties);
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
+    }
+
+    @AfterEach
+    void clearContext() {
+        com.robot.common.security.context.InnerTrustContext.clear();
     }
 
     @Test
@@ -53,5 +60,14 @@ class InnerCallInterceptorTest {
         org.junit.jupiter.api.Assertions.assertEquals(
                 HttpServletResponse.SC_FORBIDDEN, response.getStatus());
         assertTrue(response.getContentAsString().contains("内部接口"));
+    }
+
+    @Test
+    void blankConfiguredSecretCannotAuthorizeEvenABlankHeader() throws Exception {
+        RobotSecurityProperties empty = new RobotSecurityProperties();
+        empty.setInnerSecret("");
+        request.addHeader(RobotConstants.HEADER_INNER_CALL, "");
+        assertFalse(new InnerCallInterceptor(empty).preHandle(request, response, new Object()));
+        assertFalse(com.robot.common.security.context.InnerTrustContext.current() != null);
     }
 }

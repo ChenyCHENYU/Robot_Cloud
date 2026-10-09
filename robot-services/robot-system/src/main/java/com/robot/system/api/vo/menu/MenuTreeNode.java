@@ -22,5 +22,18 @@ public record MenuTreeNode(
         Integer sort,
         Boolean visible,
         Boolean keepAlive,
-        List<MenuTreeNode> children) {
+        List<MenuTreeNode> children,
+        String permission,
+        Integer status,
+        Integer hidden,
+        String remark,
+        Integer revision) {
+
+    public MenuTreeNode(String id, String parentId, String type, String name, String path,
+                        String component, String redirect, String permCode, String icon, Integer sort,
+                        Boolean visible, Boolean keepAlive, List<MenuTreeNode> children) {
+        this(id, parentId, type, name, path, component, redirect, permCode, icon, sort,
+                visible, keepAlive, children, permCode, null, Boolean.FALSE.equals(visible) ? 1 : 0,
+                null, null);
+    }
 }

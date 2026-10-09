@@ -1,5 +1,10 @@
 package com.robot.system.api.dto.role;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -10,7 +15,12 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
-/** 角色新增/编辑请求。 */
+/**
+ * 角色新增/编辑请求。
+ *
+ * @author Robot Cloud
+ * @since 1.0.0-SNAPSHOT
+ */
 @Data
 @NoArgsConstructor
 public class RoleSaveRequest implements Serializable {
@@ -22,31 +32,70 @@ public class RoleSaveRequest implements Serializable {
 
     @NotBlank(message = "角色名不能为空")
     @Size(max = 30, message = "角色名最长 30")
+    @JsonAlias("name")
     private String roleName;
 
     @NotBlank(message = "角色编码不能为空")
     @Pattern(regexp = "^[A-Z][A-Z0-9_]{1,49}$", message = "角色编码为大写字母开头的字母数字下划线")
+    @JsonAlias("code")
     private String roleCode;
 
-    /** all/department/department_below/self/custom。 */
+    /** 新配置支持all/department/department_below/self；旧custom不隐式改写。 */
+    @Pattern(regexp = "self|department|department_below|all", message = "custom数据范围尚无配置模型")
     private String dataScope;
 
+    @JsonAlias("sort")
     private Integer sortNo;
 
+    @Min(0)
+    @Max(1)
     private Integer status;
 
+    @Size(max = 255)
+    @JsonAlias("description")
     private String remark;
 
+    /** 更新时必填，取自角色详情；新增忽略。 */
+    @Min(0)
+    private Integer revision;
+
     /**
-     * 授权资源 ID 集合（RC11：菜单 ID 与按钮 ID 混合，按存在性分流绑定；
-     * 兼容旧字段名 menuIds 读取）。
+     * 授权资源 ID 集合（菜单与按钮 ID 混合，按存在性分流绑定）。
      */
-    private List<String> permissionIds;
+    @Size(max = 500)
+    private List<
+            @NotBlank
+            @Size(max = 64)
+            String> permissionIds;
 
-    /** 兼容旧字段（= permissionIds）。 */
-    private List<String> menuIds;
+    /** 兼容旧菜单资源字段，与buttonIds合并；不得与permissionIds同时提交。 */
+    @Size(max = 500)
+    private List<
+            @NotBlank
+            @Size(max = 64)
+            String> menuIds;
 
+    @Size(max = 500)
+    private List<
+            @NotBlank
+            @Size(max = 64)
+            String> buttonIds;
+
+    @JsonIgnore
+    @AssertTrue(message = "permissionIds与menuIds/buttonIds不能同时提交")
+    public boolean isPermissionIdsConsistent() {
+        return permissionIds == null || menuIds == null && buttonIds == null;
+    }
+
+    /** 合并兼容字段；未提交任何权限字段时保留null，交由服务保留原授权。 */
     public List<String> effectivePermissionIds() {
-        return permissionIds != null ? permissionIds : menuIds;
+        if (permissionIds != null) {
+            return permissionIds;
+        }
+        if (menuIds == null && buttonIds == null) {
+            return null;
+        }
+        return java.util.stream.Stream.concat(menuIds == null ? java.util.stream.Stream.empty() : menuIds.stream(),
+                buttonIds == null ? java.util.stream.Stream.empty() : buttonIds.stream()).toList();
     }
 }

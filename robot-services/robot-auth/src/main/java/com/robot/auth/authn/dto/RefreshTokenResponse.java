@@ -18,8 +18,10 @@ public class RefreshTokenResponse implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    @lombok.ToString.Exclude
     private String token;
 
+    @lombok.ToString.Exclude
     private String refreshToken;
 
     private long expiresIn;

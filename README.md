@@ -1,159 +1,282 @@
-# Robot Cloud — Robot 中后台管理系统后端框架
+# Robot Cloud
 
-> 基于 **Spring Cloud Alibaba** 的微服务后端框架，为 [Robot_Admin](../Robot_Admin)（Vue3 中后台前端）提供认证、系统管理与权限治理能力。
-> 选型与工程规范融合 **Spring Cloud Alibaba 官方最佳实践** 与团队 **wl-skills-bd** 后端规范包（B1~B32 / standards 01~30）的通用要求。
+面向 Robot Admin 的 Spring Cloud Alibaba 后端，提供认证、公司上下文、系统管理和权限治理。
 
-| | |
-|---|---|
-| 代码基线 | `Java 17` · `Spring Boot 3.2.12` · `Spring Cloud 2023.0.3` · `Spring Cloud Alibaba 2023.0.3.3`（官方版本矩阵） |
-| 注册/配置中心 | Nacos（本地 profile 可脱离 Nacos 独立启动） |
-| 网关 | Spring Cloud Gateway + Sentinel 网关流控 |
-| 认证 | Sa-Token 双 Token（Redis 共享会话，网关/服务统一校验） |
-| 持久层 | MyBatis-Plus 3.5.12 + MySQL 8 + Flyway（唯一迁移写入者） |
-| 缓存/锁 | Redis（TTL 强制 + 抖动）+ Redisson（唯一锁实现） |
-| 服务间调用 | OpenFeign + LoadBalancer（降级工厂 + 显式超时） |
-| 文档 | OpenAPI 3（springdoc 2.3）+ Knife4j |
-| 构建 | Maven 多模块（14 模块）· 全量构建 `mvn clean install` 已验证全绿 |
+- Maven 坐标：`com.robot:robot-cloud:1.0.0-SNAPSHOT`
+- 运行服务：`robot-gateway`、`robot-auth`、`robot-system`
+- 工程组织：独立服务、五个公共组件、跨服务 API、统一依赖 BOM。
+- 演进方向：先巩固内部业务边界和持续验证，再按数据所有权、容量及独立部署需求拆分。
 
----
+[本轮验收](docs/verification-2026-10-09.md)记录实际结果及边界。[架构与演进](docs/architecture.md)描述设计与拆分路线；[API 契约](docs/api-contract.md)说明 Robot Admin 的请求字段、权限和兼容要求。
 
-## 1. 快速开始
+## 目录
 
-### 1.1 环境要求
+- [能力与边界](#能力与边界)
+- [服务拓扑](#服务拓扑)
+- [工程结构](#工程结构)
+- [技术基线](#技术基线)
+- [本地构建与启动](#本地构建与启动)
+- [配置约定](#配置约定)
+- [Robot Admin 配对](#robot-admin-配对)
+- [持续验证与数据库升级](#持续验证与数据库升级)
+- [缓存通知与运维](#缓存通知与运维)
+- [开发约定](#开发约定)
+- [分支与协作](#分支与协作)
+- [文档导航](#文档导航)
 
-| 组件 | 版本 | 说明 |
-|---|---|---|
-| JDK | 17+（本机验证：Zulu 21） | 编译目标 17 |
-| Maven | 3.8+（本机验证：3.9.16） | |
-| MySQL | 8.0+ | 字符集 utf8mb4；库名 `robot_cloud` |
-| Redis | 6.2+ / 7.x | 会话 + 缓存 + 锁 |
-| Nacos | 2.2.x+（可选） | 本地默认关闭，生产/dev 必启 |
+## 能力与边界
 
-### 1.2 初始化数据库
+| 能力 | 当前行为 |
+| --- | --- |
+| 认证 | 密码登录、多公司激活、设备独立上下文、刷新令牌轮换与注销 |
+| 撤销 | 账号/成员安全版本核验；改密、停用或移出后旧凭据失效 |
+| 成员 | 平台账号和公司成员分开维护；当前公司成员查询、编辑、启停和移出 |
+| 授权 | 有效永久/临时角色；页面与按钮精确绑定；管理授权受永久权限上界约束 |
+| 数据范围 | 用户列表和详情执行本人、部门、下级部门及当前公司全量范围 |
+| 系统资源 | 角色、菜单、按钮、部门树、字典、权限目录与审计 |
+| 并发控制 | 编辑提交版本；用户启停/移出、角色删除提交 `expectedRevision`，拒绝旧页面操作 |
+| 缓存一致性 | 数据库 epoch 为权威；业务、审计、epoch 与 Outbox 同事务，Redis 通知可重试 |
+| 验证与观测 | 行为/架构测试、机器契约、迁移/制品检查、升级验收、Prometheus 与 TraceId |
 
-```bash
-mysql -uroot -p -e "CREATE DATABASE robot_cloud DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
+通用字段权限、复杂工作流、业务消息平台、文件服务和完整 Redis HA 恢复属于后续建设。可选依赖登记或配置文件存在不能单独证明运行能力。
+
+## 服务拓扑
+
+```mermaid
+flowchart LR
+    Admin["Robot Admin"] --> Gateway["Gateway :8080"]
+    Gateway -->|"/auth/**"| Auth["Auth :9201"]
+    Gateway -->|"/sys/** /account/**"| System["System :9202"]
+    Auth -->|"robot-api-system 内部调用"| System
+    Auth --> Redis[("Redis 会话")]
+    System --> DB[("MySQL 系统数据")]
+    System --> Redis
+    Nacos["Nacos 配置与发现"] -. "nacos profile" .-> Gateway
+    Nacos -.-> Auth
+    Nacos -.-> System
 ```
 
-服务启动时 Flyway 自动执行 `robot-system/src/main/resources/db/migration/` 下 `V1__init_schema.sql`、`V2__seed_data.sql`（禁止手工执行 DDL —— Flyway 是 schema 唯一迁移写入者）。
+网关处理路由、内部身份头清洗与请求跟踪。实际登录态、主体有效性和业务权限在服务侧校验；System 是系统数据属主，Auth 经 API 调用 System。
 
-### 1.3 构建与启动
+| 服务 | 默认端口 | 职责 | 网络边界 |
+| --- | --- | --- | --- |
+| `robot-gateway` | 8080 | API 入口、路由、Bearer 头检查、TraceId、内部路径阻断 | 反向代理提供 TLS |
+| `robot-auth` | 9201 | 登录、上下文、刷新族与注销 | 应用内网 |
+| `robot-system` | 9202 | 账号/成员、组织、权限、资源、审计和缓存控制 | 应用内网 |
+
+## 工程结构
+
+```text
+Robot_Cloud/
+├── robot-dependencies/          版本 BOM
+├── robot-common/
+│   ├── robot-common-core/       Result、分页、错误码、断言、摘要
+│   ├── robot-common-web/        MVC、异常、JSON、TraceId
+│   ├── robot-common-security/   登录态、族校验、内部信任
+│   ├── robot-common-mybatis/    公司隔离、审计、分页、乐观锁
+│   └── robot-common-redis/      序列化、缓存、原子操作、锁
+├── robot-api/
+│   └── robot-api-system/        Feign 与跨服务 DTO
+├── robot-gateway/
+├── robot-services/
+│   ├── robot-auth/
+│   └── robot-system/            系统业务与 Flyway 迁移
+├── contracts/                   机器接口与数据合同
+├── scripts/                     本地和 CI 共用入口
+├── .github/workflows/           CI 定义
+└── docs/                        架构、接口、部署、运行说明
+```
+
+服务之间不依赖实现 jar；common/API 不反向依赖 Auth/System。System 内按业务子域分包，角色查询、角色写命令和临时授权命令分开承担职责。
+
+## 技术基线
+
+版本以 [robot-dependencies/pom.xml](robot-dependencies/pom.xml) 为准。升级须联合验证框架兼容性、行为和制品依赖。
+
+| 项目 | 仓库基线 |
+| --- | --- |
+| Java | Java 17 编译目标；CI 配置 JDK 17，本地验证使用 JDK 21 |
+| Spring Boot | 3.2.12 |
+| Spring Cloud / Alibaba | 2023.0.3 / 2023.0.3.3 |
+| 认证 | Sa-Token 1.44.0、Bearer、token Session |
+| 持久化 | MyBatis-Plus 3.5.12、MySQL、Flyway |
+| Redis | Spring Data Redis；Redisson 3.44.0 + `redisson-spring-data-32` |
+| 配置/流控 | Nacos、Sentinel，按 profile 启用 |
+| 文档/监控 | OpenAPI 3、Knife4j、Actuator、Micrometer/Prometheus |
+
+## 本地构建与启动
+
+### 环境与构建
+
+准备 Maven、真实 JDK、MySQL 与 Redis。默认 `local` 使用 HTTP 直连，关闭 Nacos/Sentinel；数据库与 Redis 仍是必要依赖。
 
 ```bash
-# 全量构建（含单元测试，已闭环验证）
-mvn clean install
+# 替换实际 JDK 根目录；macOS 通常以 Contents/Home 结尾
+export JAVA_HOME="/path/to/jdk"
+export PATH="$JAVA_HOME/bin:$PATH"
+java -version
+mvn -version
+mvn clean verify
 
-# 启动顺序：MySQL/Redis → robot-system → robot-auth → robot-gateway
+# 完整门禁：构建、契约、迁移清单和打包 Mapper 检查
+bash scripts/verify.sh
+```
+
+### 数据库与配置
+
+新环境创建空库；已有库按升级流程处理：
+
+```sql
+CREATE DATABASE robot_cloud
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+```
+
+在三个进程中注入一致的 Redis、环境段与内部密钥；数据库配置用于 System：
+
+```bash
+export SPRING_PROFILES_ACTIVE=local ROBOT_ENV=local DEBUG=false
+export MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 MYSQL_DATABASE=robot_cloud
+export MYSQL_USERNAME="<local-user>"
+# MYSQL_PASSWORD 从受控本地配置注入，不提交 .env
+export REDIS_HOST=127.0.0.1 REDIS_PORT=6379 REDIS_DATABASE=0
+# ROBOT_INNER_SECRET 使用三个进程一致的受控密钥
+export SPRING_FLYWAY_BASELINE_ON_MIGRATE=false
+```
+
+System 从迁移目录应用未执行版本，`baseline-on-migrate` 默认关闭。非空且无 Flyway 历史的库需先评审；不改写已发布迁移，不用 repair 绕过未解释的校验和差异。
+
+### 启动与检查
+
+三个终端按 System → Auth → Gateway 顺序启动：
+
+```bash
 java -jar robot-services/robot-system/target/robot-system-1.0.0-SNAPSHOT.jar
 java -jar robot-services/robot-auth/target/robot-auth-1.0.0-SNAPSHOT.jar
 java -jar robot-gateway/target/robot-gateway-1.0.0-SNAPSHOT.jar
 ```
 
-环境变量（默认值适用于本地）：
+```bash
+curl -fsS http://127.0.0.1:9202/actuator/health
+curl -fsS http://127.0.0.1:9201/actuator/health
+curl -fsS http://127.0.0.1:8080/actuator/health
+```
 
-| 变量 | 用途 | 默认 |
-|---|---|---|
-| `MYSQL_HOST/PORT/DATABASE/USERNAME/PASSWORD` | 系统库 | 127.0.0.1:3306/robot_cloud/root |
-| `REDIS_HOST/PORT/PASSWORD/DATABASE` | 会话/缓存/锁 | 127.0.0.1:6379 |
-| `NACOS_SERVER_ADDR` / `NACOS_NAMESPACE` | 注册配置中心 | 127.0.0.1:8848 |
-| `SENTINEL_DASHBOARD` | 流控控制台 | 127.0.0.1:8858 |
-| `ROBOT_ENV` | Redis Key 环境段（多环境共池防互踩） | local |
-| `ROBOT_INNER_SECRET` | /inner/** 服务间鉴权密钥（生产必须覆盖） | robot-inner-dev-secret |
-| `ROBOT_CORS_ORIGINS` | 网关 CORS 白名单 | http://localhost:* |
-
-### 1.4 默认账号与验证
-
-| 项 | 值 |
-|---|---|
-| 账号 | `admin` / `admin123`（BCrypt 摘要随种子数据写入，首登后必须改密） |
-| 登录接口 | `POST http://localhost:8080/auth/login` `{"username":"admin","password":"admin123"}` |
-
-验证链路：
+随后验证登录、公司激活和受保护接口。开发种子账号为 `admin/admin123`；生产应替换开发凭据，当前未实现强制首次改密。
 
 ```bash
-# 1. 登录（admin 只有一个公司上下文 → 直接返回会话）
-curl -X POST localhost:8080/auth/login -H 'Content-Type: application/json' \
+curl -sS -X POST http://127.0.0.1:8080/auth/login \
+  -H 'Content-Type: application/json' \
   -d '{"username":"admin","password":"admin123"}'
 
-# 2. 用返回的 token 拉取动态菜单
-curl localhost:8080/auth/menu-list -H "Authorization: Bearer <token>"
-
-# 3. 系统管理（分页契约：page/pageSize → {list,total,page,pageSize}）
-curl "localhost:8080/sys/users?page=1&pageSize=10" -H "Authorization: Bearer <token>"
+curl -sS 'http://127.0.0.1:8080/sys/users?page=1&pageSize=10' \
+  -H 'Authorization: Bearer <access-token>'
 ```
 
-### 1.5 前端对接
+同时检查 HTTP 状态与 `Result.code`。登录可能直接返回会话，也可能要求使用一次性票据选择公司；health UP 不能替代业务验收。
 
-Robot_Admin `.env.development` 设置 `VITE_API_BASE = http://localhost:8080`、`VITE_AUTH_MODE = remote` 即可联调。接口契约逐条对齐前端 `src/api/auth.contract.ts` 与 `sys-manage/*/data.ts`（详见 [docs/api-contract.md](docs/api-contract.md)）。
+## 配置约定
 
----
+| 配置 | 用途 |
+| --- | --- |
+| `SPRING_PROFILES_ACTIVE` | 默认 local；nacos 开启配置与发现 |
+| `MYSQL_HOST/PORT/DATABASE/USERNAME/PASSWORD` | System 数据源 |
+| `REDIS_HOST/PORT/PASSWORD/DATABASE` | Auth/System 连接；空凭据不发送空 AUTH |
+| `SPRING_DATA_REDIS_USERNAME` | 可选 Redis ACL 用户名，按 Spring Boot 标准属性注入 |
+| `ROBOT_ENV` | 自定义 Redis key 环境段，需显式设置 |
+| `ROBOT_INNER_SECRET` | 内部共享服务密钥，生产覆盖开发默认值 |
+| `ROBOT_AUTH_URI/ROBOT_SYSTEM_URI` | local 网关 HTTP 目标 |
+| `ROBOT_SYSTEM_URL` | local Auth 的 remoteSystemService Feign 目标 |
+| `NACOS_SERVER_ADDR/NACOS_NAMESPACE` | 配置/发现地址与环境 |
+| `ROBOT_CORS_ORIGINS` | 前端 origin 白名单 |
+| `DEBUG` / `LOGGING_LEVEL_*` | 控制框架日志；不要在认证环境开启请求/响应载荷调试 |
 
-## 2. 工程结构
+nacos group 为 `ROBOT_CLOUD`，每个服务读取各自 YAML dataId。导入为 `optional:`，远端配置加载、注册及规则需单独验收。生产应限制 Actuator/OpenAPI 网络访问，分离迁移与运行账号，配置数据库 TLS、Redis ACL 和密钥轮换。
 
-```text
-Robot_Cloud/
-├── robot-dependencies/              # 版本治理 BOM：第三方版本唯一登记处（B27）
-├── robot-gateway/                   # API 网关（8080）：路由/鉴权/TraceId/限流
-├── robot-common/                    # 公共组件（自动装配）
-│   ├── robot-common-core/           # Result / ResultCode / ServiceAssert / PageQuery / PageResult
-│   ├── robot-common-web/            # 全局异常 / TraceId 过滤器 / Jackson 约定
-│   ├── robot-common-security/       # Sa-Token 装配 / AuthUtil / LoginUser / 401·403 映射
-│   ├── robot-common-redis/          # RedisHelper（TTL 强制+抖动）/ LockTemplate（Redisson）/ Key 规范
-│   └── robot-common-mybatis/        # MP 插件链 / 租户拦截 / 审计填充 / BaseEntity / ID 生成器
-├── robot-api/
-│   └── robot-api-system/            # 跨服务契约：/inner/** Feign 客户端 + DTO + 降级工厂
-├── robot-services/
-│   ├── robot-auth/                  # 认证服务（9201）：AuthService 编排 + AuthSessionManager 会话生命周期
-│   └── robot-system/                # 系统服务（9202）：用户/角色/菜单(读/写分离)/部门/字典/权限治理
-└── docs/                            # 架构与工程文档（见下）
+详细默认值和受控切换步骤见 [部署与运维](docs/deployment.md)。
+
+## Robot Admin 配对
+
+前端使用远端认证模式，以网关为 API 入口：
+
+- 登录处理直接会话与多公司票据两种结果；合并同设备并行刷新。
+- 页面与按钮分别消费精确权限，导航祖先不代表页面授权。
+- 编辑保留 `revision`、`membershipRevision`，避免表单映射丢失。
+- 用户启停/移出的 `expectedRevision` 来自 `membershipRevision`；角色删除来自角色 `revision`。
+- 重置密码提交账号 `expectedRevision` 和 `expectedMembershipRevision`；成功后刷新两类版本。
+- 冲突 `40902` 要求刷新并重新确认操作，后端不代填最新版本。
+- 用户“删除”表示移出本公司，保留平台账号及其他公司关系。
+
+字段和兼容语义见 [API 契约](docs/api-contract.md)。真实 Admin 页面联调需独立验收。
+
+## 持续验证与数据库升级
+
+```bash
+bash scripts/verify.sh
+
+export ROBOT_VERIFY_MYSQL_HOST=127.0.0.1
+export ROBOT_VERIFY_MYSQL_PORT="<isolated-mysql-port>"
+export ROBOT_VERIFY_MYSQL_USER="<test-user>"
+# ROBOT_VERIFY_MYSQL_PASSWORD 从受控环境注入
+bash scripts/verify.sh --mysql-upgrade
 ```
 
-服务内包结构遵循 **业务子域优先**（wl-skills-bd standards/02）：
+升级门只接受 loopback，创建随机隔离测试库，不允许指定已有库。迁移清单依据真实 SQL 生成版本和哈希；已有版本升级验证数据保全、历史、结构和约束。
 
-```text
-com.robot.system
-├── api/                        # 领域模型层（entity / dto / vo / query 按子域分包）
-├── user/  role/  menu/  dept/  dict/  permission/
-│   ├── controller/             # REST（含 controller/inner 内部接口）
-│   ├── service/                # 直接 Service 类（默认不建接口，多实现才拆 port/impl）
-│   └── mapper/                 # MyBatis 接口
-└── config/                     # 服务级配置
-```
+| 检查层 | 证明范围 |
+| --- | --- |
+| Maven / ArchUnit | 行为、事务、序列化与依赖方向 |
+| 机器契约 | 端点、权限、输入输出、版本及数据映射 |
+| 打包 Mapper | 制品 Mapper 与必要 statement；合法零 XML |
+| MySQL 升级 | 隔离已有版本升级、数据保全、校验和及约束 |
+| 双 System 故障 | 缓存重试、重复/迟到、重启和版本单调性 |
+| 生产验收 | Nacos/Sentinel、Admin、容量、目标数据库版本、HA、备份恢复 |
 
-## 3. 文档索引
+CI 使用同一入口并归档报告和制品摘要。远端 job 或生产演练未实际运行时保持未验证；测试数量从真实报告汇总，不作为固定完成指标。
+
+## 缓存通知与运维
+
+`sys_cache_epoch` 为数据库事实源。业务事务内写审计、推进版本并登记 `sys_cache_outbox`；独立调度通知 Redis，失败保留事件并退避重试。
+
+投递可重复，权限通知只单调推进；字典按数据库版本隔离。重放仅重排已有合法事件，经授权、预览哈希、漂移检查和同事务审计，不回退业务或 epoch。
+
+监控 pending/due、最老年龄、尝试次数、失败分类和结果。错误只保留受控分类及关联 ID，避免写入凭据或任意异常报文。已完成记录的保留期和归档作业需运维落地；pending 须保留到处理或明确裁决。
+
+## 开发约定
+
+1. 按业务子域组织 Controller、Service、Mapper；查询与命令分清职责。
+2. Controller 绑定输入输出；归属、授权、状态及事务在 Service。
+3. 远程预取与本地写分开，写事务重新核对依据，外部调用有超时。
+4. DTO 为白名单，公司、审计、删除标志及初始版本由服务生成。
+5. 账号/成员编辑版本、撤销安全版本和缓存 epoch 分别维护。
+6. 业务、授权关联、成功审计和 Outbox 同事务，失败不留下成功事件。
+7. 数据库变化追加 Flyway，并同步契约、升级和恢复说明。
+8. 跨服务用 API；公共库提取真实复用机制。
+9. 改后运行行为与门禁，交付源码/制品哈希及未验证项。
+
+## 分支与协作
+
+| 分支 | 用途 | 合入方向 |
+| --- | --- | --- |
+| `main` | 稳定主分支，承载经过验证的集成结果 | `dev` 经审查合入 |
+| `dev` | 日常集成基线 | 功能、修复和维护分支经 PR 合入 |
+| `feature/<主题>`、`fix/<主题>`、`chore/<主题>` | 从最新 `dev` 创建的短期工作分支 | 合入 `dev` 后清理 |
+
+GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开始工作时先更新 `dev`，再创建功能分支；不在共享主干强制推送。构建、迁移和契约变更通过仓库门禁后再合入。详细命令、双远程同步和分支保护配置见 [Git 维护流程](docs/git-workflow.md)。
+
+## 文档导航
 
 | 文档 | 内容 |
-|---|---|
-| [docs/architecture.md](docs/architecture.md) | **架构设计（细致）**：全景图、请求链路、认证流程、多租户、数据流、部署拓扑 |
-| [docs/tech-selection.md](docs/tech-selection.md) | **选型论证**：版本矩阵、MySQL/Redis/Sa-Token/MP 等逐项对比与结论 |
-| [docs/api-contract.md](docs/api-contract.md) | 前后端接口契约：路径/方法/参数/响应与 Robot_Admin 逐条对齐 |
-| [docs/database-design.md](docs/database-design.md) | 数据库设计：表字典、八列治理基线、索引与软删策略 |
-| [docs/deployment.md](docs/deployment.md) | 部署与运维：环境矩阵、Nacos 配置、docker-compose、监控 |
-| [docs/conventions-bd-mapping.md](docs/conventions-bd-mapping.md) | **wl-skills-bd 规范映射**：采纳清单 + 显式偏差登记（含理由） |
+| --- | --- |
+| [架构与演进](docs/architecture.md) | 服务、数据属主、时序、边界、未来拆分 |
+| [API 契约](docs/api-contract.md) | 前端协议、版本、权限和错误 |
+| [系统权限](docs/system-permission-contract.md) | 角色事实、授予上界、数据范围、临时授权 |
+| [认证生命周期](docs/auth-session-lifecycle.md) | 票据、刷新族、CAS、注销与故障 |
+| [缓存与字典](docs/cache-and-dictionary-contract.md) | epoch、Outbox、字典与迁移约束 |
+| [数据库设计](docs/database-design.md) | 表、字段与关系 |
+| [部署与运维](docs/deployment.md) | profile、变量、升级、运行和恢复 |
+| [技术选择](docs/tech-selection.md) | 依赖基线和可选扩展 |
+| [规范适配](docs/conventions-bd-mapping.md) | 通用规范与 Robot 协议适配 |
+| [Git 维护流程](docs/git-workflow.md) | main/dev、功能分支、PR 与双远程同步 |
+| [验收记录](docs/verification-2026-10-09.md) | 本轮构建、升级与隔离运行结果及边界 |
 
-## 4. 核心设计决策（速览）
-
-1. **响应契约以前端为准**：成功码 `0`（Robot_Admin `BUSINESS_SUCCESS_CODES=[200,0,'200','0']` 且 activate 强校验 `'0'`），响应同时携带 `message` 与 `msg`；分页 `{list,total,page,pageSize}`。与 jh4j `2000/records` profile 的差异是**有意决策**，登记于 conventions-bd-mapping.md。
-2. **多租户 = 统一拦截器**：MyBatis-Plus `TenantLineInnerInterceptor` + `AuthUtil.getLoginCompanyId()`，未登录时租户条件恒假（宁查空不泄露）；全局表白名单显式登记。
-3. **软删语义**：`DELETE_FLAG` 1=有效 / 0=删除（jh4j profile 语义），MP 逻辑删除全局启用，物理删/TRUNCATE 禁止。
-4. **Redis 写入强制 TTL**：`RedisHelper` 不提供无 TTL 写入；TTL 随机抖动防雪崩、空值占位防穿透 + 互斥重建防击穿；分布式锁唯一走 Redisson `RLock`（watchdog 续期）；通用 Key 构建器在 common，业务键（AuthKeys/SystemKeys）归属各服务。
-5. **框架零业务耦合**：common 模块不含任何 sys_* 表默认值/业务常量/业务键——全局表白名单由服务 yml 声明、业务常量归属 robot-system、业务键归属各服务；实体基类拆分 `BaseEntity`（全局表）/`TenantEntity`（租户表）。
-6. **双 Token 轮换**：访问令牌 30 分钟（Sa-Token 会话）；刷新令牌 7 天、一次性、旧换新即作废；登录票据 5 分钟一次性，多公司选择后激活。
-7. **内部接口 `/inner/**`**：仅供服务间 Feign，网关层屏蔽外部访问并清洗伪造头。
-8. **审计留痕**：权限变更（角色/菜单/临时授权）追加写入 `sys_permission_audit_log`，只增不改。
-
-## 5. 构建验证状态
-
-| 验证项 | 结果 |
-|---|---|
-| `mvn clean install`（14 模块） | ✅ BUILD SUCCESS |
-| 单元测试 | ✅ 55 个用例（含实体↔DDL 结构守护 + 变异验证、异常映射契约、白名单双侧回归、权限变更记录器降级语义），0 失败 0 错误（契约/安全/租户/ID/数据范围/网关过滤器/内部鉴权/装配冒烟） |
-| 上下文装配冒烟（H2 + Mock Redisson） | ✅ gateway、robot-auth、robot-system 自动装配链完整 |
-| 实体↔DDL 结构守护 | ✅ 16 实体全量对齐（映射列/租户基类双向断言），已做变异验证（错误基类/幽灵字段均被捕获） |
-| BCrypt 种子密码可验证 | ✅ `admin123` 与种子哈希匹配（测试固定） |
-
-> 说明：本机无 Docker/MySQL/Redis 实例，运行时链路（登录全流程、Flyway 对真实 MySQL 执行）按 [docs/deployment.md](docs/deployment.md) 步骤在具备基础设施的环境执行；编译期与装配期已闭环验证。
-
-## 6. License
-
-MIT（与 Robot_Admin 前端保持一致）。
+后续优先补运行保障并引入独立业务域。审计读模型、导出或异步任务在形成容量和交付需求后迁出；身份、成员、角色与授权的强一致写暂留 System。拆分条件及阶段见 [架构与演进](docs/architecture.md#演进路线与拆分条件)。

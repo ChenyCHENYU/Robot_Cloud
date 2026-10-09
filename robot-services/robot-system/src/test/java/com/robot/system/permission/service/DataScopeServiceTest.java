@@ -23,7 +23,9 @@ class DataScopeServiceTest {
     private EffectiveRoleResolver effectiveRoleResolver;
 
     private DataScopeService service() {
-        return new DataScopeService(effectiveRoleResolver);
+        return new DataScopeService(effectiveRoleResolver,
+                org.mockito.Mockito.mock(com.robot.system.user.mapper.SysUserMapper.class),
+                org.mockito.Mockito.mock(com.robot.system.dept.mapper.SysDepartmentMapper.class));
     }
 
     private SysRole role(String id, String scope) {
@@ -58,13 +60,13 @@ class DataScopeServiceTest {
     }
 
     @Test
-    @DisplayName("无任何角色回落 self（最小权限）")
+    @DisplayName("无任何角色不声明数据访问能力")
     void noRoleShouldFallbackToSelf() {
         when(effectiveRoleResolver.resolve("usr-1", "cmp-1"))
                 .thenReturn(EffectiveRoles.EMPTY);
 
         List<com.robot.system.api.vo.permission.DataScopeVO> scopes =
                 service().scopesOfUser("usr-1", "cmp-1");
-        assertEquals("self", scopes.get(0).scope());
+        org.junit.jupiter.api.Assertions.assertTrue(scopes.isEmpty());
     }
 }

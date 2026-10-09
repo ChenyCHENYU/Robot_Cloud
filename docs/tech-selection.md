@@ -1,150 +1,86 @@
-# 技术选型论证（综合对比）
+# 技术选型与验证边界
 
-> 目标：为 Robot 中后台（管理域、团队规模中小、与 Robot_Admin 前端配套）选出**官方维护、社区验证、团队规范兼容**的技术栈。每个决策给出候选对比与结论。
+Robot Cloud 为 Robot Admin 提供认证与系统管理能力。当前以 gateway、auth、system 三个服务起步，契约集中在 `robot-api-system`，公共能力按 core/web/security/redis/mybatis 分模块。拆分依据是职责与部署需求；新增模块应先确认数据归属、调用量和运维成本，不以服务数量判断架构质量。
 
----
+## 1. 仓库锁定版本
 
-## 1. 基线版本矩阵（Spring Cloud Alibaba 官方对齐）
+下表来自 `robot-dependencies/pom.xml`，描述当前构建选择，不表示最新稳定版本、完整安全评估或官方兼容性已获验证。升级时需重新核对对应版本的官方支持矩阵和发布说明，并完成构建、运行及回退验收。
 
-| 组件 | 版本 | 依据 |
-|---|---|---|
-| JDK | 17（LTS） | SCA 2023.x 要求 Boot 3 → JDK 17 起；本机 Zulu 21 运行验证通过 |
-| Spring Boot | 3.2.12 | SCA 2023.0.3.3 官方矩阵指定 Boot 3.2.x 的末版（安全补丁齐全） |
-| Spring Cloud | 2023.0.3 | 同上官方矩阵 |
-| Spring Cloud Alibaba | 2023.0.3.3 | 当前 2023 分支最新（Maven Central 确认），配套 Nacos client 2.x / Sentinel 1.8.8 |
+| 组件 | 仓库版本 |
+|---|---|
+| Java 编译基线 | 17 |
+| Spring Boot | 3.2.12 |
+| Spring Cloud | 2023.0.3 |
+| Spring Cloud Alibaba | 2023.0.3.3 |
+| MyBatis-Plus / jsqlparser 模块 | 3.5.12 |
+| Sa-Token | 1.44.0 |
+| Redisson | 3.44.0 |
+| springdoc | 2.3.0 |
+| Knife4j | 4.5.0 |
+| Lombok / Hutool | 1.18.38 / 5.8.38 |
 
-**为什么不是更新的 Boot 3.4/3.5？** SCA 稳定毕业版本按官方矩阵与 Boot 3.2 对齐；追新 Boot 需要 SCA 2025.x 分支（社区验证不足）。框架项目优先**矩阵内最新**而非绝对最新。
+MySQL 8、Redis 7 是部署目标；Nacos、Sentinel 服务端版本与基础设施补丁版本不由此 BOM 锁定。Java 17 编译、JDK 21 下的本轮测试运行与生产 JDK 支持范围应分别记录，不能互相代替。版本没有因文档更新而升级。
 
-**为什么不是 jh4j-cloud 3.1（Java 8）？** wl-skills-bd 的 `jh4j3-openapi3` profile 服务于 jh4j 存量体系（Java 8 / Boot 2）。本工程是 Robot 生态**新建框架**，无存量约束；官方与社区当前最佳实践均为 Boot 3 + JDK 17+（虚拟线程、_records、安全支持周期）。bd 包的**通用不变式**（分层/租户/软删/数据安全/命名）全部保留，profile 相关差异显式登记于 conventions-bd-mapping.md。
+Redisson starter 排除默认 `redisson-spring-data-34`，显式使用 `redisson-spring-data-32`，二者版本均为 3.44.0，以适配本仓库 Boot 3.2 的 Spring Data Redis。已检查制品依赖；后续升级需同时检查此适配器，不能仅修改 starter 版本。
 
----
+`wl-skills-bd` 中的分层、租户隔离、审计、软删、数据安全与版本治理规则用于本工程审查；jh4j 平台、Java 8/Boot 2、平台专用 API 等约束需按适用性区分。映射见 [规范映射](conventions-bd-mapping.md)，具体工具检查结果以任务记录为准，文档不作“全量规范已通过”的承诺。
 
-## 2. 微服务组件
+## 2. 服务与安全
 
-### 2.1 注册与配置中心：Nacos（✅ 选定）
+| 选择 | 当前用途与取舍 |
+|---|---|
+| Nacos | 三服务均引入 discovery/config starter；仅 `nacos` profile 导入配置并开启注册发现，local 不依赖 Nacos；真实读取/注册仍待验收 |
+| Spring Cloud Gateway | 响应式路由、Bearer 头检查、内部头清洗与 traceId 透传；没有在网关内实现真实会话/数据库权限验证 |
+| Sentinel | 网关流控适配、阻塞响应与 Nacos datasource 已接入；local 关闭 Sentinel 和其健康检查，动态规则、容量阈值及故障行为待真实环境验收 |
+| OpenFeign + LoadBalancer | auth local 通过 `ROBOT_SYSTEM_URL` 直连 system，nacos 按服务名调用；connect 3s/read 8s，默认不重试，circuitbreaker 当前关闭 |
+| Sa-Token + Redis | Bearer access 校验与 token Session，配合应用实现的刷新族、CAS 轮换和主体安全版本 |
 
-| 候选 | 优点 | 弃选原因 |
-|---|---|---|
-| **Nacos** | SCA 亲儿子；注册+配置二合一；控制台成熟；AP/CP 可切 | — |
-| Eureka | 简单 | 2.x 维护停滞；无配置中心 |
-| Consul | 多数据中心 | 运维成本高；与 SCA 集成非一等公民 |
-| Zookeeper | 强一致 | 运维重；CP 场景用 Nacos raft 模式可覆盖 |
+网关 local 默认通过 `ROBOT_AUTH_URI`、`ROBOT_SYSTEM_URI` 直连 9201/9202，nacos 默认使用 `lb://`。本地先启动 MySQL/Redis，并创建空数据库；Java 命令显式使用 `$JAVA_HOME/bin/java`，JDK 17/21 目录及 IDE 运行 JDK 由开发者配置。步骤见 [部署文档](deployment.md)。
 
-本地联调友好性设计：`profile=local` 时 discovery 关闭，服务可脱离 Nacos 独立启动。
+采用 Sa-Token 是为复用会话与权限入口；刷新轮换、注销竞争和多公司上下文属于本工程协议，不能据此视为框架自动提供了完整 OAuth2/OIDC 能力。access 配置 30 分钟、refresh family 7 天、loginTicket 5 分钟；公司/成员快照属于每个 token Session，相同账号的不同设备可以保持不同公司。
 
-### 2.2 网关：Spring Cloud Gateway（✅ 选定）
+刷新/切换以单 key Redis Lua CAS 提交，票据以原子读取并删除消费。受保护请求同时验证当前族及账号/成员 `securityVersion`，临时 RPC 故障阻断请求而保留族。旧会话协议不兼容本次实现，上线需全部节点受控切换并重新登录；故障语义见 [认证会话生命周期](auth-session-lifecycle.md) 与 [部署文档](deployment.md)。Redis HA 数据回退对仅存 Redis 的逐族注销仍有影响，尚未完成运行证明。
 
-| 候选 | 优点 | 弃选原因 |
-|---|---|---|
-| **SCG** | Spring 官方；WebFlux 高性能；过滤器生态 | — |
-| Zuul 1 | — | 阻塞 IO，已淘汰 |
-| Nginx+Lua | 极致性能 | 业务网关逻辑（鉴权/清洗/限流联动）写 Lua 维护成本高 |
-
-### 2.3 限流熔断：Sentinel（✅ 选定）
-
-| 候选 | 优点 | 弃选原因 |
-|---|---|---|
-| **Sentinel** | SCA 一等公民；网关流控/热点/系统自适应；控制台推规则 | — |
-| Resilience4j | 轻量函数式 | 无控制台/规则中心，运营侧不可运营 |
-| Hystrix | — | 停止维护 |
-
-### 2.4 服务调用：OpenFeign + LoadBalancer（✅ 选定）
-
-声明式契约集中在 `robot-api-system`；配套降级工厂与显式超时（connect 3s / read 8s）；登录链路默认**不重试**（防凭据尝试放大）。
-
-### 2.5 认证：Sa-Token（✅ 选定）
-
-| 候选 | 优点 | 弃选原因 |
-|---|---|---|
-| **Sa-Token** | 国产社区主流（30k+ star）；登录态/权限/会话开箱；Redis 集成天然共享给网关与服务；`StpUtil` 语义与 bd `AuthUtil` 模式同构 | — |
-| Spring Security | 标准完备 | 中后台 RBAC 场景配置面大；网关共享会话需自建大量胶水 |
-| JWT 自研 | 无状态简单 | 注销/顶替/续期全要自己造；刷新轮换与多点登录控制成本高 |
-
-关键适配：`token-name=Authorization` + `token-prefix=Bearer`（前端 request-core 契约）；会话 30 分钟；`is-read-cookie=false`（纯头模式，防 CSRF 面）。
-
-### 2.6 ORM：MyBatis-Plus（✅ 选定）
-
-bd 体系标准（SQL 可审计、复杂查询可控），且提供本框架依赖的四件能力：逻辑删除、乐观锁、自动填充、**多租户行级拦截**（bd standards/11 认可的统一拦截器路线）。候选 JPA/Hibernate 弱在 SQL 不可控与团队规范不匹配。
-
-> 版本注意：3.5.9+ 分页插件拆分到 `mybatis-plus-jsqlparser`，BOM 已同时登记。
-
----
+内部 `/inner/**` 采用共享 bearer secret 和经过校验的用户委托。Feign 拦截器只作用于 system 契约调用，网关清洗全部外部 `X-Inner-*` 头，system 验证服务凭据及委托一致性。持有共享密钥的服务属于同一信任域；当前没有 mTLS、每个服务独立身份、独立权限范围或双密钥轮换能力。生产必须替换 `robot-inner-dev-secret` 开发占位值并限制网络。
 
 ## 3. 数据与缓存
 
-### 3.1 数据库：MySQL 8.0（✅ 选定，utf8mb4）
+MyBatis-Plus 用于 SQL 查询、逻辑删除、乐观锁、审计填充与公司行级隔离。公共基础设施不能替代业务校验：显式跨公司查询与平台全局表仍需在 Service 验证可信身份、有效成员及资源归属。权限由当前有效角色和精确菜单/按钮绑定计算，普通角色不能通过目录中的通配码获得超管能力。
 
-| 候选 | 结论 |
+MySQL 是权威事实源。菜单拓扑写入通过数据库行锁串行化；修改使用客户端版本，更新0行不能报告成功。Flyway维护schema，V6–V10引入epoch/Outbox、安全版本、活跃唯一约束和重放审计。存量冲突不自动合并；默认不接管非空无历史库。真实隔离MySQL升级演练覆盖V5业务数据和V6旧pending通知到V10的保全、历史与约束；目标MySQL8.0仍需远端或对应环境验收。Flyway9对本机MySQL8.4有支持范围警告，执行成功不代表官方兼容保证。详情见 [部署](deployment.md)与 [缓存与字典](cache-and-dictionary-contract.md)。
+
+| Redis 用途 | 当前契约 |
 |---|---|
-| **MySQL 8** | 团队既定；生态/工具链/DBA 熟悉度最优；窗口函数/CTE/降序索引已覆盖管理域需求 |
-| PostgreSQL | 功能更强 | 运维栈与团队现状不匹配，收益集中在重度复杂查询场景 |
-| Oracle | 计费/重 | bd 体系为兼容 Oracle 付出的 VARCHAR(19) 等历史包袱正是我们要规避的 |
+| Sa-Token 映射及 token Session | auth/system 共享连接与配置；`ROBOT_ENV` 不自动隔离 Sa-Token 自身 key |
+| 刷新族与 access/refresh 摘要索引 | `robot:{env}:auth:*`，精确 7 天 TTL；refresh 原文不存入索引 |
+| loginTicket 摘要索引 | 精确 5 分钟 TTL，最终原子消费 |
+| 权限缓存 | `permissions:{company}:{user}:db-v{epoch}`；最多 30 分钟且不越过临时授权边界，精确 TTL |
+| 字典缓存 | 字典编码归一化并散列后拼数据库 epoch；30 分钟业务缓存 TTL，可含抖动 |
+| 权限版本通知 | Redis 版本只单调推进，7 天 TTL；数据库 epoch 决定实际权限缓存版本 |
+| 通用分布式锁 | `LockTemplate` 封装 Redisson；认证 CAS 和菜单数据库行锁不依赖它 |
 
-工程约束（bd standards/12 全量落地）：lower_snake_case；禁 `is_` 列（统一 `*_flag`）；八列治理基线；索引按真实谓词建；Flyway 唯一迁移写入者、已发布不可变、expand-contract 演进。连接池 HikariCP（Boot 默认，管理域足够；分层读密集可演进 dynamic-datasource + 从库，BOM 已登记 4.3.1）。
+事务内同步更新数据库 epoch 并写 outbox，独立调度在提交后通知 Redis，通知失败持久重试。权限/字典读取使用数据库版本，因此 Redis 失效通知不是撤权的唯一保障。已完成 outbox 的保留、归档与容量管理仍待运维策略。
 
-### 3.2 缓存与分布式协调：Redis 7 + Redisson（✅ 选定）
+`RedisHelper` 提供携带 TTL 的写入，业务缓存可抖动；认证凭据和权限时间边界使用精确 TTL。Jackson 缓存序列化只允许登记的 Robot 类型与基础容器；缓存载荷变更仍需验证实际类型往返及部署兼容性。锁、Lua 和内存单测通过不能证明 Redis cluster 或主从切换下的行为。
 
-用途矩阵：
+Redis 凭据绑定后将空/空白 username/password 归一为 `null`，避免 Redisson 对无密码 Redis 发送空 `AUTH`；非空值原样保留。Redis 7.4.2 已用于真实本地启动和 HTTP 链路验收，仍不代表 HA、ACL 所有组合或生产容量已验证。
 
-| 用途 | 键 | TTL | 说明 |
-|---|---|---|---|
-| 登录会话 | satoken:* | 30m | 网关/服务共享校验 |
-| 刷新令牌 | robot:{env}:auth:refresh-token:* | 7d | 一次性轮换 |
-| 登录票据 | robot:{env}:auth:login-ticket:* | 5m | 一次性 |
-| 权限码缓存 | robot:{env}:system:permissions:{co}:{uid} | 30m+抖动 | 变更 evict |
-| 字典缓存 | robot:{env}:system:dict:{code} | 30m+抖动 | 空值占位防穿透 |
-| 分布式锁 | robot:{env}:{svc}:lock:* | watchdog | Redisson RLock 唯一实现 |
+## 4. 工程化与契约
 
-候选对比：
-
-| 候选 | 结论 |
+| 能力 | 当前实现与边界 |
 |---|---|
-| **Redis（Lettuce+Redisson）** | 会话/缓存/锁一站式；sa-token/redisson 生态成熟 |
-| 本地 Caffeine | 管理域多实例部署下一致性成本 > 收益；保留为二级缓存演进位 |
-| etcd/ZK 锁 | 引入第二套协调组件，运维不经济 |
+| 构建/版本 | Maven 多模块，`robot-dependencies` 管理依赖；CI 应保留实际 verify 结果与制品摘要 |
+| HTTP 契约 | DTO 接收可写业务字段，VO 输出；ID 使用不透明 String，数值计数/TTL 保持 JSON number |
+| 文档 | OpenAPI 3 + Knife4j，生产访问控制需部署配置落实；版本配对不在本文承诺兼容 |
+| 测试 | JUnit 5、Mockito、Spring MVC、真实 Sa-Token 内存 DAO、H2 集成与架构检查；按实际执行报告记录范围与结果 |
+| 监控 | actuator/prometheus 与 traceId；生产阈值、链路效果及告警处置待部署验收 |
 
-强制规范（B13~B15）：`RedisHelper` 层面**不存在无 TTL 写入 API**；TTL 抖动 0~60s；`unlink` 删除；禁 KEYS */FLUSH*；锁模板内置 watchdog 续期与 `isHeldByCurrentThread` 安全释放。
+本轮完整门禁已执行14模块、56套Java报告、308测试，失败/错误/跳过均为0，包含3项真实MySQL升级测试；最终制品17个Mapper/68个statement装配检查另行通过。双System缓存故障、新写命令HTTP、重启及旧缓存回填按实际运行回执登记，不能由离线测试推导生产或页面通过。托管CI已配置同一入口并接入GitHub/Gitee远程，实际执行结果以对应提交的Actions记录为准。验证范围、当前未验项和工作区回执说明见 [部署](deployment.md)。
 
-### 3.3 API 文档：springdoc 2.3 + Knife4j 4.5（✅ 选定）
+Admin 必须随读模型保留 revision 并在修改时提交，不能由服务端补当前 revision 掩盖并发冲突。前后端联调需覆盖现代/兼容字段、按钮独立授权、字典 code/label/value、状态和冲突提示；后端测试不等于 Admin 页面联调通过。
 
-OpenAPI 3（bd standards/13 新代码强制）；Knife4j 增强中文化调试 UI。**版本陷阱登记**：springdoc 2.6+ 需 Boot 3.4，本工程锁 2.3.0 与 Boot 3.2 匹配（升级 Boot 时同步评估）。
+## 5. 尚未实现的扩展
 
----
+Seata 2.2.0、RocketMQ Spring 2.3.4 仅在 BOM 登记，本轮没有启用分布式事务或消息系统，也没有实现与这些组件的可靠协作协议。若出现跨服务写入或异步业务需求，先明确一致性、幂等、补偿和运维目标，再单独选型、实现与验证；不能通过增加 starter 就认定能力完成。
 
-## 4. 工程化
-
-| 项 | 选定 | 说明 |
-|---|---|---|
-| 构建 | Maven 多模块 | BOM 单点版本治理（robot-dependencies，对应 bd B27 父 BOM 门） |
-| Lombok | 1.18.38 | 注解处理器统一在根 POM |
-| 工具库 | Hutool 5.8 | ID/JSON 工具；避免重复造轮 |
-| 测试 | JUnit5 + Mockito + spring-boot-starter-test | 25 用例：契约/安全/租户/ID/数据范围 + 两服务上下文装配冒烟（H2） |
-| 监控 | actuator + prometheus | `/actuator/prometheus`；网关另暴露 gateway 指标 |
-
----
-
-## 5. 摘要决策表
-
-| 领域 | 决策 | 一句话理由 |
-|---|---|---|
-| 基线 | Boot 3.2.12 / SC 2023.0.3 / SCA 2023.0.3.3 / JDK 17 | SCA 官方矩阵内最新稳定 |
-| 注册配置 | Nacos | SCA 一等公民，二合一 |
-| 网关 | SCG + Sentinel | 官方组合，业务网关逻辑集中 |
-| 认证 | Sa-Token（Redis 共享） | 契约同构 bd AuthUtil，双 Token 轮换易实现 |
-| ORM | MyBatis-Plus | bd 标准 + 租户/审计/软删/乐观锁四件套 |
-| DB | MySQL 8 utf8mb4 | 团队既定，规范全落地 |
-| 缓存 | Redis + Redisson | TTL/锁规范机器化强制 |
-| 文档 | springdoc 2.3 + Knife4j 4.5 | OpenAPI 3 强制（bd 13） |
-| ID | 不透明 String(64) | bd idPolicy；防遍历 |
-
----
-
-## 6. 明确不做（本期）与理由
-
-| 项 | 理由 |
-|---|---|
-| Seata 默认启用 | 当前唯一跨服务调用是只读供给（auth→system），无跨服务写事务；引入即增加运维面。BOM 已登记版本，出现跨服务写时按官方接入文档启用（`seata.enabled=false` 起步） |
-| RocketMQ 默认引入 | 管理域暂无异步事件诉求；bd 规则「事务内禁发 MQ」在无 MQ 时天然满足。登记版本，事件化改造时启用 |
-| SkyWalking | traceId 已贯通日志与响应， span 级追踪待微服务数量上规模后按需接 Agent |
-| 多数据源/分库 | 单库 robot_cloud 起步；按业务中心扩张时再拆（对应 bd 02 业务中心×数据库集群映射） |
-| Docker Compose 内置 | 本机无 Docker；提供 deployment.md 中的 compose 模板供有 Docker 环境使用 |
+多数据源、读写分离、数据库拆分、二级本地缓存、mTLS 和 span 级链路追踪也不作为当前已实现能力。现有管理域从单库起步；后续拆分需基于明确的数据所有权和调用证据。性能、生产目标 MySQL 8.0、存量库升级、Nacos、Robot Admin 与 HA 验收完成前，不称该框架已达到生产最佳实践的完整证明。

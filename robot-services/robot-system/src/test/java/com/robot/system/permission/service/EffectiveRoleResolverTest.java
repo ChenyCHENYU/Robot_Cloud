@@ -1,136 +1,168 @@
 package com.robot.system.permission.service;
 
-import com.robot.system.api.entity.SysRole;
-import com.robot.system.permission.service.EffectiveRoleResolver.EffectiveRoles;
-import com.robot.system.api.vo.permission.DataScopeVO;
+import com.robot.system.api.entity.*;
+import com.robot.system.mapper.SysCompanyMapper;
+import com.robot.system.mapper.SysTenantMapper;
 import com.robot.system.role.mapper.SysRoleMapper;
 import com.robot.system.role.mapper.SysTempAuthorizationMapper;
+import com.robot.system.user.mapper.SysUserCompanyMapper;
+import com.robot.system.user.mapper.SysUserMapper;
 import com.robot.system.user.mapper.SysUserRoleMapper;
-import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-/**
- * 有效角色解析器测试（RC01/RC02 事实源）：
- * 超管只来自用户自身有效集合；跨公司角色排除；临时授权并入；停用角色排除。
- */
 @ExtendWith(MockitoExtension.class)
 class EffectiveRoleResolverTest {
+    @Mock SysRoleMapper roleMapper;
+    @Mock SysUserRoleMapper userRoleMapper;
+    @Mock SysTempAuthorizationMapper tempMapper;
+    @Mock SysUserCompanyMapper membershipMapper;
+    @Mock SysUserMapper userMapper;
+    @Mock SysCompanyMapper companyMapper;
+    @Mock SysTenantMapper tenantMapper;
+    final Clock clock = Clock.fixed(Instant.parse("2026-10-08T04:00:00Z"), ZoneId.of("Asia/Shanghai"));
+    final LocalDateTime now = LocalDateTime.now(clock);
+    EffectiveRoleResolver resolver;
+    SysUser user;
+    SysCompany company;
+    SysUserCompany membership;
 
-    @Mock
-    private SysRoleMapper roleMapper;
-    @Mock
-    private SysUserRoleMapper userRoleMapper;
-    @Mock
-    private SysTempAuthorizationMapper tempAuthorizationMapper;
-
-    private EffectiveRoleResolver resolver() {
-        return new EffectiveRoleResolver(roleMapper, userRoleMapper, tempAuthorizationMapper);
+    @BeforeEach void setUp() {
+        resolver = new EffectiveRoleResolver(roleMapper, userRoleMapper, tempMapper, membershipMapper,
+                userMapper, companyMapper, tenantMapper, clock);
+        user = new SysUser(); user.setId("u-1"); user.setStatusFlag(1); user.setDeleteFlag(1);
+        company = new SysCompany(); company.setId("c-1"); company.setTenantId("t-1");
+        company.setStatusFlag(1); company.setDeleteFlag(1);
+        SysTenant tenant = new SysTenant(); tenant.setId("t-1"); tenant.setStatusFlag(1); tenant.setDeleteFlag(1);
+        membership = new SysUserCompany(); membership.setId("member-1"); membership.setUserId("u-1");
+        membership.setCompanyId("c-1"); membership.setStatusFlag(1); membership.setDeleteFlag(1);
+        lenient().when(userMapper.selectById("u-1")).thenReturn(user);
+        lenient().when(companyMapper.selectById("c-1")).thenReturn(company);
+        lenient().when(tenantMapper.selectById("t-1")).thenReturn(tenant);
+        lenient().when(membershipMapper.selectList(any())).thenReturn(List.of(membership));
+        lenient().when(userRoleMapper.selectList(any())).thenReturn(List.of());
+        lenient().when(tempMapper.selectList(any())).thenReturn(List.of());
     }
 
-    private SysRole role(String id, String companyId, String code, String dataScope) {
-        SysRole role = new SysRole();
-        role.setId(id);
-        role.setCompanyId(companyId);
-        role.setRoleCode(code);
-        role.setDataScope(dataScope);
-        role.setStatusFlag(1);
-        role.setDeleteFlag(1);
-        return role;
+    @Test void emptyIdentityNeverQueriesRoles() {
+        assertTrue(resolver.resolve(null, "c-1").isEmpty());
+        assertTrue(resolver.resolve("u-1", " ").isEmpty());
+        verifyNoInteractions(roleMapper, userRoleMapper, tempMapper);
     }
 
-    /** RC01 核心场景：公司有超管+管理员，用户只绑定管理员 → 非超管、只有管理员。 */
-    @Test
-    @DisplayName("RC01: 公司存在超管而用户未绑定 → 非超管")
-    void companySuperAdminDoesNotLeak() {
-        when(roleMapper.selectList(any())).thenReturn(List.of(
-                role("r-super", "cmp-1", "SUPER_ADMIN", "all"),
-                role("r-admin", "cmp-1", "SYS_ADMIN", "all")));
-        when(userRoleMapper.selectList(any())).thenReturn(List.of());
-        when(tempAuthorizationMapper.selectList(any())).thenReturn(List.of());
-
-        EffectiveRoles effective = resolver().resolve("usr-1", "cmp-1");
-
-        org.junit.jupiter.api.Assertions.assertFalse(effective.superAdmin(),
-                "未绑定超管的用户不得被判为超管");
-        org.junit.jupiter.api.Assertions.assertTrue(effective.isEmpty());
+    @Test void companySuperAdminDoesNotLeakToUnboundUser() {
+        assertFalse(resolver.resolve("u-1", "c-1").superAdmin());
+        verifyNoInteractions(roleMapper);
     }
 
-    @Test
-    @DisplayName("绑定超管的用户 → 超管")
-    void boundSuperAdminIsSuper() {
-        when(roleMapper.selectList(any())).thenReturn(List.of(
-                role("r-super", "cmp-1", "SUPER_ADMIN", "all")));
-        when(userRoleMapper.selectList(any())).thenReturn(List.of(
-                binding("r-super")));
-        when(tempAuthorizationMapper.selectList(any())).thenReturn(List.of());
-
-        EffectiveRoles effective = resolver().resolve("usr-1", "cmp-1");
-        org.junit.jupiter.api.Assertions.assertTrue(effective.superAdmin());
-        assertEquals(1, effective.roles().size());
+    @Test void boundSuperAdminIsSuper() {
+        when(userRoleMapper.selectList(any())).thenReturn(List.of(binding("u-1", "c-1", "r-super")));
+        when(roleMapper.selectList(any())).thenReturn(List.of(role("r-super", "c-1", "SUPER_ADMIN")));
+        assertTrue(resolver.resolve("u-1", "c-1").superAdmin());
+        assertTrue(resolver.resolvePermanent("u-1", "c-1").superAdmin());
     }
 
-    @Test
-    @DisplayName("跨公司绑定被交集排除（B 公司角色不进 A 上下文）")
-    void crossCompanyBindingExcluded() {
-        when(roleMapper.selectList(any())).thenReturn(List.of(
-                role("r-a", "cmp-A", "STAFF", "self")));
-        when(userRoleMapper.selectList(any())).thenReturn(List.of(
-                binding("r-a"), binding("r-b")));
-        when(tempAuthorizationMapper.selectList(any())).thenReturn(List.of());
-
-        EffectiveRoles effective = resolver().resolve("usr-1", "cmp-A");
-
-        assertEquals(1, effective.roles().size());
-        assertEquals("r-a", effective.roles().get(0).getId());
+    @Test void temporarySuperCanUseBusinessPermissionsButCannotBeDelegationSource() {
+        when(tempMapper.selectList(any())).thenReturn(List.of(temp("r-super", now, now.plusHours(1))));
+        when(roleMapper.selectList(any())).thenReturn(List.of(role("r-super", "c-1", "SUPER_ADMIN")));
+        assertTrue(resolver.resolve("u-1", "c-1").superAdmin());
+        var permanent = resolver.resolvePermanent("u-1", "c-1");
+        assertTrue(permanent.isEmpty()); assertFalse(permanent.superAdmin()); assertNull(permanent.nextChangeAt());
+        verify(tempMapper, times(1)).selectList(any());
     }
 
-    @Test
-    @DisplayName("临时授权角色并入有效集合（限本公司）")
-    void tempAuthorizationMergesIn() {
-        when(roleMapper.selectList(any())).thenReturn(List.of(
-                role("r-staff", "cmp-1", "STAFF", "self"),
-                role("r-acting", "cmp-1", "ACTING_ADMIN", "all")));
-        when(userRoleMapper.selectList(any())).thenReturn(List.of(binding("r-staff")));
-        com.robot.system.api.entity.SysTempAuthorization tempAuth =
-                new com.robot.system.api.entity.SysTempAuthorization();
-        tempAuth.setRoleId("r-acting");
-        when(tempAuthorizationMapper.selectList(any())).thenReturn(List.of(tempAuth));
-
-        EffectiveRoles effective = resolver().resolve("usr-1", "cmp-1");
-
-        assertEquals(2, effective.roles().size());
-        org.junit.jupiter.api.Assertions.assertFalse(effective.superAdmin());
+    @Test void permanentScopeDoesNotIncludeTemporaryElevatedRole() {
+        when(userRoleMapper.selectList(any())).thenReturn(List.of(binding("u-1", "c-1", "r-own")));
+        lenient().when(tempMapper.selectList(any())).thenReturn(List.of(temp("r-super", now, now.plusHours(1))));
+        when(roleMapper.selectList(any())).thenReturn(List.of(role("r-own", "c-1", "STAFF"),
+                role("r-super", "c-1", "SUPER_ADMIN")));
+        var permanent = resolver.resolvePermanent("u-1", "c-1");
+        assertEquals(java.util.Set.of("r-own"), permanent.roleIds()); assertFalse(permanent.superAdmin());
+        verifyNoInteractions(tempMapper);
     }
 
-    @Test
-    @DisplayName("停用角色不参与（代码级防御过滤兜底）")
-    void disabledCompanyRoleExcluded() {
-        SysRole disabled = role("r-off", "cmp-1", "STAFF", "self");
-        disabled.setStatusFlag(0);
-        when(roleMapper.selectList(any())).thenReturn(List.of(disabled));
-
-        EffectiveRoles effective = resolver().resolve("usr-1", "cmp-1");
-        org.junit.jupiter.api.Assertions.assertTrue(effective.isEmpty());
+    @Test void mapperReturnsCannotCrossUserCompanyOrDeletedBinding() {
+        SysUserRole deleted = binding("u-1", "c-1", "r-old"); deleted.setDeleteFlag(0);
+        when(userRoleMapper.selectList(any())).thenReturn(List.of(binding("u-2", "c-1", "r-evil"),
+                binding("u-1", "c-2", "r-cross"), deleted, binding("u-1", "c-1", "r-own")));
+        when(roleMapper.selectList(any())).thenReturn(List.of(role("r-own", "c-1", "STAFF"),
+                role("r-evil", "c-1", "SUPER_ADMIN"), role("r-own-copy", "c-2", "SUPER_ADMIN")));
+        var result = resolver.resolve("u-1", "c-1");
+        assertFalse(result.superAdmin());
+        assertEquals(java.util.Set.of("r-own"), result.roleIds());
     }
 
-    private com.robot.system.api.entity.SysUserRole binding(String roleId) {
-        com.robot.system.api.entity.SysUserRole binding =
-                new com.robot.system.api.entity.SysUserRole();
-        binding.setRoleId(roleId);
-        binding.setDeleteFlag(1);
-        return binding;
+    @Test void temporaryRoleUsesHalfOpenWindowAndNextBoundary() {
+        when(tempMapper.selectList(any())).thenReturn(List.of(temp("r-active", now, now.plusSeconds(10)),
+                temp("r-expired", now.minusMinutes(2), now),
+                temp("r-future", now.plusSeconds(5), now.plusMinutes(1))));
+        when(roleMapper.selectList(any())).thenReturn(List.of(role("r-active", "c-1", "STAFF"),
+                role("r-expired", "c-1", "SUPER_ADMIN"), role("r-future", "c-1", "SUPER_ADMIN")));
+        var result = resolver.resolve("u-1", "c-1");
+        assertEquals(java.util.Set.of("r-active"), result.roleIds());
+        assertFalse(result.superAdmin());
+        assertEquals(now.plusSeconds(5), result.nextChangeAt());
+    }
+
+    @Test void futureRoleKeepsEmptyPermissionSetButHasWakeupBoundary() {
+        when(tempMapper.selectList(any())).thenReturn(List.of(temp("r-future", now.plusSeconds(10), now.plusMinutes(1))));
+        when(roleMapper.selectList(any())).thenReturn(List.of(role("r-future", "c-1", "STAFF")));
+        var result = resolver.resolve("u-1", "c-1");
+        assertTrue(result.isEmpty());
+        assertEquals(now.plusSeconds(10), result.nextChangeAt());
+    }
+
+    @Test void disabledRoleDoesNotGrantOrProduceBoundary() {
+        SysRole role = role("r-1", "c-1", "SUPER_ADMIN"); role.setStatusFlag(0);
+        when(tempMapper.selectList(any())).thenReturn(List.of(temp("r-1", now, now.plusMinutes(1))));
+        when(roleMapper.selectList(any())).thenReturn(List.of(role));
+        var result = resolver.resolve("u-1", "c-1");
+        assertTrue(result.isEmpty()); assertNull(result.nextChangeAt());
+    }
+
+    @Test void disabledAccountCompanyOrMembershipFailsClosed() {
+        user.setStatusFlag(0); assertFalse(resolver.isActiveSubject("u-1", "c-1"));
+        user.setStatusFlag(1); company.setStatusFlag(0); assertFalse(resolver.isActiveSubject("u-1", "c-1"));
+        company.setStatusFlag(1); membership.setStatusFlag(0); assertFalse(resolver.isActiveSubject("u-1", "c-1"));
+        assertTrue(resolver.resolve("u-1", "c-1").isEmpty());
+        verifyNoInteractions(roleMapper);
+    }
+
+    @Test void invalidTenantAndDuplicateMembershipFailClosed() {
+        when(tenantMapper.selectById("t-1")).thenReturn(null);
+        assertFalse(resolver.isActiveSubject("u-1", "c-1"));
+        SysTenant tenant = new SysTenant(); tenant.setId("t-1"); tenant.setStatusFlag(1); tenant.setDeleteFlag(1);
+        when(tenantMapper.selectById("t-1")).thenReturn(tenant);
+        when(membershipMapper.selectList(any())).thenReturn(List.of(membership, membership));
+        assertFalse(resolver.isActiveSubject("u-1", "c-1"));
+    }
+
+    private SysRole role(String id, String companyId, String code) {
+        SysRole role = new SysRole(); role.setId(id); role.setCompanyId(companyId); role.setRoleCode(code);
+        role.setDeleteFlag(1); role.setStatusFlag(1); role.setDataScope("self"); return role;
+    }
+
+    private SysUserRole binding(String userId, String companyId, String roleId) {
+        SysUserRole binding = new SysUserRole(); binding.setUserId(userId); binding.setCompanyId(companyId);
+        binding.setRoleId(roleId); binding.setDeleteFlag(1); return binding;
+    }
+
+    private SysTempAuthorization temp(String roleId, LocalDateTime from, LocalDateTime to) {
+        SysTempAuthorization auth = new SysTempAuthorization(); auth.setUserId("u-1"); auth.setCompanyId("c-1");
+        auth.setRoleId(roleId); auth.setEffectFrom(from); auth.setEffectTo(to); auth.setStatusFlag(1);
+        auth.setDeleteFlag(1); return auth;
     }
 }

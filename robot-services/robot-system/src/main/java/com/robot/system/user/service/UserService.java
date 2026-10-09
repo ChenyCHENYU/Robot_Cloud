@@ -1,298 +1,489 @@
 package com.robot.system.user.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.robot.common.core.constant.RobotConstants;
 import com.robot.common.core.domain.PageResult;
 import com.robot.common.core.domain.ResultCode;
 import com.robot.common.core.exception.ServiceAssert;
-import com.robot.common.core.exception.ServiceException;
 import com.robot.common.security.util.AuthUtil;
 import com.robot.system.api.dto.user.UserPageQuery;
 import com.robot.system.api.dto.user.UserSaveRequest;
+import com.robot.system.api.dto.user.UserStatusRequest;
+import com.robot.system.api.dto.user.UserPasswordResetRequest;
+import com.robot.system.api.entity.SysDepartment;
 import com.robot.system.api.entity.SysRole;
+import com.robot.system.api.entity.SysTempAuthorization;
 import com.robot.system.api.entity.SysUser;
 import com.robot.system.api.entity.SysUserCompany;
 import com.robot.system.api.entity.SysUserRole;
 import com.robot.system.api.vo.user.UserVO;
+import com.robot.system.dept.mapper.SysDepartmentMapper;
+import com.robot.system.permission.service.PermissionChangeRecorder;
+import com.robot.system.permission.service.PermissionGrantPolicy;
+import com.robot.system.permission.service.PermissionGrantPolicy.Operator;
+import com.robot.system.permission.service.DataScopeService;
+import com.robot.system.permission.service.DataScopeService.UserReadScope;
+import com.robot.system.role.mapper.SysRoleMapper;
+import com.robot.system.role.mapper.SysTempAuthorizationMapper;
 import com.robot.system.user.mapper.SysUserCompanyMapper;
 import com.robot.system.user.mapper.SysUserMapper;
 import com.robot.system.user.mapper.SysUserRoleMapper;
-import com.robot.system.role.mapper.SysRoleMapper;
-import com.robot.system.permission.service.PermissionChangeRecorder;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 用户管理：查询走租户拦截器自动过滤 COMPANY_ID；
- * 用户/成员/角色绑定跨三表写必须收敛在同一事务（wl-skills-bd standards/10）。
+ * 公司管理员管理公司成员。移出/启停不删除或停用共享平台账户；授权与关联写同事务。
+ *
+ * @author Robot Cloud
+ * @since 1.0.0-SNAPSHOT
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService extends ServiceImpl<SysUserMapper, SysUser> {
-
-    /** 内置管理员账号（种子数据），禁止删除/停用，防系统自锁。 */
-    public static final String BUILTIN_ADMIN_USERNAME = "admin";
-
-    /**
-     * 成员归属约束（RC08/T05）：公司管理域内的用户操作必须确认目标是本公司
-     * 活跃成员——A 公司管理员猜 B 公司用户 ID 的列表外操作（详情/编辑/重置/
-     * 启停/删除）一律拒绝。平台级账号动作（跨公司全局禁用等）后续按独立
-     * 平台权限单独设计（见 remaining.md）。
-     */
-    private void assertCompanyMember(String userId, String action) {
-        String companyId = AuthUtil.getLoginCompanyId();
-        if (companyId == null) {
-            return; // 系统任务/内部委托上下文缺失时不阻断（由调用链上层保护）
-        }
-        Long memberships = userCompanyMapper.selectCount(
-                new LambdaQueryWrapper<SysUserCompany>()
-                        .eq(SysUserCompany::getUserId, userId)
-                        .eq(SysUserCompany::getCompanyId, companyId)
-                        .eq(SysUserCompany::getStatusFlag, 1)
-                        .eq(SysUserCompany::getDeleteFlag,
-                                RobotConstants.DELETE_FLAG_ACTIVE));
-        ServiceAssert.isTrue(memberships != null && memberships > 0,
-                ResultCode.FORBIDDEN, "目标用户不属于当前公司，禁止" + action);
-    }
+    public static final String BUILTIN_ADMIN_USERNAME = UserWriteValidation.BUILTIN_ADMIN_USERNAME;
 
     private final SysUserCompanyMapper userCompanyMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMapper roleMapper;
+    private final SysDepartmentMapper departmentMapper;
+    private final SysTempAuthorizationMapper tempAuthorizationMapper;
+    private final PermissionGrantPolicy grantPolicy;
     private final BCryptPasswordEncoder passwordEncoder;
     private final PermissionChangeRecorder changeRecorder;
+    private final Clock clock;
+    private final DataScopeService dataScopeService;
 
+    /** 公司成员过滤与用户数据范围共同参与分页SQL，返回值再次校验当前成员关系。 */
     public PageResult<UserVO> queryPage(UserPageQuery query) {
+        String companyId = grantPolicy.requireCompany();
+        UserWriteValidation.validateStatus(query.getStatus());
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
-                .eq(query.getStatus() != null, SysUser::getStatusFlag, query.getStatus())
+                .exists("SELECT 1 FROM sys_user_company uc WHERE uc.user_id = sys_user.id"
+                        + " AND uc.company_id = {0} AND uc.delete_flag = 1", companyId)
+                .exists(query.getStatus() != null,
+                        "SELECT 1 FROM sys_user_company ms WHERE ms.user_id = sys_user.id"
+                        + " AND ms.company_id = {0} AND ms.delete_flag = 1 AND ms.status_flag = {1}",
+                        companyId, query.getStatus())
                 .eq(query.getDeptId() != null && !query.getDeptId().isBlank(),
                         SysUser::getDepartmentId, query.getDeptId())
                 .and(query.getKeyword() != null && !query.getKeyword().isBlank(), w -> w
                         .like(SysUser::getUsername, query.getKeyword())
                         .or().like(SysUser::getNickname, query.getKeyword())
                         .or().like(SysUser::getEmail, query.getKeyword()))
-                .orderByDesc(SysUser::getCreateDateTime);
-
-        Page<SysUser> page = page(new Page<>(query.pageValue(), query.pageSizeValue()), wrapper);
-        return PageResult.of(toVos(page.getRecords()), page.getTotal(),
+                .orderByDesc(SysUser::getCreateDateTime, SysUser::getId);
+        UserReadScope scope = dataScopeService.userReadScope(AuthUtil.getLoginUserId(), companyId);
+        applyReadScope(wrapper, scope);
+        Page<SysUser> result = page(new Page<>(query.pageValue(), query.pageSizeValue()), wrapper);
+        return PageResult.of(toVos(result.getRecords().stream().filter(scope::permits).toList(), companyId), result.getTotal(),
                 query.pageValue(), query.pageSizeValue());
     }
 
+    /** 详情沿用列表读取范围；查询期间成员移出时返回业务拒绝，避免无成员资料泄露。 */
     public UserVO getDetail(String id) {
-        assertCompanyMember(id, "查看详情");
-        SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
-        return toVos(List.of(user)).get(0);
+        String companyId = grantPolicy.requireCompany();
+        requireMembership(id, companyId);
+        UserReadScope scope = dataScopeService.userReadScope(AuthUtil.getLoginUserId(), companyId);
+        LambdaQueryWrapper<SysUser> query = new LambdaQueryWrapper<SysUser>().eq(SysUser::getId, id)
+                .eq(SysUser::getDeleteFlag, 1);
+        applyReadScope(query, scope);
+        SysUser user = ServiceAssert.notNull(getOne(query), ResultCode.FORBIDDEN, "用户不在当前数据范围内");
+        ServiceAssert.isTrue(scope.permits(user) && id.equals(user.getId()), ResultCode.FORBIDDEN);
+        List<UserVO> views = toVos(List.of(user), companyId);
+        ServiceAssert.isTrue(!views.isEmpty(), ResultCode.FORBIDDEN, "用户已不属于当前公司成员");
+        return views.get(0);
     }
 
+    private static void applyReadScope(LambdaQueryWrapper<SysUser> query, UserReadScope scope) {
+        if (!scope.all()) {
+            query.and(w -> {
+                w.eq(SysUser::getId, scope.userId());
+                if (!scope.departmentIds().isEmpty()) {
+                    w.or().in(SysUser::getDepartmentId, scope.departmentIds());
+                }
+            });
+        }
+    }
+
+    /** 新建平台账号及当前公司成员，角色上界在任何写入前校验，审计与关联写同事务。 */
     @Transactional(rollbackFor = Exception.class)
     public String create(UserSaveRequest request) {
+        Operator operator = grantPolicy.requireOperator();
+        UserWriteValidation.validateUsername(request.getUsername());
+        ServiceAssert.notBlank(request.getNickname(), ResultCode.PARAM_INVALID);
+        UserWriteValidation.validatePassword(request.getPassword());
+        UserWriteValidation.validateProfile(request.getNickname(), request.getEmail(), request.getPhone());
+        validateDepartment(request.getDepartmentId(), operator.companyId());
+        UserWriteValidation.validateStatus(request.getStatus());
+        List<SysRole> roles = validatedRoles(operator, request.getRoleIds());
         ServiceAssert.isTrue(count(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getUsername, request.getUsername())
-                .eq(SysUser::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)) == 0,
+                .eq(SysUser::getUsername, request.getUsername()).eq(SysUser::getDeleteFlag, 1)) == 0,
                 ResultCode.USER_USERNAME_DUPLICATED);
-        ServiceAssert.notNull(request.getPassword(), ResultCode.PARAM_INVALID, "新增用户必须提供初始密码");
-        String companyId = AuthUtil.getLoginCompanyId();
-        ServiceAssert.notBlank(companyId, ResultCode.FORBIDDEN, "缺少公司上下文，禁止创建用户");
-
         SysUser user = new SysUser();
         user.setUsername(request.getUsername());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        applyMutableFields(user, request);
-        save(user);
-
-        // 加入当前公司（首个成员关系默认主公司）
+        applyProfile(user, request);
+        user.setStatusFlag(1);
+        ServiceAssert.isTrue(save(user), ResultCode.DATA_CONCURRENT_CONFLICT);
         SysUserCompany membership = new SysUserCompany();
         membership.setUserId(user.getId());
-        membership.setCompanyId(companyId);
+        membership.setCompanyId(operator.companyId());
         membership.setPrimaryFlag(1);
-        membership.setStatusFlag(1);
-        userCompanyMapper.insert(membership);
-
-        grantRoles(user.getId(), request.getRoleIds());
-        changeRecorder.record("grant_roles", user.getId(),
-                Map.of("username", request.getUsername(),
-                        "roleCount", request.getRoleIds() == null ? 0 : request.getRoleIds().size()));
+        membership.setStatusFlag(request.getStatus() == null ? 1 : request.getStatus());
+        ServiceAssert.isTrue(userCompanyMapper.insert(membership) == 1, ResultCode.DATA_CONCURRENT_CONFLICT);
+        insertRoles(user.getId(), operator.companyId(), roles);
+        changeRecorder.record("create_member", user.getId(), Map.of("roleCount", roles.size()));
         return user.getId();
     }
 
+    /** 更新当前公司成员聚合；账号独占约束和两类版本校验先于角色重绑及成功审计。 */
     @Transactional(rollbackFor = Exception.class)
     public void update(String id, UserSaveRequest request) {
-        assertCompanyMember(id, "编辑");
+        Operator operator = grantPolicy.requireOperator();
+        SysUserCompany membership = requireMembership(id, operator.companyId());
         SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
-        ServiceAssert.isTrue(count(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getUsername, request.getUsername())
-                .eq(SysUser::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
-                .ne(SysUser::getId, id)) == 0,
-                ResultCode.USER_USERNAME_DUPLICATED);
-        guardBuiltinAccount(user, "编辑");
-
-        applyMutableFields(user, request);
-        // 编辑留空表示不改密码
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        validateMemberUpdate(operator, id, user, membership, request);
+        List<SysRole> roles = rolesForMemberUpdate(operator, id, request);
+        boolean passwordChange = updateAccountIfChanged(id, user, request, operator.companyId());
+        applyMemberStatus(id, membership, request.getStatus());
+        ServiceAssert.isTrue(userCompanyMapper.updateById(membership) == 1, ResultCode.DATA_CONCURRENT_CONFLICT);
+        if (roles != null) {
+            deleteRoles(id, operator.companyId());
+            insertRoles(id, operator.companyId(), roles);
         }
-        updateById(user);
-
-        // 角色重绑：先删后插（事务内）
-        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
-                .eq(SysUserRole::getUserId, id));
-        grantRoles(id, request.getRoleIds());
-        changeRecorder.record("rebind_roles", id,
-                Map.of("roleCount", request.getRoleIds() == null ? 0 : request.getRoleIds().size()));
+        changeRecorder.record("update_member", id, Map.of("rolesChanged", roles != null));
+        if (passwordChange) {
+            changeRecorder.record("reset_password", id, null);
+        }
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public void delete(String id) {
-        assertCompanyMember(id, "删除");
-        SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
-        guardBuiltinAccount(user, "删除");
-        ServiceAssert.isTrue(!id.equals(AuthUtil.getLoginUserId()),
-                ResultCode.PARAM_INVALID, "禁止删除当前登录账号");
-        // MP 逻辑删除：UPDATE sys_user SET delete_flag=0 WHERE id=? AND delete_flag=1
-        removeById(id);
-        // 成员关系与角色绑定同步失效
-        SysUserCompany membership = new SysUserCompany();
-        membership.setStatusFlag(0);
-        userCompanyMapper.update(membership, new LambdaQueryWrapper<SysUserCompany>()
-                .eq(SysUserCompany::getUserId, id));
-        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
-                .eq(SysUserRole::getUserId, id));
-        changeRecorder.record("delete_user", id, null);
+    private void validateMemberUpdate(Operator operator, String id, SysUser user,
+            SysUserCompany membership, UserSaveRequest request) {
+        UserWriteValidation.assertMutableAccount(user.getUsername(), "编辑");
+        assertCanManageMember(operator, id);
+        UserWriteValidation.assertUnchangedUsername(user.getUsername(), request.getUsername());
+        UserWriteValidation.assertRevision(membership.getRevision(), request.getMembershipRevision(), "membershipRevision");
+        UserWriteValidation.validateStatus(request.getStatus());
+        UserWriteValidation.validateProfile(request.getNickname(), request.getEmail(), request.getPhone());
     }
 
-    /** 管理员重置密码（敏感写：审计语义走操作日志，前端二次确认）。 */
-    @Transactional(rollbackFor = Exception.class)
-    public void resetPassword(String id, String password) {
-        ServiceAssert.notNull(password, ResultCode.PARAM_INVALID, "新密码不能为空");
-        ServiceAssert.isTrue(password.length() >= 6 && password.length() <= 32,
-                ResultCode.PARAM_INVALID, "密码长度 6~32");
-        assertCompanyMember(id, "重置密码");
-        SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
-        user.setPasswordHash(passwordEncoder.encode(password));
-        updateById(user);
+    private List<SysRole> rolesForMemberUpdate(Operator operator, String id, UserSaveRequest request) {
+        List<SysRole> roles = request.getRoleIds() == null ? null : validatedRoles(operator, request.getRoleIds());
+        if (roles != null) {
+            ServiceAssert.isTrue(operator.roles().superAdmin() || !operator.userId().equals(id),
+                    ResultCode.FORBIDDEN, "禁止为自己重绑角色");
+        }
+        return roles;
     }
 
-    /** 启用/停用（停用后登录被拒绝；内置 admin 禁止停用）。 */
+    private boolean updateAccountIfChanged(String id, SysUser user, UserSaveRequest request, String companyId) {
+        boolean profileChange = UserWriteValidation.hasProfileChanges(user, request);
+        boolean passwordChange = request.getPassword() != null && !request.getPassword().isBlank();
+        if (profileChange || passwordChange) {
+            assertExclusiveAccount(id);
+            UserWriteValidation.assertRevision(user.getRevision(), request.getRevision(), "revision");
+            if (profileChange) {
+                validateDepartment(request.getDepartmentId(), companyId);
+            }
+            applyProfile(user, request);
+            if (passwordChange) {
+                UserWriteValidation.validatePassword(request.getPassword());
+                user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+                user.setSecurityVersion(nextSecurityVersion(user.getSecurityVersion()));
+            }
+            ServiceAssert.isTrue(updateById(user), ResultCode.DATA_CONCURRENT_CONFLICT);
+        }
+        return passwordChange;
+    }
+
+    private void applyMemberStatus(String id, SysUserCompany membership, Integer status) {
+        if (status != null) {
+            assertCanDisableSelf(id, status);
+            membership.setStatusFlag(status);
+            if (status == 0) {
+                membership.setSecurityVersion(nextSecurityVersion(membership.getSecurityVersion()));
+            }
+        }
+    }
+
+    /** 按客户端成员版本移出本公司；保留平台账户与其他公司关系，撤权和审计同事务。 */
     @Transactional(rollbackFor = Exception.class)
-    public void toggleStatus(String id, Integer status) {
-        ServiceAssert.isTrue(status != null && (status == 0 || status == 1),
-                ResultCode.PARAM_INVALID, "状态值只允许 0/1");
-        assertCompanyMember(id, "启停");
+    public void delete(String id, Integer expectedRevision) {
+        Operator operator = grantPolicy.requireOperator();
+        String companyId = operator.companyId();
+        SysUserCompany membership = requireMembership(id, companyId);
         SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
+        UserWriteValidation.assertMutableAccount(user.getUsername(), "移出");
+        assertCanManageMember(operator, id);
+        ServiceAssert.isTrue(!id.equals(AuthUtil.getLoginUserId()), ResultCode.PARAM_INVALID, "禁止移出自身");
+        UserWriteValidation.assertRevision(membership.getRevision(), expectedRevision, "expectedRevision");
+        membership.setSecurityVersion(nextSecurityVersion(membership.getSecurityVersion()));
+        ServiceAssert.isTrue(userCompanyMapper.update(membership, new LambdaUpdateWrapper<SysUserCompany>()
+                        .eq(SysUserCompany::getId, membership.getId()).eq(SysUserCompany::getUserId, id)
+                        .eq(SysUserCompany::getCompanyId, companyId)
+                        .eq(SysUserCompany::getRevision, expectedRevision)
+                        .set(SysUserCompany::getDeleteFlag, 0)) == 1,
+                ResultCode.DATA_CONCURRENT_CONFLICT);
+        deleteRoles(id, companyId);
+        SysTempAuthorization revoked = new SysTempAuthorization();
+        revoked.setStatusFlag(0);
+        tempAuthorizationMapper.update(revoked, new LambdaQueryWrapper<SysTempAuthorization>()
+                .eq(SysTempAuthorization::getCompanyId, companyId).eq(SysTempAuthorization::getUserId, id)
+                .eq(SysTempAuthorization::getStatusFlag, 1));
+        changeRecorder.record("remove_member", id, null);
+    }
+
+    /** 两类客户端版本CAS后重置独占账号密码；成员栅栏、账号、审计和事件同事务。 */
+    @Transactional(rollbackFor = Exception.class)
+    public void resetPassword(String id, UserPasswordResetRequest request) {
+        Operator operator = grantPolicy.requireOperator();
+        ServiceAssert.notNull(request, ResultCode.PARAM_INVALID);
+        String companyId = operator.companyId();
+        SysUserCompany membership = requireMembership(id, companyId);
+        assertCanManageMember(operator, id);
+        assertExclusiveAccount(id);
+        UserWriteValidation.validatePassword(request.password());
+        SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
+        UserWriteValidation.assertRevision(user.getRevision(), request.expectedRevision(), "expectedRevision");
+        UserWriteValidation.assertRevision(membership.getRevision(), request.expectedMembershipRevision(), "expectedMembershipRevision");
+        ServiceAssert.isTrue(userCompanyMapper.updateById(membership) == 1, ResultCode.DATA_CONCURRENT_CONFLICT);
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.setSecurityVersion(nextSecurityVersion(user.getSecurityVersion()));
+        ServiceAssert.isTrue(updateById(user), ResultCode.DATA_CONCURRENT_CONFLICT);
+        changeRecorder.record("reset_password", id, null);
+    }
+
+    /** 按客户端成员版本启停当前公司成员；重新启用仍保留已推进的安全版本。 */
+    @Transactional(rollbackFor = Exception.class)
+    public void toggleStatus(String id, UserStatusRequest request) {
+        Operator operator = grantPolicy.requireOperator();
+        ServiceAssert.notNull(request, ResultCode.PARAM_INVALID);
+        String companyId = operator.companyId();
+        Integer status = request.status();
+        UserWriteValidation.validateStatus(status);
+        ServiceAssert.notNull(status, ResultCode.PARAM_INVALID);
+        SysUserCompany membership = requireMembership(id, companyId);
+        SysUser user = ServiceAssert.notNull(getById(id), ResultCode.USER_NOT_FOUND);
+        assertCanManageMember(operator, id);
         if (status == 0) {
-            guardBuiltinAccount(user, "停用");
-            ServiceAssert.isTrue(!id.equals(AuthUtil.getLoginUserId()),
-                    ResultCode.PARAM_INVALID, "禁止停用当前登录账号");
+            UserWriteValidation.assertMutableAccount(user.getUsername(), "停用成员");
         }
-        user.setStatusFlag(status);
-        updateById(user);
+        UserWriteValidation.assertRevision(membership.getRevision(), request.expectedRevision(), "expectedRevision");
+        applyMemberStatus(id, membership, status);
+        ServiceAssert.isTrue(userCompanyMapper.updateById(membership) == 1, ResultCode.DATA_CONCURRENT_CONFLICT);
+        changeRecorder.record("member_status", id, Map.of("status", status));
     }
 
-    private void guardBuiltinAccount(SysUser user, String action) {
-        if (BUILTIN_ADMIN_USERNAME.equals(user.getUsername())) {
-            throw new ServiceException(ResultCode.FORBIDDEN,
-                    "内置管理员账号禁止" + action);
-        }
+    private SysUserCompany requireMembership(String userId, String companyId) {
+        ServiceAssert.notBlank(userId, ResultCode.PARAM_INVALID);
+        List<SysUserCompany> memberships = userCompanyMapper.selectList(new LambdaQueryWrapper<SysUserCompany>()
+                        .eq(SysUserCompany::getUserId, userId).eq(SysUserCompany::getCompanyId, companyId)
+                        .eq(SysUserCompany::getDeleteFlag, 1))
+                .stream().filter(m -> userId.equals(m.getUserId()) && companyId.equals(m.getCompanyId())
+                        && Integer.valueOf(1).equals(m.getDeleteFlag())).toList();
+        ServiceAssert.isTrue(memberships.size() == 1, ResultCode.FORBIDDEN, "目标用户不是当前公司的唯一有效成员");
+        return memberships.get(0);
     }
 
-    private void applyMutableFields(SysUser user, UserSaveRequest request) {
+    private void assertExclusiveAccount(String userId) {
+        long companies = userCompanyMapper.selectList(new LambdaQueryWrapper<SysUserCompany>()
+                        .eq(SysUserCompany::getUserId, userId).eq(SysUserCompany::getDeleteFlag, 1))
+                .stream().filter(m -> userId.equals(m.getUserId()) && Integer.valueOf(1).equals(m.getDeleteFlag()))
+                .map(SysUserCompany::getCompanyId).distinct().count();
+        ServiceAssert.isTrue(companies == 1, ResultCode.FORBIDDEN,
+                "共享平台账户资料和密码只能由本人或独立平台管理员修改");
+    }
+
+    /** 管理成员需覆盖其永久和未结束临时角色；普通操作者不得使用管理命令修改本人。 */
+    private void assertCanManageMember(Operator operator, String targetId) {
+        ServiceAssert.isTrue(operator.roles().superAdmin() || !operator.userId().equals(targetId),
+                ResultCode.FORBIDDEN, "本人资料和密码请使用需要原密码校验的本人入口");
+        if (operator.roles().superAdmin()) {
+            return;
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        Set<String> roleIds = memberBoundRoleIds(targetId, operator.companyId());
+        addUnexpiredMemberRoleIds(roleIds, targetId, operator.companyId(), now);
+        if (roleIds.isEmpty()) {
+            return;
+        }
+        List<SysRole> roles = managedMemberRoles(roleIds, operator.companyId());
+        grantPolicy.assertManagedRoles(operator, roles);
+    }
+
+    private Set<String> memberBoundRoleIds(String targetId, String companyId) {
+        return userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                        .eq(SysUserRole::getUserId, targetId).eq(SysUserRole::getCompanyId, companyId)
+                        .eq(SysUserRole::getDeleteFlag, 1)).stream()
+                .filter(binding -> targetId.equals(binding.getUserId())
+                        && companyId.equals(binding.getCompanyId())
+                        && Integer.valueOf(1).equals(binding.getDeleteFlag()))
+                .map(SysUserRole::getRoleId).collect(Collectors.toSet());
+    }
+
+    private void addUnexpiredMemberRoleIds(Set<String> roleIds, String targetId, String companyId, LocalDateTime now) {
+        tempAuthorizationMapper.selectList(new LambdaQueryWrapper<SysTempAuthorization>()
+                        .eq(SysTempAuthorization::getUserId, targetId)
+                        .eq(SysTempAuthorization::getCompanyId, companyId)
+                        .eq(SysTempAuthorization::getStatusFlag, 1).eq(SysTempAuthorization::getDeleteFlag, 1)
+                        .gt(SysTempAuthorization::getEffectTo, now)).stream()
+                .filter(temp -> targetId.equals(temp.getUserId()) && companyId.equals(temp.getCompanyId())
+                        && Integer.valueOf(1).equals(temp.getStatusFlag()) && Integer.valueOf(1).equals(temp.getDeleteFlag())
+                        && temp.getEffectTo() != null && temp.getEffectTo().isAfter(now))
+                .forEach(temp -> roleIds.add(temp.getRoleId()));
+    }
+
+    private List<SysRole> managedMemberRoles(Set<String> roleIds, String companyId) {
+        List<SysRole> roles = roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+                        .in(SysRole::getId, roleIds).eq(SysRole::getCompanyId, companyId)
+                        .eq(SysRole::getDeleteFlag, 1)).stream()
+                .filter(role -> roleIds.contains(role.getId()) && companyId.equals(role.getCompanyId())
+                        && Integer.valueOf(1).equals(role.getDeleteFlag())).toList();
+        ServiceAssert.isTrue(roles.stream().map(SysRole::getId).distinct().count() == roleIds.size(),
+                ResultCode.FORBIDDEN, "目标成员存在无效或跨公司角色绑定");
+        return roles;
+    }
+
+    private void assertCanDisableSelf(String id, Integer status) {
+        ServiceAssert.isTrue(status == null || status != 0 || !id.equals(AuthUtil.getLoginUserId()),
+                ResultCode.PARAM_INVALID, "禁止停用自身公司成员");
+    }
+
+    private void validateDepartment(String id, String companyId) {
+        if (id == null || id.isBlank()) {
+            return;
+        }
+        SysDepartment department = departmentMapper.selectById(id);
+        ServiceAssert.isTrue(department != null && companyId.equals(department.getCompanyId())
+                        && Integer.valueOf(1).equals(department.getDeleteFlag())
+                        && Integer.valueOf(1).equals(department.getStatusFlag()),
+                ResultCode.FORBIDDEN, "部门不属于当前公司或已停用");
+    }
+
+    private static void applyProfile(SysUser user, UserSaveRequest request) {
         user.setNickname(request.getNickname());
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
         user.setDepartmentId(request.getDepartmentId());
-        user.setStatusFlag(request.getStatus() == null ? 1 : request.getStatus());
     }
 
-    private void grantRoles(String userId, List<String> roleIds) {
-        if (roleIds == null || roleIds.isEmpty()) {
-            return;
+    private List<SysRole> validatedRoles(Operator operator, List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
         }
-        // 自授禁令（RC11/T18）：非超管不得给自己绑定角色
-        if (userId.equals(AuthUtil.getLoginUserId()) && !AuthUtil.isSuperAdmin()) {
-            throw new ServiceException(ResultCode.FORBIDDEN, "禁止为自己绑定角色（自授禁令）");
-        }
-        ServiceAssert.isTrue(roleIds.size() <= RobotConstants.BATCH_WRITE_LIMIT,
-                ResultCode.PARAM_INVALID, "角色数量超出单批上限");
-        // 角色必须属于当前公司（防越权挂载他司角色）
-        List<String> validRoleIds = roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
-                        .in(SysRole::getId, roleIds)
-                        .eq(SysRole::getCompanyId, AuthUtil.getLoginCompanyId())
-                        .eq(SysRole::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE))
-                .stream().map(SysRole::getId).toList();
-        ServiceAssert.isTrue(validRoleIds.size() == roleIds.stream().distinct().count(),
-                ResultCode.FORBIDDEN, "包含无效或跨公司角色");
-        for (String roleId : validRoleIds) {
-            SysUserRole binding = new SysUserRole();
-            binding.setUserId(userId);
-            binding.setRoleId(roleId);
-            userRoleMapper.insert(binding);
+        ServiceAssert.isTrue(ids.size() <= RobotConstants.BATCH_WRITE_LIMIT
+                        && ids.stream().allMatch(id -> id != null && !id.isBlank() && id.length() <= 64)
+                        && new HashSet<>(ids).size() == ids.size(), ResultCode.PARAM_INVALID,
+                "角色ID必须有效、不重复且在单批上限内");
+        List<SysRole> roles = roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+                        .in(SysRole::getId, ids).eq(SysRole::getCompanyId, operator.companyId())
+                        .eq(SysRole::getDeleteFlag, 1).eq(SysRole::getStatusFlag, 1))
+                .stream().filter(role -> ids.contains(role.getId())
+                        && operator.companyId().equals(role.getCompanyId())
+                        && Integer.valueOf(1).equals(role.getDeleteFlag())
+                        && Integer.valueOf(1).equals(role.getStatusFlag())).toList();
+        ServiceAssert.isTrue(roles.stream().map(SysRole::getId).distinct().count() == ids.size(),
+                ResultCode.FORBIDDEN, "包含无效、停用或跨公司角色");
+        grantPolicy.assertRoles(operator, roles);
+        return roles;
+    }
+
+    private void insertRoles(String userId, String companyId, List<SysRole> roles) {
+        for (SysRole role : roles) {
+            SysUserRole binding = new SysUserRole(); binding.setUserId(userId);
+            binding.setCompanyId(companyId); binding.setRoleId(role.getId());
+            ServiceAssert.isTrue(userRoleMapper.insert(binding) == 1, ResultCode.DATA_CONCURRENT_CONFLICT);
         }
     }
 
-    /** VO 批量转换：绑定 + 角色各一次查询（消除 N+1 与同表重复查询）。 */
-    private List<UserVO> toVos(List<SysUser> users) {
+    private void deleteRoles(String userId, String companyId) {
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
+                .eq(SysUserRole::getUserId, userId).eq(SysUserRole::getCompanyId, companyId));
+    }
+
+    private List<UserVO> toVos(List<SysUser> users, String companyId) {
         if (users.isEmpty()) {
             return List.of();
         }
-        // 查询 1：本页用户的全部有效绑定
-        List<SysUserRole> bindings = userRoleMapper.selectList(
-                new LambdaQueryWrapper<SysUserRole>()
-                        .in(SysUserRole::getUserId, users.stream().map(SysUser::getId).toList())
-                        .eq(SysUserRole::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE));
-        // 查询 2：绑定角色实体（批量）
-        Map<String, SysRole> roleById = bindings.isEmpty() ? Map.of()
-                : roleMapper.selectBatchIds(bindings.stream()
-                        .map(SysUserRole::getRoleId).distinct().toList()).stream()
-                .filter(role -> role.getDeleteFlag().equals(RobotConstants.DELETE_FLAG_ACTIVE))
+        List<String> ids = users.stream().map(SysUser::getId).toList();
+        Map<String, SysUserCompany> memberships = userCompanyMapper.selectList(new LambdaQueryWrapper<SysUserCompany>()
+                        .in(SysUserCompany::getUserId, ids).eq(SysUserCompany::getCompanyId, companyId)
+                        .eq(SysUserCompany::getDeleteFlag, 1)).stream()
+                .filter(m -> ids.contains(m.getUserId()) && companyId.equals(m.getCompanyId())
+                        && Integer.valueOf(1).equals(m.getDeleteFlag()))
+                .collect(Collectors.toMap(SysUserCompany::getUserId, Function.identity()));
+        List<SysUserRole> bindings = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                        .in(SysUserRole::getUserId, ids).eq(SysUserRole::getCompanyId, companyId)
+                        .eq(SysUserRole::getDeleteFlag, 1)).stream()
+                .filter(binding -> ids.contains(binding.getUserId()) && companyId.equals(binding.getCompanyId())
+                        && Integer.valueOf(1).equals(binding.getDeleteFlag())).toList();
+        Map<String, SysRole> roles = bindings.isEmpty() ? Map.of() : roleMapper.selectBatchIds(
+                        bindings.stream().map(SysUserRole::getRoleId).distinct().toList()).stream()
+                .filter(role -> companyId.equals(role.getCompanyId()) && Integer.valueOf(1).equals(role.getDeleteFlag()))
                 .collect(Collectors.toMap(SysRole::getId, Function.identity()));
-        Map<String, List<String>> roleNamesByUser = bindings.stream()
-                .collect(Collectors.groupingBy(SysUserRole::getUserId,
-                        Collectors.mapping(binding -> {
-                            SysRole role = roleById.get(binding.getRoleId());
-                            return role == null ? null : role.getRoleName();
-                        }, Collectors.filtering(name -> name != null, Collectors.toList()))));
-        return users.stream()
-                .map(user -> UserVO.from(user,
-                        roleNamesByUser.getOrDefault(user.getId(), List.of())))
-                .toList();
+        return users.stream().filter(user -> memberships.containsKey(user.getId())).map(user -> {
+            List<String> roleIds = bindings.stream().filter(binding -> user.getId().equals(binding.getUserId()))
+                    .map(SysUserRole::getRoleId).filter(roles::containsKey).distinct().toList();
+            UserVO vo = UserVO.from(user, roleIds.stream().map(id -> roles.get(id).getRoleName()).toList());
+            SysUserCompany membership = memberships.get(user.getId());
+            vo.setRoleIds(roleIds);
+            vo.setMembershipRevision(membership.getRevision());
+            vo.setStatus(membership.getStatusFlag());
+            vo.setStatusFlag(membership.getStatusFlag());
+            return vo;
+        }).toList();
     }
 
-
-    /** 自助修改密码：校验旧密码。 */
+    /** 本人改密必须匹配旧密码；推进会话安全版本并与密码更新、审计同事务提交。 */
     @Transactional(rollbackFor = Exception.class)
     public void changeOwnPassword(String userId, String oldPassword, String newPassword) {
-        ServiceAssert.notNull(newPassword, ResultCode.PARAM_INVALID, "新密码不能为空");
-        ServiceAssert.isTrue(newPassword.length() >= 6 && newPassword.length() <= 32,
-                ResultCode.PARAM_INVALID, "密码长度 6~32");
+        requireOwnUser(userId);
+        UserWriteValidation.validatePassword(newPassword);
         SysUser user = ServiceAssert.notNull(getById(userId), ResultCode.USER_NOT_FOUND);
-        ServiceAssert.isTrue(
-                passwordEncoder.matches(oldPassword == null ? "" : oldPassword,
-                        user.getPasswordHash()),
+        ServiceAssert.isTrue(passwordEncoder.matches(oldPassword == null ? "" : oldPassword, user.getPasswordHash()),
                 ResultCode.PARAM_INVALID, "原密码不正确");
         user.setPasswordHash(passwordEncoder.encode(newPassword));
-        updateById(user);
+        user.setSecurityVersion(nextSecurityVersion(user.getSecurityVersion()));
+        ServiceAssert.isTrue(updateById(user), ResultCode.DATA_CONCURRENT_CONFLICT);
+        changeRecorder.record("change_password", userId, null);
     }
 
-    /** 自助更新资料（昵称/邮箱/手机号）。 */
+    /** 本人资料入口只允许当前登录账号，避免公司管理命令绕过本人身份校验。 */
     @Transactional(rollbackFor = Exception.class)
     public void updateOwnProfile(String userId, String nickname, String email, String phone) {
+        requireOwnUser(userId);
+        UserWriteValidation.validateProfile(nickname, email, phone);
         SysUser user = ServiceAssert.notNull(getById(userId), ResultCode.USER_NOT_FOUND);
-        if (nickname != null && !nickname.isBlank()) {
+        if (nickname != null) {
             user.setNickname(nickname);
         }
         user.setEmail(email);
         user.setPhone(phone);
-        updateById(user);
+        ServiceAssert.isTrue(updateById(user), ResultCode.DATA_CONCURRENT_CONFLICT);
+        changeRecorder.record("profile_update", userId, null);
+    }
+
+    private void requireOwnUser(String id) {
+        ServiceAssert.notBlank(AuthUtil.getLoginUserId(), ResultCode.UNAUTHORIZED);
+        ServiceAssert.isTrue(AuthUtil.getLoginUserId().equals(id), ResultCode.FORBIDDEN);
+        grantPolicy.requireCompany();
+    }
+
+    private static long nextSecurityVersion(Long value) {
+        return Math.addExact(value == null ? 0L : value, 1L);
     }
 }

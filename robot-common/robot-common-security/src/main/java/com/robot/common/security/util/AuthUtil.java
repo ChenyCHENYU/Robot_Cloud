@@ -3,6 +3,9 @@ package com.robot.common.security.util;
 import com.robot.common.core.constant.RobotConstants;
 import com.robot.common.security.context.InnerTrustContext;
 import com.robot.common.security.context.LoginUser;
+import com.robot.common.security.exception.InnerAccessDeniedException;
+
+import java.util.Objects;
 
 /**
  * 登录上下文读取工具（对齐 wl-skills-bd「租户只来自 AuthUtil」的不变式）。
@@ -24,10 +27,11 @@ public final class AuthUtil {
     public static LoginUser getLoginUser() {
         Object loginId = AuthHolder.getLoginId();
         if (loginId != null) {
-            return AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER, LoginUser.class);
+            LoginUser user = AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER, LoginUser.class);
+            return user != null && Objects.equals(String.valueOf(loginId), user.getUserId()) ? user : null;
         }
         InnerTrustContext inner = InnerTrustContext.current();
-        if (inner != null && inner.getUserId() != null && inner.getCompanyId() != null) {
+        if (inner != null && inner.hasDelegate()) {
             return LoginUser.builder()
                     .userId(inner.getUserId())
                     .username(inner.getUsername())
@@ -36,6 +40,25 @@ public final class AuthUtil {
                     .build();
         }
         return null;
+    }
+
+    /** 服务凭据通过当前内部请求验证后，才允许进入登录前供给/租户豁免路径。 */
+    public static InnerTrustContext requireTrustedService() {
+        InnerTrustContext inner = InnerTrustContext.current();
+        if (inner == null) {
+            throw new InnerAccessDeniedException();
+        }
+        return inner;
+    }
+
+    /** 委托接口的路径/查询身份必须与权威上下文完全相同。 */
+    public static void requireTrustedUser(String userId, String companyId) {
+        InnerTrustContext inner = requireTrustedService();
+        LoginUser user = getLoginUser();
+        if (!inner.hasDelegate() || user == null || !Objects.equals(userId, user.getUserId())
+                || !Objects.equals(companyId, user.getCompanyId())) {
+            throw new InnerAccessDeniedException();
+        }
     }
 
     /** 当前登录用户 ID（未登录返回 null）。 */

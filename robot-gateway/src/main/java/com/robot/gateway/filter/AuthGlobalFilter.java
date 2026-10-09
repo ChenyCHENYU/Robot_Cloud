@@ -3,6 +3,7 @@ package com.robot.gateway.filter;
 import com.robot.common.core.constant.RobotConstants;
 import com.robot.common.core.domain.Result;
 import com.robot.common.core.domain.ResultCode;
+import com.robot.common.core.util.TraceIds;
 import com.robot.gateway.properties.AuthProperties;
 import com.robot.gateway.util.WebFluxResponseWriter;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,7 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.util.UUID;
+import java.util.Locale;
 
 /**
  * 网关全局过滤器：TraceId 注入 → 内部接口屏蔽 → 登录态校验。
@@ -40,20 +41,15 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
 
-        // 1. TraceId：沿用客户端可信头（本工程内网可信），否则生成；响应头回传便于排障
-        String traceId = request.getHeaders().getFirst(RobotConstants.HEADER_TRACE_ID);
-        if (traceId == null || traceId.isBlank()) {
-            traceId = UUID.randomUUID().toString().replace("-", "");
-        }
+        // 1. TraceId：格式合法才沿用，非法输入生成新标识；响应头回传便于关联排障
+        String traceId = TraceIds.resolve(request.getHeaders().getFirst(RobotConstants.HEADER_TRACE_ID));
         exchange.getResponse().getHeaders().set(RobotConstants.HEADER_TRACE_ID, traceId);
         // 单次 mutate：写入 TraceId + 清洗客户端伪造的内部调用与委托头（RC07）
         ServerHttpRequest mutated = request.mutate()
                 .header(RobotConstants.HEADER_TRACE_ID, traceId)
                 .headers(headers -> {
-                    headers.remove(RobotConstants.HEADER_INNER_CALL);
-                    headers.remove(RobotConstants.HEADER_INNER_USER);
-                    headers.remove(RobotConstants.HEADER_INNER_COMPANY);
-                    headers.remove(RobotConstants.HEADER_INNER_USERNAME);
+                    headers.keySet().removeIf(name -> name.toLowerCase(Locale.ROOT)
+                            .startsWith("x-inner-"));
                 })
                 .build();
 

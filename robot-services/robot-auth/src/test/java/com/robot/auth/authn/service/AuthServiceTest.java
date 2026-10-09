@@ -48,7 +48,8 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(remoteSystemService, redisHelper, sessions, encoder);
+        authService = new AuthService(remoteSystemService, redisHelper, sessions, encoder,
+                new com.fasterxml.jackson.databind.ObjectMapper());
     }
 
     private static LoginCompaniesRequest buildCompanies(String username) {
@@ -71,6 +72,7 @@ class AuthServiceTest {
                 .passwordHash(encoder.encode("admin123"))
                 .nickname("管理员")
                 .statusFlag(1)
+                .securityVersion(0L)
                 .build();
     }
 
@@ -125,7 +127,8 @@ class AuthServiceTest {
     @Test
     @DisplayName("刷新令牌无效：拒绝并提示重新登录")
     void refreshShouldRejectUnknownToken() {
-        lenient().when(redisHelper.getString(anyString())).thenReturn(java.util.Optional.empty());
+        lenient().when(sessions.requireRefresh("not-a-token"))
+                .thenThrow(new ServiceException(ResultCode.AUTH_REFRESH_TOKEN_INVALID));
 
         ServiceException e = assertThrows(ServiceException.class,
                 () -> authService.refreshToken("not-a-token"));

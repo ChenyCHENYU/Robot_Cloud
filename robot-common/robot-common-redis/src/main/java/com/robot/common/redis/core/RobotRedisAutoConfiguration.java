@@ -2,10 +2,12 @@ package com.robot.common.redis.core;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -18,11 +20,33 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * <ul>
  *   <li>Key / HashKey 一律 StringRedisSerializer，保证可读可排查；</li>
  *   <li>Value 用 Jackson JSON + 类型信息，注册 JavaTimeModule 支持 LocalDateTime；</li>
- *   <li>开启默认类型仅用于受控内部缓存，反序列化白名单交由 LaissezFaire 校验器。</li>
+ *   <li>只允许 Robot 缓存模型与已登记的基础容器，拒绝任意第三方类型。</li>
  * </ul>
  */
 @AutoConfiguration
 public class RobotRedisAutoConfiguration {
+
+    /**
+     * 配置绑定完成后，将未提供的 Redis 凭据归一为 null，避免 Redisson 发送空 AUTH。
+     * static 且无依赖，保证注册此处理器时不会提前实例化 Redis 客户端或配置 Bean。
+     */
+    @Bean
+    public static BeanPostProcessor redisCredentialsNormalizer() {
+        return new BeanPostProcessor() {
+            @Override
+            public Object postProcessAfterInitialization(Object bean, String beanName) {
+                if (bean instanceof RedisProperties properties) {
+                    properties.setUsername(blankToNull(properties.getUsername()));
+                    properties.setPassword(blankToNull(properties.getPassword()));
+                }
+                return bean;
+            }
+        };
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
 
     @Bean
     @ConditionalOnMissingBean(name = "robotRedisTemplate")
@@ -32,7 +56,15 @@ public class RobotRedisAutoConfiguration {
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
-        mapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance,
+        mapper.activateDefaultTyping(BasicPolymorphicTypeValidator.builder()
+                        .allowIfSubType("com.robot.")
+                        .allowIfSubType(java.util.ArrayList.class)
+                        .allowIfSubType(java.util.HashMap.class)
+                        .allowIfSubType(java.util.LinkedHashMap.class)
+                        .allowIfSubType(java.util.HashSet.class)
+                        .allowIfSubType(java.util.LinkedHashSet.class)
+                        .allowIfSubType(java.time.LocalDateTime.class)
+                        .build(),
                 ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
 
         Jackson2JsonRedisSerializer<Object> valueSerializer =

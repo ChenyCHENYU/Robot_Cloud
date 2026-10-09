@@ -14,6 +14,7 @@ import java.util.List;
 @Service
 public class DepartmentService extends ServiceImpl<SysDepartmentMapper, SysDepartment> {
 
+    /** 仅返回租户插件过滤后的当前公司活跃部门树。 */
     public List<DepartmentNode> departmentTree() {
         return buildTree(activeDepartments(), null);
     }

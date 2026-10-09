@@ -24,8 +24,17 @@
       <artifactId>spring-cloud-openfeign-core</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.robot</groupId>
+      <artifactId>robot-common-security</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.github.openfeign</groupId>
       <artifactId>feign-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

@@ -25,8 +25,13 @@ public final class InnerTrustContext {
         this.username = username;
     }
 
-    public static void bind(String userId, String companyId, String username) {
+    /** 仅由内部接口鉴权拦截器在验证服务凭据后调用；无委托时仍记录服务鉴权结果。 */
+    public static void bindVerifiedService(String userId, String companyId, String username) {
         HOLDER.set(new InnerTrustContext(userId, companyId, username));
+    }
+
+    public boolean hasDelegate() {
+        return userId != null && companyId != null;
     }
 
     public static InnerTrustContext current() {

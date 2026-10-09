@@ -42,6 +42,7 @@
     <hutool.version>5.8.38</hutool.version>
     <mapstruct.version>1.6.3</mapstruct.version>
     <lombok.version>1.18.38</lombok.version>
+    <archunit.version>1.4.2</archunit.version>
 
     <!-- 可选扩展（默认不启用，启用方式见 docs/tech-selection.md） -->
     <seata.version>2.2.0</seata.version>
@@ -58,6 +59,11 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>com.tngtech.archunit</groupId>
+        <artifactId>archunit-junit5</artifactId>
+        <version>${archunit.version}</version>
+      </dependency>
       <!-- Spring Cloud（含 loadbalancer / gateway / openfeign / circuitbreaker） -->
       <dependency>
         <groupId>org.springframework.cloud</groupId>
@@ -120,6 +126,11 @@
       <dependency>
         <groupId>org.redisson</groupId>
         <artifactId>redisson-spring-boot-starter</artifactId>
+        <version>${redisson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.redisson</groupId>
+        <artifactId>redisson-spring-data-32</artifactId>
         <version>${redisson.version}</version>
       </dependency>
 

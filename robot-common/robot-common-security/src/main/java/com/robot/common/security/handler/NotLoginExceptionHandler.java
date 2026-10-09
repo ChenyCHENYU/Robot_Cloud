@@ -33,7 +33,8 @@ public class NotLoginExceptionHandler {
         return Result.failed(ResultCode.UNAUTHORIZED, ResultCode.UNAUTHORIZED.getMessage(), traceId());
     }
 
-    @ExceptionHandler({NotPermissionException.class, NotRoleException.class})
+    @ExceptionHandler({NotPermissionException.class, NotRoleException.class,
+            com.robot.common.security.exception.InnerAccessDeniedException.class})
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public Result<Void> handleNoPermission(Exception e) {
         return Result.failed(ResultCode.FORBIDDEN, ResultCode.FORBIDDEN.getMessage(), traceId());

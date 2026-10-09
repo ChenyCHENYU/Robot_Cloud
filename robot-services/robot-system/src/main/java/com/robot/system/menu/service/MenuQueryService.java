@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,49 +44,126 @@ public class MenuQueryService {
 
     /** 全量菜单树（管理端；菜单为全局表，可见性由角色授权控制）。 */
     public List<MenuTreeNode> menuTree() {
-        return buildTree(activeMenus(), null);
+        return buildTree(menus(false), null);
     }
 
-    /** 用户可用路由树（/auth/menu-list 数据源）。 */
+    /** 必要祖先仅用于导航结构，不附赠页面或动作权限。 */
     public List<RemoteMenuRouteDTO> routesOfUser(String userId, String companyId) {
-        Set<String> grantedIds = grantedMenuIds(userId, companyId);
-        List<SysMenu> menus = grantedIds == null
-                ? activeMenus()
-                : activeMenus().stream().filter(m -> grantedIds.contains(m.getId())).toList();
-        return toRoutes(menus, null);
+        return toRoutes(accessOfUser(userId, companyId).menus(), null);
     }
 
-    /**
-     * 用户按钮权限映射：菜单 path → 权限码集合（/auth/button-list 数据源）。
-     * RC11：按钮码只来自 sys_role_button 精确绑定且挂在已授权菜单下。
-     */
+    /** 与API精确绑定一致：隐式父菜单不提供page权限，按钮只来自有效role_button。 */
     public Map<String, List<String>> buttonListOfUser(String userId, String companyId) {
-        EffectiveRoleResolver.EffectiveRoles effective =
-                effectiveRoleResolver.resolve(userId, companyId);
-        Set<String> grantedIds = effective.superAdmin() ? null
-                : menuIdsOfRoles(effective.roleIds());
-        List<SysMenu> menus = activeMenus().stream()
-                .filter(menu -> menu.getPath() != null && !menu.getPath().isBlank())
-                .filter(menu -> grantedIds == null || grantedIds.contains(menu.getId()))
-                .toList();
-        if (menus.isEmpty()) {
-            return Map.of();
-        }
-        Map<String, List<SysMenuButton>> byMenu = boundButtons(effective).stream()
-                .collect(Collectors.groupingBy(SysMenuButton::getMenuId));
-
+        MenuAccess access = accessOfUser(userId, companyId);
+        Map<String, List<String>> byMenu = buttonCodesByMenu(access.buttons());
         Map<String, List<String>> result = new HashMap<>();
-        for (SysMenu menu : menus) {
-            List<String> codes = new ArrayList<>(byMenu
-                    .getOrDefault(menu.getId(), List.of()).stream()
-                    .map(SysMenuButton::getPermCode).toList());
-            // 页面级权限码并入（如 sys:user:list）
-            if (menu.getPermCode() != null && !menu.getPermCode().isBlank()) {
-                codes.add(menu.getPermCode());
-            }
-            result.put(menu.getPath(), codes);
+        for (SysMenu menu : access.menus()) {
+            List<String> codes = permissionCodesOfMenu(menu, access, byMenu.getOrDefault(menu.getId(), List.of()));
+            putPermissionsForPath(result, menu, access.allMenus(), codes);
         }
         return result;
+    }
+
+    /** 这里只接收已经通过有效角色精确绑定和有效父页过滤的按钮。 */
+    private Map<String, List<String>> buttonCodesByMenu(List<SysMenuButton> buttons) {
+        return buttons.stream().filter(button -> hasText(button.getPermCode()))
+                .collect(Collectors.groupingBy(SysMenuButton::getMenuId,
+                        Collectors.mapping(SysMenuButton::getPermCode, Collectors.toList())));
+    }
+
+    /** 导航祖先没有页面码；页面权限仅来自显式菜单授权或既有超管规则。 */
+    private List<String> permissionCodesOfMenu(SysMenu menu, MenuAccess access, List<String> buttonCodes) {
+        List<String> codes = new ArrayList<>(buttonCodes);
+        if (hasPagePermission(menu, access)) {
+            codes.add(menu.getPermCode());
+        }
+        return codes.stream().distinct().sorted().toList();
+    }
+
+    private boolean hasPagePermission(SysMenu menu, MenuAccess access) {
+        return (access.superAdmin() || access.explicitMenus().contains(menu.getId())) && hasText(menu.getPermCode());
+    }
+
+    private void putPermissionsForPath(Map<String, List<String>> result, SysMenu menu,
+            Map<String, SysMenu> activeMenus, List<String> codes) {
+        if (!hasText(menu.getPath()) || codes.isEmpty()) {
+            return;
+        }
+        String path = absolutePath(menu, activeMenus);
+        if (path != null) {
+            result.put(path, codes);
+        }
+    }
+
+    private record MenuAccess(boolean superAdmin, Set<String> explicitMenus,
+            List<SysMenu> menus, List<SysMenuButton> buttons, Map<String, SysMenu> allMenus) { }
+
+    private MenuAccess accessOfUser(String userId, String companyId) {
+        EffectiveRoles effective = effectiveRoleResolver.resolve(userId, companyId);
+        if (effective.isEmpty()) {
+            return new MenuAccess(false, Set.of(), List.of(), List.of(), Map.of());
+        }
+        List<SysMenu> active = menus(true);
+        Map<String, SysMenu> byId = active.stream().collect(Collectors.toMap(SysMenu::getId, java.util.function.Function.identity()));
+        Set<String> explicit = effective.superAdmin() ? byId.keySet() : menuIdsOfRoles(effective.roleIds());
+        List<SysMenuButton> buttons = buttonsOnActiveMenus(effective, byId);
+        Set<String> included = navigationMenuIds(navigationSeeds(explicit, buttons), byId);
+        return new MenuAccess(effective.superAdmin(), explicit,
+                active.stream().filter(menu -> included.contains(menu.getId())).toList(), buttons, byId);
+    }
+
+    private List<SysMenuButton> buttonsOnActiveMenus(EffectiveRoles effective, Map<String, SysMenu> activeMenus) {
+        return boundButtons(effective).stream().filter(button -> activeMenus.containsKey(button.getMenuId())).toList();
+    }
+
+    private Set<String> navigationSeeds(Set<String> explicitMenus, List<SysMenuButton> buttons) {
+        Set<String> seeds = new HashSet<>(explicitMenus);
+        buttons.forEach(button -> seeds.add(button.getMenuId()));
+        return seeds;
+    }
+
+    /** 精确授权页和按钮所属页提供导航种子，只有完整有效的祖先链才能进入路由树。 */
+    private Set<String> navigationMenuIds(Set<String> seeds, Map<String, SysMenu> activeMenus) {
+        Set<String> included = new HashSet<>();
+        for (String id : seeds) {
+            included.addAll(completeAncestorChain(id, activeMenus));
+        }
+        return included;
+    }
+
+    /** 缺失、循环或超过64层的祖先链全部丢弃，避免残缺导航旁路授权过滤。 */
+    private Set<String> completeAncestorChain(String id, Map<String, SysMenu> activeMenus) {
+        Set<String> chain = new HashSet<>();
+        String parent = id;
+        while (hasText(parent) && chain.size() < 64 && activeMenus.containsKey(parent) && chain.add(parent)) {
+            parent = activeMenus.get(parent).getParentId();
+        }
+        return hasText(parent) ? Set.of() : chain;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String absolutePath(SysMenu menu, Map<String, SysMenu> menus) {
+        List<String> segments = new ArrayList<>();
+        Set<String> visited = new java.util.HashSet<>();
+        SysMenu current = menu;
+        while (current != null && visited.size() < 64 && visited.add(current.getId())) {
+            String path = current.getPath();
+            if (path != null && !path.isBlank()) {
+                segments.add(0, path);
+                if (path.startsWith("/")) {
+                    return String.join("/", segments).replaceAll("/{2,}", "/");
+                }
+            }
+            if (current.getParentId() == null || current.getParentId().isBlank())
+                {
+                    return "/" + String.join("/", segments).replaceAll("/{2,}", "/");
+                }
+            current = menus.get(current.getParentId());
+        }
+        return null;
     }
 
     private Set<String> menuIdsOfRoles(Set<String> roleIds) {
@@ -93,8 +171,11 @@ public class MenuQueryService {
             return Set.of();
         }
         return roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
-                        .in(SysRoleMenu::getRoleId, roleIds))
-                .stream().map(SysRoleMenu::getMenuId).collect(Collectors.toSet());
+                        .in(SysRoleMenu::getRoleId, roleIds)
+                        .eq(SysRoleMenu::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE))
+                .stream().filter(binding -> roleIds.contains(binding.getRoleId())
+                        && Integer.valueOf(1).equals(binding.getDeleteFlag()))
+                .map(SysRoleMenu::getMenuId).collect(Collectors.toSet());
     }
 
     /** 精确绑定的按钮（超管为全部）。 */
@@ -102,20 +183,25 @@ public class MenuQueryService {
         if (effective.superAdmin()) {
             return menuButtonMapper.selectList(new LambdaQueryWrapper<SysMenuButton>()
                     .eq(SysMenuButton::getStatusFlag, 1)
-                    .eq(SysMenuButton::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE));
+                    .eq(SysMenuButton::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)).stream()
+                    .filter(button -> Integer.valueOf(1).equals(button.getStatusFlag())
+                            && Integer.valueOf(1).equals(button.getDeleteFlag())).toList();
         }
         if (effective.isEmpty()) {
             return List.of();
         }
         List<String> buttonIds = roleButtonMapper.selectList(
                         new LambdaQueryWrapper<SysRoleButton>()
-                                .in(SysRoleButton::getRoleId, effective.roleIds()))
-                .stream().map(SysRoleButton::getButtonId).toList();
+                                .in(SysRoleButton::getRoleId, effective.roleIds())
+                                .eq(SysRoleButton::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE))
+                .stream().filter(binding -> effective.roleIds().contains(binding.getRoleId())
+                        && Integer.valueOf(1).equals(binding.getDeleteFlag()))
+                .map(SysRoleButton::getButtonId).toList();
         if (buttonIds.isEmpty()) {
             return List.of();
         }
         return menuButtonMapper.selectBatchIds(buttonIds).stream()
-                .filter(button -> button.getStatusFlag() != null && button.getStatusFlag() == 1
+                .filter(button -> buttonIds.contains(button.getId()) && button.getStatusFlag() != null && button.getStatusFlag() == 1
                         && button.getDeleteFlag() != null
                         && button.getDeleteFlag() == RobotConstants.DELETE_FLAG_ACTIVE)
                 .toList();
@@ -126,11 +212,12 @@ public class MenuQueryService {
         return menuButtonMapper.selectList(new LambdaQueryWrapper<SysMenuButton>()
                         .eq(menuId != null && !menuId.isBlank(), SysMenuButton::getMenuId, menuId)
                         .eq(SysMenuButton::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
-                        .orderByAsc(SysMenuButton::getSortNo))
+                        .orderByAsc(SysMenuButton::getSortNo, SysMenuButton::getId))
                 .stream()
                 .map(button -> new MenuButtonVO(button.getId(), button.getMenuId(),
                         button.getButtonName(), button.getPermCode(),
-                        button.getSortNo(), button.getStatusFlag()))
+                        button.getSortNo(), button.getStatusFlag(), button.getPermCode(),
+                        button.getRemark(), button.getRevision()))
                 .toList();
     }
 
@@ -144,16 +231,16 @@ public class MenuQueryService {
     /** 权限码清单（/sys/permissions：页面码 + 按钮码）。 */
     public List<PermissionItem> permissionList() {
         List<PermissionItem> result = new ArrayList<>();
-        for (SysMenu menu : activeMenus()) {
+        for (SysMenu menu : menus(false)) {
             if (menu.getPermCode() != null && !menu.getPermCode().isBlank()) {
-                result.add(new PermissionItem(menu.getPermCode(), menu.getId(),
+                result.add(new PermissionItem(menu.getId(), menu.getId(),
                         menu.getMenuName(), menu.getPermCode(), "menu"));
             }
         }
         for (SysMenuButton button : menuButtonMapper.selectList(
                 new LambdaQueryWrapper<SysMenuButton>()
                         .eq(SysMenuButton::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE))) {
-            result.add(new PermissionItem(button.getPermCode(), button.getMenuId(),
+            result.add(new PermissionItem(button.getId(), button.getMenuId(),
                     button.getButtonName(), button.getPermCode(), "button"));
         }
         return result;
@@ -161,29 +248,14 @@ public class MenuQueryService {
 
     /* ==================== 私有装配 ==================== */
 
-    private List<SysMenu> activeMenus() {
+    private List<SysMenu> menus(boolean activeOnly) {
         return menuMapper.selectList(new LambdaQueryWrapper<SysMenu>()
-                .eq(SysMenu::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
-                .eq(SysMenu::getStatusFlag, 1)
-                .orderByAsc(SysMenu::getSortNo));
-    }
-
-    /**
-     * 用户可用菜单 ID 集：null 表示超管（不过滤）。
-     * 角色事实源 = {@link EffectiveRoleResolver}（RC02：按用户有效角色过滤，
-     * 不再使用全公司角色并集）。
-     */
-    private Set<String> grantedMenuIds(String userId, String companyId) {
-        EffectiveRoles effective = effectiveRoleResolver.resolve(userId, companyId);
-        if (effective.superAdmin()) {
-            return null;
-        }
-        if (effective.isEmpty()) {
-            return Set.of();
-        }
-        return roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
-                        .in(SysRoleMenu::getRoleId, effective.roleIds()))
-                .stream().map(SysRoleMenu::getMenuId).collect(Collectors.toSet());
+                        .eq(SysMenu::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
+                        .eq(activeOnly, SysMenu::getStatusFlag, 1)
+                        .orderByAsc(SysMenu::getSortNo, SysMenu::getId)).stream()
+                .filter(menu -> Integer.valueOf(1).equals(menu.getDeleteFlag())
+                        && (!activeOnly || Integer.valueOf(1).equals(menu.getStatusFlag())))
+                .toList();
     }
 
     private List<MenuTreeNode> buildTree(List<SysMenu> menus, String parentId) {
@@ -197,7 +269,9 @@ public class MenuQueryService {
                             menu.getIcon(), menu.getSortNo(),
                             menu.getVisibleFlag() != null && menu.getVisibleFlag() == 1,
                             menu.getKeepAliveFlag() != null && menu.getKeepAliveFlag() == 1,
-                            children.isEmpty() ? null : children);
+                            children.isEmpty() ? null : children, menu.getPermCode(), menu.getStatusFlag(),
+                            menu.getVisibleFlag() != null && menu.getVisibleFlag() == 0 ? 1 : 0,
+                            menu.getRemark(), menu.getRevision());
                 })
                 .toList();
     }

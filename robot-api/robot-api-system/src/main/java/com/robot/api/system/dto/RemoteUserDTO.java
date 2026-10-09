@@ -37,4 +37,7 @@ public class RemoteUserDTO implements Serializable {
 
     /** 账号状态：1=启用，0=停用。 */
     private Integer statusFlag;
+
+    /** 持久化账号撤销版本，认证服务签发时必须保存。 */
+    private Long securityVersion;
 }
