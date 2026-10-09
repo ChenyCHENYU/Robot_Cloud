@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc" >
+  <title id="title">Robot Cloud logo</title>
+  <desc id="desc">A cloud-crowned robot in midnight blue, ice blue and teal, connected to three service nodes.</desc>
+  <defs>
+    <linearGradient id="body" x1="54" y1="40" x2="199" y2="203" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D4563"/>
+      <stop offset="1" stop-color="#102439"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="64" y1="44" x2="192" y2="214" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B5E8F8"/>
+      <stop offset="0.55" stop-color="#71D7E6"/>
+      <stop offset="1" stop-color="#43D4B6"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <path d="M128 207v26M91 207v13H65v13M165 207v13h26v13" fill="none" stroke="url(#edge)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="65" cy="234" r="7" fill="#56D9C3"/>
+    <circle cx="128" cy="234" r="7" fill="#A6E7F9"/>
+    <circle cx="191" cy="234" r="7" fill="#56D9C3"/>
+    <path d="M68 80C68 51 91 30 120 30C145 30 166 45 173 66C196 66 214 84 214 107V162C214 187 194 207 169 207H87C62 207 42 187 42 162V109C42 94 53 82 68 80Z" fill="url(#body)" stroke="url(#edge)" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M80 78c1-21 18-37 40-37 18 0 33 9 40 24" fill="none" stroke="#D4F3FC" stroke-opacity="0.22" stroke-width="3" stroke-linecap="round"/>
+    <rect x="60" y="100" width="136" height="75" rx="27" fill="#0B1D30"/>
+    <rect x="78" y="119" width="23" height="18" rx="9" fill="#D0F1FB"/>
+    <rect x="155" y="119" width="23" height="18" rx="9" fill="#D0F1FB"/>
+    <path d="M112 151h32" fill="none" stroke="#56D9C3" stroke-width="7" stroke-linecap="round"/>
+  </g>
+</svg>

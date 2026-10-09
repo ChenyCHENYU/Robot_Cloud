@@ -1,6 +1,33 @@
-# Robot Cloud
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/lockup-dark.svg">
+    <img src="docs/assets/brand/lockup-light.svg" width="720" alt="Robot Cloud — Spring Cloud Alibaba 后端框架">
+  </picture>
 
-面向 Robot Admin 的 Spring Cloud Alibaba 后端，提供认证、公司上下文、系统管理和权限治理。
+  <p><strong>面向 Robot Admin 的 Spring Cloud Alibaba 后端框架</strong></p>
+  <p>认证 · 公司上下文 · 系统管理 · 权限治理</p>
+
+  <p>
+    <a href="robot-dependencies/pom.xml"><img src="https://img.shields.io/badge/Java-17-2563EB?style=flat-square&amp;labelColor=172B43" alt="Java 17 编译目标"></a>
+    <a href="robot-dependencies/pom.xml"><img src="https://img.shields.io/badge/Spring_Boot-3.2.12-0E9F8C?style=flat-square&amp;labelColor=172B43" alt="Spring Boot 3.2.12 仓库基线"></a>
+    <a href="robot-dependencies/pom.xml"><img src="https://img.shields.io/badge/Cloud_Alibaba-2023.0.3.3-2563EB?style=flat-square&amp;labelColor=172B43" alt="Spring Cloud Alibaba 2023.0.3.3 仓库基线"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-64748B?style=flat-square&amp;labelColor=172B43" alt="MIT License"></a>
+  </p>
+
+  <p>
+    <a href="#本地构建与启动">快速开始</a> ·
+    <a href="docs/architecture.md">架构与演进</a> ·
+    <a href="docs/api-contract.md">API 契约</a> ·
+    <a href="docs/improvement-roadmap.md">改进计划</a> ·
+    <a href="https://github.com/ChenyCHENYU/Robot_Admin">Robot Admin</a>
+  </p>
+</div>
+
+---
+
+## 项目定位
+
+Robot Cloud 为 Robot Admin 提供认证、公司成员、组织与权限管理能力。当前采用 Gateway、Auth、System 三个运行服务，配合统一的公共组件、API 契约和依赖 BOM；System 内保留相关业务的本地事务。
 
 - Maven 坐标：`com.robot:robot-cloud:1.0.0-SNAPSHOT`
 - 运行服务：`robot-gateway`、`robot-auth`、`robot-system`
@@ -22,6 +49,7 @@
 - [缓存通知与运维](#缓存通知与运维)
 - [开发约定](#开发约定)
 - [分支与协作](#分支与协作)
+- [下一轮改进](#下一轮改进)
 - [文档导航](#文档导航)
 
 ## 能力与边界
@@ -263,11 +291,18 @@ CI 使用同一入口并归档报告和制品摘要。远端 job 或生产演练
 
 GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开始工作时先更新 `dev`，再创建功能分支；不在共享主干强制推送。构建、迁移和契约变更通过仓库门禁后再合入。详细命令、双远程同步和分支保护配置见 [Git 维护流程](docs/git-workflow.md)。
 
+## 下一轮改进
+
+本项目持续区分源码事实、行为验证和目标环境验收。下一轮优先收口全局资源目录的写入授权、生产配置与初始化、密码处理边界，再完成 Admin 配对、托管 CI、成员部门模型及运行容量治理。具体证据、执行顺序和完成标准见 [改进计划](docs/improvement-roadmap.md)。
+
+品牌资产采用仓库内的原生 SVG，提供浅色、深色与单色版本，使用说明见 [品牌资产](docs/assets/brand/README.md)。
+
 ## 文档导航
 
 | 文档 | 内容 |
 | --- | --- |
 | [架构与演进](docs/architecture.md) | 服务、数据属主、时序、边界、未来拆分 |
+| [改进计划](docs/improvement-roadmap.md) | 当前证据、优先级、执行批次和验收标准 |
 | [API 契约](docs/api-contract.md) | 前端协议、版本、权限和错误 |
 | [系统权限](docs/system-permission-contract.md) | 角色事实、授予上界、数据范围、临时授权 |
 | [认证生命周期](docs/auth-session-lifecycle.md) | 票据、刷新族、CAS、注销与故障 |
@@ -277,6 +312,7 @@ GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开
 | [技术选择](docs/tech-selection.md) | 依赖基线和可选扩展 |
 | [规范适配](docs/conventions-bd-mapping.md) | 通用规范与 Robot 协议适配 |
 | [Git 维护流程](docs/git-workflow.md) | main/dev、功能分支、PR 与双远程同步 |
+| [品牌资产](docs/assets/brand/README.md) | SVG 标识、字标、配色与使用约定 |
 | [验收记录](docs/verification-2026-10-09.md) | 本轮构建、升级与隔离运行结果及边界 |
 
 后续优先补运行保障并引入独立业务域。审计读模型、导出或异步任务在形成容量和交付需求后迁出；身份、成员、角色与授权的强一致写暂留 System。拆分条件及阶段见 [架构与演进](docs/architecture.md#演进路线与拆分条件)。

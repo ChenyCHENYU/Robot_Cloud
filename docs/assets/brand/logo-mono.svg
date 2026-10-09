@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc" color="#16324F">
+  <title id="title">Robot Cloud monochrome logo</title>
+  <desc id="desc">A single-color cloud-crowned robot with three service nodes and transparent eye and mouth cutouts.</desc>
+
+  <g fill="currentColor">
+    <path d="M128 207v26M91 207v13H65v13M165 207v13h26v13" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="65" cy="234" r="7"/>
+    <circle cx="128" cy="234" r="7"/>
+    <circle cx="191" cy="234" r="7"/>
+    <path d="M68 80C68 51 91 30 120 30C145 30 166 45 173 66C196 66 214 84 214 107V162C214 187 194 207 169 207H87C62 207 42 187 42 162V109C42 94 53 82 68 80ZM87 119h5a9 9 0 0 1 0 18h-5a9 9 0 0 1 0-18ZM164 119h5a9 9 0 0 1 0 18h-5a9 9 0 0 1 0-18ZM112 147.5h32a3.5 3.5 0 0 1 0 7h-32a3.5 3.5 0 0 1 0-7Z" fill-rule="evenodd"/>
+  </g>
+</svg>
