@@ -9,7 +9,7 @@
 - 使用现有 `contracts/`、Flyway 与 `docs/api-contract.md`；不要把现有 Robot 合同伪装成 BD 的 CRUD 生成合同。公司身份来自服务可信上下文；逻辑删除为 1 有效、0 删除；普通更新必须比较版本，敏感变更与审计、epoch、Outbox 保持同一事务。
 - 项目规范映射与检查边界见 `docs/conventions-bd-mapping.md`。通用静态发现必须保留原始结果；已有问题基线只允许阻断新增问题，不代表历史问题修复完成，不能自动刷新基线掩盖发现。
 - Java 变化执行 `scripts/verify.sh`，数据库变化另跑隔离 MySQL 升级验收；不要执行包中的 `mvn verify -Pwl-quality` Java 8 示例来替代 Robot 现有行为、ArchUnit 和制品检查。缺少的质量门如实登记。
-- 从最新 `dev` 创建功能分支，经 PR 合入 `dev`，再发布到 `main`。推送前执行相关检查，不强推共享分支、不提交本地秘密、运行回执或缓存。
+- 从最新 `dev` 创建功能分支。每次完成任务并通过适用验证后，提交并推送功能分支，再依次使用 `git merge --ff-only` 快进到 `dev`、`main`，同步 GitHub 和 Gitee 并核对两边 `dev/main` 的 SHA；交付不只停在功能分支。保持线性历史，不新增 merge commit、不重写已共享提交、不强推。PR 用于审查记录；站点保护要求 PR 时遵循实际保护，不绕过。托管 CI 未运行或失败须如实报告，不等同生产发布已验收。不提交本地秘密、运行回执或缓存。
 
 <!-- wl-skills-bd:begin -->
 # Agent Instructions — wl-skills-bd

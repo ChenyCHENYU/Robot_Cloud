@@ -1,6 +1,6 @@
 # Git 维护流程
 
-本项目以 `main` 为稳定主分支，以 `dev` 为日常集成基线。功能分支从最新 `dev` 创建，经审查合回 `dev`，验证后的集成结果再合入 `main`。
+本项目以 `main` 为稳定主分支，以 `dev` 为日常集成基线。功能分支从最新 `dev` 创建；每次任务完成并通过适用验证后，提交推送，再依次以 `--ff-only` 快进到 `dev`、`main`，同步 GitHub 和 Gitee 并核对 SHA。交付不只停在功能分支，两个主干保持线性历史。
 
 ## 仓库与远程
 
@@ -18,6 +18,7 @@ git remote add gitee git@gitee.com:ycyplus163/robot_-cloud.git
 git config remote.pushDefault origin
 git config push.default simple
 git config pull.ff only
+git config merge.ff only
 git switch --track origin/dev
 bun install --frozen-lockfile
 ```
@@ -45,24 +46,47 @@ git commit -m "feat(system): add company profile commands"
 git push -u origin feature/company-profile
 ```
 
-随后创建目标为 `dev` 的 PR，填写问题、结果、实际验证、API/数据库兼容性及未验证项。功能分支集成最新 `dev` 时可合并它；已被他人使用的分支不重写历史。共享的 `main`、`dev` 禁止强制推送。
+PR 可用于审查记录，填写问题、结果、实际验证、API/数据库兼容性及未验证项；站点保护要求 PR 时遵守实际保护。合入使用快进，不新增 merge commit。功能分支出现分叉时，先核对双方提交，在未共享分支中整理待交付提交并重新验证；保留已共享历史，不强推或自动用 merge commit 绕过 `--ff-only`。
 
 ## 集成与发布
 
-1. 功能 PR 合入 `dev` 前，完成代码审查和 `Verify Robot Cloud` 门禁。数据库变化同步 Flyway、机器合同、升级预检和恢复说明；前端字段变化同步 Robot Admin。
-2. `dev` 达到发布条件后创建 `dev` → `main` 的 PR，说明本次集成范围与环境验收结果。合并时保留祖先关系，使用普通 merge 或快进；避免反复 squash 整个 `dev`，造成两条主干历史持续分叉。
-3. `main` 合入后，把最新 `main` 快进或合并回 `dev`；再同步两个远程。正式版本按发布规则增加标签，不把 `1.0.0-SNAPSHOT` 自动当作正式发布。
-4. 紧急修复先按同样的 `dev` 流程交付；确需从 `main` 修复时，修复必须合回 `dev`，确保下次发布包含它。
+1. 合入前完成适用检查与审查；托管 CI 未运行或失败必须如实说明，不能登记为通过。数据库变化同步 Flyway、机器合同、升级预检和恢复说明；前端字段变化同步 Robot Admin。
+2. 提交标题使用 `type(scope): message`，推送功能分支后，先将功能分支快进到 `dev`，再将 `dev` 快进到 `main`；使用明确的 `--ff-only`，不新增 merge commit，不对已共享历史 rebase 或 squash。
+3. 同步两个远程的 `main/dev`，核对四个远端引用均指向本次交付提交。保留清洁工作区，交付后回到 `dev`，下个功能分支继续从最新 `dev` 创建。
+4. 正式版本增加标签及生产部署仍按发布规则验收；主干同步不代表生产环境已验收，不把 `1.0.0-SNAPSHOT` 自动当作正式发布。紧急修复也须同步到两个主干，避免遗失。
+
+已验证功能分支的集成示例：
+
+```bash
+set -euo pipefail
+git fetch origin
+git fetch gitee
+git switch dev
+git merge --ff-only origin/dev
+git merge --ff-only gitee/dev
+git merge --ff-only feat/company-profile
+git switch main
+git merge --ff-only origin/main
+git merge --ff-only gitee/main
+git merge --ff-only dev
+git push --atomic origin dev main
+git push --atomic gitee dev main
+git ls-remote --heads origin dev main
+git ls-remote --heads gitee dev main
+git switch dev
+```
+
+所有合并均须成功快进后才能继续；任一远端出现新提交时先核对并整理，再验证，不用 force 覆盖。单站 `--atomic` 保证该站两个引用一起更新；不支持 atomic 的站点需明确说明并逐个推送、核对结果，两个站点之间仍无原子事务。
 
 ## 双远程同步
 
-GitHub 是主要协作入口。同步前读取两个站点的最新状态，只向可快进的分支推送；发现 Gitee 独立提交时先审查、合并，再同步，不覆盖远端历史。
+GitHub 是主要协作入口。同步前读取两个站点的最新状态，只向可快进的分支推送；发现 Gitee 独立提交时先审查并整理线性提交，再同步，不覆盖远端历史。
 
 ```bash
 git fetch origin
 git fetch gitee
-git push origin main dev
-git push gitee main dev
+git push --atomic origin main dev
+git push --atomic gitee main dev
 git ls-remote --heads origin main dev
 git ls-remote --heads gitee main dev
 ```
@@ -71,7 +95,7 @@ git ls-remote --heads gitee main dev
 
 ## 站点保护设置
 
-在 GitHub 和 Gitee 的仓库设置中将默认分支设为 `main`。建议保护 `main`、`dev`：要求 PR、至少一次审查、解决讨论，并禁止 force 和删除主干。GitHub 的合入检查选择真实运行生成的 `verify` job；Gitee 的检查依据其实际可用能力配置，不能把 GitHub 工作流文件的存在等同于 Gitee 已运行 CI。
+在 GitHub 和 Gitee 的仓库设置中将默认分支设为 `main`。建议保护 `main`、`dev`：要求审查、线性历史，禁止 force 和删除主干；采用满足快进要求的审查与集成方式。GitHub 的合入检查选择真实运行生成的 `verify` job；Gitee 的检查依据其实际可用能力配置，不能把 GitHub 工作流文件的存在等同于 Gitee 已运行 CI。
 
 这些设置需要站点管理权限，文档不代表它们已经启用。首次建立分支后核对远端 HEAD、分支 SHA 和 CI 执行记录，再按站点提供的能力完成保护。
 

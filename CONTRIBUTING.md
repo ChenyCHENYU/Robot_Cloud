@@ -66,6 +66,6 @@ bun run bd doctor-host --host codex --target . --json
 
 ## 分支、PR 与发布
 
-从最新 `dev` 创建功能分支，经 PR 合回 `dev`，再将验证后的集成结果发布到 `main`。GitHub 是主协作仓库，Gitee 同步相同提交；两边都禁止强推共享历史。完整流程见 [Git 维护](docs/git-workflow.md)。
+从最新 `dev` 创建功能分支。任务完成并通过适用验证后，提交推送，再依次用 `git merge --ff-only` 快进到 `dev` 和 `main`，同步 GitHub、Gitee 并核对两边主干 SHA；交付不只停在功能分支。保持线性历史，不新增 merge commit、不强推或重写已共享提交。PR 可保留审查记录，站点实际保护要求仍须遵守。完整命令与无法快进时的处理见 [Git 维护](docs/git-workflow.md)。
 
 PR 说明具体问题、修改后行为、实际检查、接口/迁移兼容性和未验证项。托管 workflow 的存在不代表执行成功，仓库保护也需实际站点设置；平台拒绝启动或检查未执行时不得登记为通过。
