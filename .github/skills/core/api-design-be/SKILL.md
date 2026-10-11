@@ -1,0 +1,97 @@
+---
+name: api-design-be
+description: |
+  后端 API 契约设计与评审 Skill。读取前端 wl-skills-kit 产出的 src/views/{module}/api.md，
+  按团队基线形成可校验的 wl-contract.json，再由 codegen 同步生成源码、wl-api-contract JSON 和 api.md，
+  并核对 HTTP 方法、路径、DTO/VO、OpenAPI 与权限清单。
+  典型触发：「设计接口」「评审 api.md」「接口契约审查」「接口对齐」
+metadata:
+  status: "✅ 已落地"
+  stage: "② 设计阶段"
+  triggers: "设计接口、评审 api.md、接口契约审查、逻辑 ID、集成契约、接口对齐"
+---
+
+# api-design-be
+
+## Pre-flight 模型声明（必填）
+
+```
+模型声明：🚀 已触发技能 api-design-be/SKILL.md       → 后端 API 契约设计
+模型声明：✅ 已读取 standards/index.md               → 任务类型 F
+模型声明：✅ 已读取 standards/03-naming.md           → 路径与字段命名
+模型声明：✅ 已读取 standards/04-controller.md       → Controller 模板
+模型声明：✅ 已读取 standards/11-security-permission.md → 权限码规范
+模型声明：✅ 已读取 standards/13-api-doc-swagger.md  → OpenAPI 3 注解
+✅ 涉及跨系统集成时已读取 standards/08-exception.md、standards/22-resilience.md 与 standards/30-change-review-integration-adapter.md
+```
+
+## 前置检查
+
+- [ ] 是否存在前端 `src/views/{module}/api.md` 或经后端确认的等价接口输入？若无，停止并列出缺失信息
+- [ ] 是否存在 `docs/business/{module}.md`？无则建议先跑 `business-doc-extract-be`
+
+## 产物
+
+已有 `docs/db-spec` 时，先执行 `contract seed --table <TABLE> --database <oracle|mysql> --json`。它只推导数据库证据可证明的名称、类型和存储边界；`unresolved` 中的写策略、查询方式、分级、语义 ID、API、权限和迁移风险必须人工确认。
+
+先执行 `contract inspect <file>` 分类。新建并进入代码生成的契约语义必须是 `crud`，并建议显式声明 `contractKind=crud`；未声明的旧严格契约可兼容推断，再用受控迁移固定类型。`schema-mirror` 和 `integration-projection` 只进入只读目录与对账，不伪造成 CRUD。`api.requestPath` 是 Controller 路径，`api.externalBasePath` 是前端经过网关调用的完整资源根路径，两者都必须明确。
+
+执行：
+
+```bash
+wl-skills-bd codegen validate wl-contract.json
+wl-skills-bd codegen plan wl-contract.json --json
+```
+
+计划确认后，codegen 同步生成 `docs/contracts/{contractId}.backend-contract.json` 与 `.api.md`。可读输出结构示例：
+
+```markdown
+# {模块} API 契约 v{x.y}
+
+## 1. 资源路径
+- 类路径：`/mdmFeatureCategory`
+- 权限码前缀：`mdm_feature_category_`
+
+## 2. 接口清单
+| Method | Path                        | Operation          | 权限码                                | DTO                              | VO                          |
+| ------ | --------------------------- | ------------------ | ------------------------------------- | -------------------------------- | --------------------------- |
+| POST   | `/mdmFeatureCategory/queryPage` | 分页查询       | `mdm_feature_category_query_page`     | `MdmFeatureCategoryPageDTO`      | `JhPage<...PageVO>`         |
+| ...    | ...                         | ...                | ...                                   | ...                              | ...                         |
+
+## 3. DTO / VO 字段
+...
+
+## 4. 与前端 api.md / OpenAPI / 权限清单的 diff
+- 新增 / 缺失 / 字段名不一致项
+```
+
+## 约束
+
+- 路径使用驼峰（团队基线，**不**使用 kebab-case）
+- 权限码命名 `{module}_{resource}_{action}` 全小写下划线
+- 列表查询统一 POST + queryPage 路径
+- 所有写接口必带权限码与 `@Operation`
+- 若前端 `api.md` 缺权限码 / 字段类型，报告差异而不擅自补全
+- 当前 Profile 固定 queryPage/getById/{id}/save/updateById/deleteById/{id}；需要另一套路由时新增兼容性 Profile，不做资源级临时覆盖
+- 更新必须形成 `详情 revision → UpdateDTO id+revision` 的乐观锁闭环
+- ID 长度由 Profile 的 `idPolicy` 同时驱动 DDL、Controller/DTO 校验与协作契约；不得在模板中另写魔法长度
+- 生产契约必须声明目标数据库风险、业务错误码目录和对外字段稳定语义 ID
+- 跨系统逻辑 ID 必须声明来源字段、算法/版本、规范化、字符集与最大长度；出站/双向集成必须声明排序键、载荷版本、重试/确认/死信/重放并引用已登记错误码
+- 使用 `integration inspect <contract>` 验证单契约完备性；使用 `integration audit --module <module>` 检查 StableBusinessId/PayloadHash 重复或漂移，不让 AI 主观判断算法是否一致
+- 当 transport 由平台 MQ/HTTP 封装承载时，业务契约只声明方向、参与方、载荷、身份、排序和投递语义；具体依赖、注解、调用方法与配置键进入项目 `integration-adapters.json`，由 `integration-adapter-be` 对账，禁止把某个平台 API 固化进通用契约
+- 需求含“唯一/不得重复”时必须建立 `businessKeys[]`，明确真实业务字段、create/update、归一化、直观提示与数据库约束引用；不得沿用历史索引组合或输出“业务唯一键”。
+- 合并/统合/批处理含跨记录校验时必须建立 `batchPolicy`，选择范围固定为 `selected-only`，再声明一致字段和分组数量；不允许把未选中的同组数据纳入校验。
+- 任何字段长度变更必须附需求/API/DTO/数据库/文档五方影响矩阵；直到新应用与数据库都部署验证完成前不得宣称闭环。
+
+## 完成摘要
+
+```
+✅ api-design-be 完成
+   - 输出: wl-contract.json + docs/contracts/{contractId}.{backend-contract.json,api.md}
+   - 接口数: N
+   - 权限码新增: M
+   - contract diff: X error / Y warning
+   - 下一步建议: ③ entity-codegen
+```
+
+差异命令与 C1xx/C2xx/C3xx 规则见 `.github/guides/frontend-backend-contract.md`。

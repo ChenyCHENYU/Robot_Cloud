@@ -1,0 +1,69 @@
+# Robot Cloud — 项目指令
+
+本文的 Robot 适配约定优先于下方由 wl-skills-bd 安装器维护的通用入口。
+
+- 主工程为 Java 17 / Spring Boot 3 / Spring Cloud Alibaba / Sa-Token / MyBatis-Plus，构建和运行使用 Maven。Bun 与 Node 只用于开发工具，不进入服务运行依赖。
+- 提交必须采用 `type(scope): message`。类型与 Robot Admin 的 `commitlint.config.cjs` 一致，scope 必填且允许自定义；以本项目 commitlint 和 Husky 校验为准。不要启用 BD 的 `.githooks`，也不叠加其模块 scope 白名单或标题中的连字符要求。已共享历史不重写。
+- BD 只应用于 Robot 后端。首次读取 `.agents/skills/wl-skills-bd/SKILL.md`，按真实 `task` notice 读取所需规范，复用 runId 执行校验与 status；安装文件和宿主静态诊断不能证明自动加载或执行通过。
+- JH4J 坐标、Java 8 / Boot 2、`javax.validation`、固定成功码 2000、`data.records`、平台目录、配置生成模板及质量 profile 均不应用于 Robot。完整受管文件保留用于版本追踪，禁止把其中的模板复制到业务或 POM。Robot profile 明确禁止代码生成。
+- 使用现有 `contracts/`、Flyway 与 `docs/api-contract.md`；不要把现有 Robot 合同伪装成 BD 的 CRUD 生成合同。公司身份来自服务可信上下文；逻辑删除为 1 有效、0 删除；普通更新必须比较版本，敏感变更与审计、epoch、Outbox 保持同一事务。
+- 项目规范映射与检查边界见 `docs/conventions-bd-mapping.md`。通用静态发现必须保留原始结果；已有问题基线只允许阻断新增问题，不代表历史问题修复完成，不能自动刷新基线掩盖发现。
+- Java 变化执行 `scripts/verify.sh`，数据库变化另跑隔离 MySQL 升级验收；不要执行包中的 `mvn verify -Pwl-quality` Java 8 示例来替代 Robot 现有行为、ArchUnit 和制品检查。缺少的质量门如实登记。
+- 从最新 `dev` 创建功能分支，经 PR 合入 `dev`，再发布到 `main`。推送前执行相关检查，不强推共享分支、不提交本地秘密、运行回执或缓存。
+
+<!-- wl-skills-bd:begin -->
+# Agent Instructions — wl-skills-bd
+
+## 项目适用边界
+
+先确认目标项目自身的接入证据（本包安装清单、直接依赖或 `.wl-skills-scope.json` 显式启用），再判定任务。只在目标已接入且平台适用时读取规则；父目录安装、兄弟包、Vue 文件或触发词不能证明接入。未接入的开源项目不套用规则、不建议自动安装；UniApp/小程序/App/PDA/移动 H5 不适用。跨项目目标分别判定，沿最近项目边界停止，不能越过未接入子项目找父清单。工具返回 `scope` 作为静态范围证据，宿主加载仍需实际事件。
+
+
+## 唯一入口（先读这里）
+
+1. `.wl-skills-bd/capabilities.json`（或 `wl-skills-bd capabilities --json` / MCP `wls_be_capabilities`）：机器能力清单——13 个 Skill 的触发词/状态/安装路径、B1~B32 规则、MCP 工具、CLI 命令与推荐读取顺序，全部单一数据源生成。
+2. `.github/skills/_registry.md`：触发词 → Skill 路由；`.github/standards/index.md`：任务类型 → 必读规范（懒加载，不一次读全 30 条）。
+3. 任务路由优先 `wl-skills-bd task "<描述>"`（仅持久化本包任务计划；`route`/`explain` 只读）；输出含规则子集、安全写链步骤和 Pre-flight 证据（必读 standards/skill 文件的 sha256 清单，`--json` 获取 `preflightHash`）。文件哈希仅证明可定位的版本，不证明模型已读取；读取与执行自述必须标为“模型声明”。
+
+## 不变式（任何任务模式都不得违反）
+
+1. 分层与租户：Controller → 直接 Service → Mapper；租户来自 AuthUtil，SQL 显式 COMPANY_ID（除非有 doctor 可验证的统一拦截器证据）；`companyId` 不得来自请求。
+2. 软删事实源：受管 profile + 未受管 `profile.local` 合并为唯一事实源（默认 1=有效/0=删除）；禁止直接编辑 `profiles/*.json`；受管更新用 `ID + COMPANY_ID + 有效标记 + REVISION` 原子 SQL，详情返回 revision。
+3. 数据库事实源：涉及表结构先对账 `docs/db-spec` 与 standards/29——文档表同名复用、字段全属性/顺序一致、扩展有依据且末尾追加；用 `db review` 做逐字段正向复核（可选线上快照三方对账）；ALTER 必须通过机器影响分析或登记 `alter.impactRef`，执行前按 DDL 预览留底证据；ALTER 分 expand/contract；Flyway 版本不可变；DDL 只生成，永不由工具执行。
+4. 契约先行：codegen 只接受机器契约，先 plan 后 apply；apply 必须携带同一 planHash 与显式确认；plan 含阻断性 `openQuestions`（空批语义、状态并发、命令防重等业务闭环疑点）时必须逐项人工评审后携带 `--questions-reviewed`；增量接口/字段/业务命令必须先更新 `wl-contract.json`，禁止字符串拼接旁路 patch。
+5. 统一写链：所有工程写入必须 preview → planHash → confirm → 原子写 → 复验 → 可回滚；pre/prod/production 默认零写入，显式授权后仍保留确认链；MCP 不执行数据库写入。
+6. 修复白名单：自动修复仅限 B3/B5 严格前置条件与项目批准的单次精确替换（evidenceRefs 内、字面 before 恰好命中一次）；写后强制复扫；权限、租户、SQL、MQ 语义与业务算法保持人工卡口。
+7. 验证收口：每步之后跑对应验证，error 未清零不得宣称完成；最终交付执行完整 `review run`（quick/staged/changed 是 partial，不能冒充 full）与 `mvn verify -Pwl-quality`（J1~J5/J8；J6/J7 不冒充硬门）。
+8. 模块上下文：启用 Catalog 后默认只扫当前模块；关联模块只读一跳快照；目录过期、身份冲突或上下文哈希漂移时阻断，不偷偷回退全仓扫描。
+9. 数据安全与稳定性底线：Redis 必带 TTL、锁用 Redisson、禁 KEYS \*/FLUSHDB/物理删/TRUNCATE、全表写必须有 WHERE、saveBatch ≤ 1000、事务内禁发 MQ/HTTP、外部调用必须超时、新代码统一 OpenAPI 3。详见 standards 20/21/22 与 `ops/data-safety`。
+10. Token 纪律：MCP 默认 summary 与有界 response 预算，超预算用 cursor 续取，不重复注入上下文；cursor 不授予写权限。
+
+场景级约束（生产保障、契约分流、集成治理、平台适配、受控修复等）以 standards/26~30 与对应 Skill 为准，不在本文件重复展开。
+
+## 快速命令
+
+```bash
+wl-skills-bd capabilities --json          # AI 能力清单（首次接入）
+wl-skills-bd task "<任务描述>" --json      # 任务路由 + Pre-flight 证据
+wl-skills-bd doctor                       # 含环境体检（bootstrap/profile/dbcluster）
+wl-skills-bd catalog check --module <module>
+wl-skills-bd context plan --module <module> --task "<任务>" --json
+wl-skills-bd codegen validate wl-contract.json
+wl-skills-bd codegen plan wl-contract.json --json
+wl-skills-bd codegen apply wl-contract.json --plan-hash <hash> --confirm   # 可加 --require-complete
+wl-skills-bd contract inspect <contract.json> --json   # 先分流：仅 crud 可 codegen
+wl-skills-bd impact field --module <module> --field <field> --table <table> --json
+wl-skills-bd review run --module <module> --json        # 交付前 full 门禁
+wl-skills-bd fix advise --module <module> --json
+wl-skills-bd validate . --strict          # B1~B32（含真实端点、数据库事实源与跨服务 DTO）
+wl-skills-bd test gen wl-contract.json    # 行为契约测试
+```
+
+MCP 提供 18 个等价工具（`wls_be_capabilities` 起步）；`wls_be_review` 统一承载变更门禁、平台适配、项目断言、供应链与修复分级。写工具的 confirm 只能在用户评审预览后传递；pre/prod/production 额外需要 `allowProductionWrites=true`。
+
+每次任务先用 `task --input "<完整任务>" --json` 取得 runId 与 matched/baseline/ambiguous/gap/not-applicable 判定。任务计划尚未执行；`status --run-id <runId> --json` 才读取本包工具回执与新鲜度。`doctor --host codex --json` 仅诊断宿主入口可用性，不能证明宿主已发现或模型已选中技能。
+
+编辑前必须展示实际 `notice`：包名/版本、判定、Skill 或基础约束、规则编号与名称、目标、runId 和尚未执行的检查；命令失败或版本不一致须明示，不能静默跳过。
+
+同一用户任务跨已安装且适用的包复用同一 `--run-id <id>` 或 `WL_TASK_RUN_ID`；本包仍可独立使用，无需安装其他 WL 包。
+<!-- wl-skills-bd:end -->

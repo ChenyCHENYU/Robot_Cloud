@@ -1,0 +1,68 @@
+# 使用指南：standard-env-config-be
+
+> **v0.12 起，本 Skill 通过 `wl-skills-bd config` 命令族落地**。Skill 负责场景路由与安全边界，确定性执行复用 `config init/migrate/doctor/fix` 与 `troubleshoot`，不再维护第二套环境写逻辑。
+
+## 已落地的等价命令（v0.12）
+
+| 原 Skill 目标 | 等价命令 | 说明 |
+|---|---|---|
+| 生成环境配置骨架 | `wl-skills-bd config init` | bootstrap.yml + application.yml + logback + .env.example ×5 + env-matrix.yml |
+| 配置合规检查 | `wl-skills-bd config doctor` | L0~L8 全链路体检（骨架/明文密码/占位符/矩阵/K8s/端口/一致性/生产护栏）|
+| 客户迁移 | `wl-skills-bd config migrate --to <customer>` | 生成 .env + K8s ConfigMap/Secret/Deployment + 迁移报告 |
+| 明文密码修复 | `wl-skills-bd config fix` | 自动改 ${VAR} 占位符 + 复扫验证 |
+| 连通性探测 | `wl-skills-bd config doctor --probe` | DB/Redis/Nacos TCP 端口可达性 |
+| 故障排查 | `wl-skills-bd troubleshoot "<错误>"` | 15 类故障诊断树 |
+
+## 输入（config init/migrate 需要）
+
+- 工程名（project）、业务模块（module）、端口（port）、数据源类型（oracle/mysql）、数据库集群（cx/non_cx/pt）
+- 已登记业务域可从 project/rootPackage 推断集群；未知业务域必须显式 `--db-cluster`，禁止默认 pt
+- 环境差异矩阵 `.wl-skills-bd/env-matrix.yml`（客户 × 环境的 nacos/datasource/redis/k8s/secrets）
+- 真实 secret 只保存在受控 K8s Secret / Nacos / CI 平台，不进仓库
+
+## 占位符铁律（config doctor 强制）
+
+```yaml
+# ✅ L1 代码库全占位（环境无关）
+spring:
+  cloud:
+    nacos:
+      config:
+        server-addr: ${NACOS_HOST}
+        namespace: ${NACOS_CONFIG_NAMESPACE}
+        username: ${NACOS_USERNAME}
+        password: ${NACOS_PASSWORD}
+        shared-configs:
+          - dataId: datasource-${DATASOURCE:mysql}-${DB_CLUSTER:pt}-${spring.profiles.active}.yml
+  profiles:
+    active: ${PROFILES_ACTIVE}
+
+# ❌ 明文密码（config-secret error）
+# password: DO_NOT_COMMIT
+# password: ${NACOS_PASSWORD:DO_NOT_COMMIT} # 任意默认 secret 都会泄露
+```
+
+## 验收（config doctor 全绿）
+
+- bootstrap.yml 存在 + profiles.active 声明
+- 无明文敏感信息（config-secret）
+- env-matrix.yml 存在 + current 客户有效
+- Nacos 配置结构完整（server-addr/namespace/group/shared-configs）
+- datasource dataId 同时包含类型、DB_CLUSTER、profile，且与 env-matrix/K8s 一致
+- K8s ConfigMap 的 PROFILES_ACTIVE/NAMESPACE 合规
+- 端口在模块范围（sale 10000-10099 等）
+- 三方一致（bootstrap profile = env-matrix current = K8s PROFILES_ACTIVE）
+- 连通性（可选 --probe）：DB/Redis/Nacos TCP 可达
+- init/migrate/fix 的 apply 均使用刚生成的 planHash + confirm；pre/prod/production 另需显式授权
+- K8s Deployment 使用独立 startup/readiness/liveness 探针、优雅停机、非 root、只读根文件系统、禁提权、drop ALL、禁用默认 ServiceAccount token；生产额外生成 PDB/HPA/拓扑分散
+- `${IMAGE_TAG}` 只是发布流水线占位，CI 必须在部署前替换为不可变 tag 或 digest，禁止 `latest`
+
+详见 [standards/25 配置分层](../../../standards/25-config-layering.md) 和 [standards/24 多环境](../../../standards/24-multi-env.md)。
+
+## 变更记录
+
+- 2026-07-28 v0.17.8：补 DB_CLUSTER fail-closed、显式 profile、集群化 dataId 与启动故障诊断闭环。
+- 2026-07-19 v0.17：K8s 产物补探针、优雅停机、非 root、只读根文件系统、能力收敛、PDB/HPA 与非 latest 镜像门。
+- 2026-07-18 v0.14：所有配置写命令统一 planHash/原子写/回滚/受保护环境护栏。
+- 2026-07-18 v0.12：本 Skill 目标已由 `config` 命令族落地；USAGE 改为指向 config 等价命令。
+- 2026-07-17：骨架 USAGE（占位符示例 + 验收清单）。

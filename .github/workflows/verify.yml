@@ -30,6 +30,22 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22.18.0'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.2'
+      - name: Install pinned backend development tools
+        env:
+          HUSKY: '0'
+        run: bun install --frozen-lockfile
+      - name: Commit format, real hook behavior and adopted BD assets
+        run: |
+          bun run check:commits
+          bun run test:tooling
+          bun run bd check --target . --json
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
@@ -45,6 +61,9 @@ jobs:
           ROBOT_VERIFY_MYSQL_USER: root
           ROBOT_VERIFY_MYSQL_PASSWORD: ephemeral-ci-only
         run: scripts/verify.sh --mysql-upgrade
+      - name: Full native BD evidence and Robot generic rule gate
+        if: always()
+        run: bun run check:bd
       - name: Retain actual test reports and artifact hashes even after failure
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -56,3 +75,4 @@ jobs:
             **/target/surefire-reports/TEST-*.xml
             **/target/failsafe-reports/TEST-*.xml
             target/verification/*.json
+            target/verification/*.log

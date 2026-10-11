@@ -1,0 +1,21 @@
+{
+  "name": "robot-cloud-tooling",
+  "private": true,
+  "description": "Development tools for the Maven backend; no Node runtime dependency",
+  "packageManager": "bun@1.4.2",
+  "engines": { "node": ">=22.18.0", "bun": ">=1.4.2" },
+  "scripts": {
+    "prepare": "husky",
+    "commitlint": "commitlint",
+    "check:commits": "node scripts/check_commits.mjs",
+    "test:tooling": "node --test scripts/tooling/*.test.mjs",
+    "bd": "wl-skills-bd",
+    "check:bd": "node scripts/check_backend_rules.mjs"
+  },
+  "devDependencies": {
+    "@agile-team/wl-skills-bd": "0.37.0",
+    "@commitlint/cli": "20.4.3",
+    "@commitlint/config-conventional": "20.4.3",
+    "husky": "9.1.7"
+  }
+}

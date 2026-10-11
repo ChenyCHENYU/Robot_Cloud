@@ -1,0 +1,4 @@
+# Canonical rule text uses one line ending across development and CI.
+.github/standards/** text eol=lf
+.github/skills/** text eol=lf
+.github/reports/** text eol=lf

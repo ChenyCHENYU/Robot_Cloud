@@ -281,13 +281,26 @@ CI 使用同一入口并归档报告和制品摘要。远端 job 或生产演练
 8. 跨服务用 API；公共库提取真实复用机制。
 9. 改后运行行为与门禁，交付源码/制品哈希及未验证项。
 
+开发工具使用 Node >=22.18.0 和 Bun 1.4.2，服务仍由 Maven 构建和启动。首次 clone 后执行 `bun install --frozen-lockfile`，安装固定版本的 commitlint、Husky 和 `@agile-team/wl-skills-bd@0.37.0`，并启用提交 Hook：
+
+```bash
+bun run test:tooling
+bun run check:commits
+bun run check:bd
+git commit -m "feat(system): add company membership commands"
+```
+
+提交必须采用 `type(scope): message`，scope 必填，类型白名单与 Robot Admin 相同。本地 Hook 和 CI 共用配置；已共享历史保留，之后的提交范围持续校验。具体类型、安装和检查说明见 [贡献指南](CONTRIBUTING.md)。
+
+BD 已接入项目入口、规范、受管资产检查和持续门禁。Robot 采用 31 条通用 B 规则，并保留 32 条原始扫描结果；B1 仍需 Sa-Token 适配，现有权限行为测试继续执行。JH4J profiles 和默认 Robot profile 都禁止代码生成，Java 8/Boot 2 模板不进入 Robot 源码或 POM；完整适配边界见 [规范映射](docs/conventions-bd-mapping.md)。
+
 ## 分支与协作
 
 | 分支 | 用途 | 合入方向 |
 | --- | --- | --- |
 | `main` | 稳定主分支，承载经过验证的集成结果 | `dev` 经审查合入 |
 | `dev` | 日常集成基线 | 功能、修复和维护分支经 PR 合入 |
-| `feature/<主题>`、`fix/<主题>`、`chore/<主题>` | 从最新 `dev` 创建的短期工作分支 | 合入 `dev` 后清理 |
+| `feat/<主题>`、`fix/<主题>`、`chore/<主题>` 等 | 从最新 `dev` 创建的短期工作分支，兼容既有 `feature/` | 合入 `dev` 后清理 |
 
 GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开始工作时先更新 `dev`，再创建功能分支；不在共享主干强制推送。构建、迁移和契约变更通过仓库门禁后再合入。详细命令、双远程同步和分支保护配置见 [Git 维护流程](docs/git-workflow.md)。
 
@@ -311,6 +324,7 @@ GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开
 | [部署与运维](docs/deployment.md) | profile、变量、升级、运行和恢复 |
 | [技术选择](docs/tech-selection.md) | 依赖基线和可选扩展 |
 | [规范适配](docs/conventions-bd-mapping.md) | 通用规范与 Robot 协议适配 |
+| [贡献指南](CONTRIBUTING.md) | 必填 scope、提交 Hook、开发工具与 BD 门禁 |
 | [Git 维护流程](docs/git-workflow.md) | main/dev、功能分支、PR 与双远程同步 |
 | [品牌资产](docs/assets/brand/README.md) | SVG 标识、字标、配色与使用约定 |
 | [验收记录](docs/verification-2026-10-09.md) | 本轮构建、升级与隔离运行结果及边界 |

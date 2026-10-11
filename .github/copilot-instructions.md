@@ -1,0 +1,111 @@
+# Robot Cloud 项目适配
+
+本项目的 [AGENTS.md](../AGENTS.md) 与 [BD 映射](../docs/conventions-bd-mapping.md) 优先于下方受管通用示例。实际技术栈为 Java 17 / Boot 3 / Sa-Token；不使用 JH4J 依赖、Java 8 模板或 `wl-quality` 示例。提交遵循项目 commitlint 的 `type(scope): message`，scope 必填，使用 Husky，禁止改用 BD 自带 Hook。Robot 与 JH4J profiles 均禁止代码生成；沿用现有 Robot 合同、Flyway 和 Maven 验证入口。包资产存在不代表其平台配置已经启用或全部检查通过。
+
+<!-- wl-skills-bd:begin -->
+# Copilot Instructions — wl-skills-bd 后端主入口
+
+本文件是后端业务工程的统一 AI 入口。首次接入先读 `.wl-skills-bd/capabilities.json`（机器能力清单：Skill 触发词/状态/安装路径、MCP 工具、CLI 命令、读取顺序），或调用 `wls_be_capabilities` / `wl-skills-bd capabilities --json`。具体场景先查 `.github/skills/_registry.md`，再按 `.github/standards/index.md` 懒加载相关规范；不要一次读完全部 30 条。存量契约先 inspect 分类，只有 crud 可进入代码生成。
+
+## 技术基线
+
+- Java 8、Spring Boot 2、jh4j-cloud 3.1、MyBatis-Plus；
+- OpenAPI 3：`@Tag/@Operation/@Schema`；
+- 返回：`ApiResult.success(message, data)`，业务成功码 2000；
+- 分页：`JhPage<T>`，响应 `data.records/data.total`；
+- Controller → 直接 Service → Mapper，禁止 Controller 直调 Mapper；
+- 租户从 `AuthUtil` 获取，SQL 显式 `COMPANY_ID`；软删列和值读取受管 profile 与 `profile.local.json` 的合并结果（默认 1=有效、0=删除，禁止直接改受管 profile）；
+- UpdateDTO 必须 id/revision，详情 VO 必须返回 revision；受管更新/软删使用包含租户、有效标记和 revision 的显式原子 SQL。
+
+数据库类型不能猜。Oracle/MySQL、物理库归属与目标 Profile 必须从工程配置和用户上下文确认。
+
+## 生成主流程
+
+```text
+已评审需求 / 可选 design-model 或前端契约 / 数据模型
+  → wl-contract.json（唯一 codegen 输入）
+  → codegen plan（17+N 产物，零写入）
+  → planHash + 人工确认 → apply
+  → contract diff（前端/OpenAPI/权限）
+  → contract diff --strict（wl-api-contract/OpenAPI/权限/completion）
+  → validate B1~B31
+  → Maven verify -Pwl-quality（J1~J5/J8）
+  → DDL/权限/发布人工卡口
+```
+
+生成前必须读 `.github/guides/codegen-workflow.md`；启用 Catalog 的项目先以当前模块执行 `catalog check/context plan`，不得全仓扫描。前后端协作读 `frontend-backend-contract.md`；MCP 写入规则读 `mcp-workflow.md`。
+
+plan 输出的 `openQuestions` 是机器枚举的业务闭环疑点（空批语义、状态并发、命令防重等）：阻断性疑点必须逐项与用户确认后才能携带 `--questions-reviewed` apply。字段长度/类型以 `docs/db-spec` 为准并可用 `db review` 做逐字段三方对账复核；ALTER 必须通过机器影响分析或登记 `alter.impactRef`。
+
+字段变更先执行 `impact field --module ...` 核对存储容量、所有权、迁移链和精确源码引用。跨系统集成使用契约化逻辑 ID、载荷版本、重试/确认/死信/重放与错误码；使用 `integration inspect/audit` 取代主观判断或全仓重读。平台接线只以项目 `integration-adapters.json` 声明的真实依赖、API、配置、测试和运行证据为准；未配置时不猜 MQ SDK、不自动激活规则。
+
+## Pre-flight
+
+触发 Skill 时先标注模型声明（不能代替工具回执；文件哈希不证明模型读取）：
+
+```text
+模型声明：🚀 已触发 {skill}
+模型声明：✅ 已读取 standards/index.md → 任务类型
+模型声明：✅ 已读取本次必需规范 → 文件列表
+模型声明：✅ 已确认工程 Profile/JDK/Maven/数据库
+⚠️ 本次写入、DDL、权限或破坏性 API 风险与确认点
+```
+
+## 高风险边界
+
+- DDL 只生成正向 Flyway、只读验证 SQL 和人工恢复说明；不得由 AI/MCP 执行数据库写入；
+- ALTER 必须分 expand/contract；contract drop 需 approvalRef，Flyway 版本和既有迁移内容不可变；
+- 数据回填、批量 UPDATE/DELETE、权限发布、角色授权必须走对应审批；
+- Controller 路径/字段/权限变更必须更新后端契约并执行 contract diff；
+- `companyId` 不得来自请求；租户拦截器豁免必须有可验证证据；
+- 不允许把 `${}` 机械替换为 `#{}`，也不允许猜权限码、租户谓词、业务异常或 Javadoc。
+
+## 检查与修复
+
+```bash
+wl-skills-bd doctor
+wl-skills-bd validate . --strict
+wl-skills-bd validate . --format sarif --output reports/backend.sarif
+```
+
+`code-fix-be`/`fix` 的内置自动修复只处理满足严格前置条件的 B3/B5。项目断言的 `safeReplacement` 也必须限制在 evidenceRefs 内且字面 before 恰好命中一次。先 plan，评审 diff，再用同一 planHash + confirm apply；写后复扫不可跳过，失败必须回滚。其他规则转人工、平台模板或结构重构。
+
+精准 `--rules` 会在文件发现前缩小执行面；必须保留 `execution/coverage` 证据。quick/staged/changed 是 partial，最终交付执行 full `review run`，汇总新增/历史问题、适配、供应链和覆盖率。`task` 输出标准 Pipeline 与 pipelineHash；写任务必须经过 approval/apply 双确认。
+
+## MCP（18 个工具）
+
+| 工具 | 作用 |
+|---|---|
+| `wls_be_capabilities` | AI 首次接入的单一能力清单（Skill 触发词/路径、规则范围、CLI 命令、读取顺序） |
+| `wls_be_validate` | B1~B31 只读扫描 |
+| `wls_be_doctor` | 环境与门禁诊断 |
+| `wls_be_codegen` | validate/plan/受控 apply |
+| `wls_be_contract` | seed/inspect/migrate/show/diff/impact/integration-inspect |
+| `wls_be_safe_fix` | B3/B5 受控修复与复扫 |
+| `wls_be_review` | 变更门禁、质量基线、平台适配、项目断言、供应链与修复分级 |
+| `wls_be_standards` | 查询 30 条规范 |
+| `wls_be_templates` | 查询 16 个模板 |
+| `wls_be_db_preview` | 只读 DDL/Expand-Contract 预览 |
+| `wls_be_export_permissions` | 受控导出 kit 权限清单片段 |
+| `wls_be_config` | 配置 doctor/init/migrate/fix；写入需确认 |
+| `wls_be_troubleshoot` | 常见后端故障只读诊断 |
+| `wls_be_task` | 只读任务路由 + Pre-flight 证据（必读文件 sha256）；不得绕过 codegen/safe-fix/config 写链 |
+| `wls_be_catalog` | 模块目录 plan/apply/check/show、分区分页与 integration-audit；默认只扫描当前模块 |
+| `wls_be_context` | 当前模块 + 一跳快照的有界上下文；不扫关联源码 |
+| `wls_be_commit` | 提交消息/range 校验与 Hook doctor |
+| `wls_be_test` | 行为契约测试 gen/scenarios（测行为不测镜像） |
+
+写工具默认只预览，并统一执行 planHash、写前重算、原子写、失败回滚和写后复验。Agent 不得自行把 `confirmApply` 设为 true 来绕过用户评审；pre/prod/production 还必须取得显式工程文件写授权。
+
+所有工具默认传 `response.mode=summary` 并设置合理 `maxItems/maxBytes`；超预算时用 `nextCursor` 续取，不为获取正文重复执行原工具。cursor 只代表读取短期结果，不代表确认写入。
+
+## 方法论
+
+规范以官方/社区最佳实践、团队 standards、机器 Profile 和本次契约为准；存量代码只作为待审计事实，不自动晋升为标准答案。Skill 文档不能承诺执行器未实现的能力。
+
+每次任务执行 `wl-skills-bd task --input "<完整任务>" --json`（或 MCP wls_be_task），持有 runId 后用 `status --run-id <runId> --json` 核验真实检查、输入新鲜度与未验证项；相关但缺能力/规则必须显示 gap 并保留建议。宿主入口诊断用 `doctor --host codex --json`，发现/选中仍须宿主证据。
+
+编辑前必须展示实际 `notice`：包名/版本、判定、Skill 或基础约束、规则编号与名称、目标、runId 和尚未执行的检查；命令失败或版本不一致须明示，不能静默跳过。
+
+同一用户任务跨已安装且适用的包复用同一 `--run-id <id>` 或 `WL_TASK_RUN_ID`；本包仍可独立使用，无需安装其他 WL 包。
+<!-- wl-skills-bd:end -->

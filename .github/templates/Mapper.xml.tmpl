@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  {{Entity}}Mapper.xml — {{apiDesc}}的 SQL 映射
+  namespace 必须与 Mapper.java 全限定名一致
+  规则：禁 SELECT 星号 / 禁 ${} 注入 / 软删除条件常驻（standards/06）
+-->
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="{{rootPackage}}.{{module}}.mapper.{{Entity}}Mapper">
+
+    <!-- 显式列出字段，禁止 SELECT *（standards/06）-->
+    <sql id="BaseColumns">
+        t.{{idColumn}}               AS id,
+        {{#columns}}
+        t.{{COLUMN}}            AS {{field}},
+        {{/columns}}
+        t.{{companyIdColumn}}       AS companyId,
+        t.{{softDeleteColumn}}        AS {{softDeleteJavaField}},
+        t.{{revisionColumn}}         AS revision,
+        t.{{createUserNoColumn}}   AS createUserNo,
+        t.{{createDateTimeColumn}} AS createDateTime,
+        t.{{updateUserNoColumn}}   AS updateUserNo,
+        t.{{updateDateTimeColumn}} AS updateDateTime
+    </sql>
+
+    <!-- 分页查询：动态条件 + 软删除常驻 -->
+    <select id="queryPage" resultType="{{rootPackage}}.api.vo.{{module}}.{{Entity}}PageVO">
+        SELECT
+        <include refid="BaseColumns"/>
+        FROM {{table}} t
+        <where>
+            <!-- 软删除条件常驻：{{softDeleteComment}} -->
+            AND t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
+            <!-- 租户值只能由 Service 从 AuthUtil 注入，禁止从请求 DTO 获取 -->
+            AND t.{{companyIdColumn}} = #{companyId}
+            <if test="param != null">
+                {{#queryConditions}}
+                <if test="param.{{field}} != null and param.{{field}} != ''">
+                    AND t.{{COLUMN}} = #{param.{{field}}}
+                </if>
+                {{/queryConditions}}
+                {{#likeConditions}}
+                <if test="param.{{field}} != null and param.{{field}} != ''">
+                    <!-- Oracle CONCAT 仅支持2参数，三参数要嵌套（standards/06）-->
+                    AND t.{{COLUMN}} LIKE CONCAT(CONCAT('%', #{param.{{field}}}), '%')
+                </if>
+                {{/likeConditions}}
+            </if>
+        </where>
+        ORDER BY t.{{createDateTimeColumn}} DESC
+    </select>
+
+    <!-- 按 ID + 租户查询详情（用于复杂详情联表场景的起点；默认 getById 由 Service.lambdaQuery 兜底） -->
+    <select id="queryById" resultType="{{rootPackage}}.api.vo.{{module}}.{{Entity}}VO">
+        SELECT
+        <include refid="BaseColumns"/>
+        FROM {{table}} t
+        WHERE t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
+          AND t.{{companyIdColumn}} = #{companyId}
+          AND t.{{idColumn}} = #{id}
+    </select>
+
+    <!-- 写操作统一使用显式租户 SQL 加载实体，避免 Wrapper 条件遗漏且便于静态审计。 -->
+    <select id="selectActiveById" resultType="{{rootPackage}}.api.entity.{{module}}.{{Entity}}">
+        SELECT
+        <include refid="BaseColumns"/>
+        FROM {{table}} t
+        WHERE t.{{idColumn}} = #{id}
+          AND t.{{companyIdColumn}} = #{companyId}
+          AND t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
+    </select>
+
+    <select id="selectActiveByIds" resultType="{{rootPackage}}.api.entity.{{module}}.{{Entity}}">
+        SELECT
+        <include refid="BaseColumns"/>
+        FROM {{table}} t
+        WHERE t.{{companyIdColumn}} = #{companyId}
+          AND t.{{softDeleteColumn}} = {{softDeleteActiveValue}}
+          AND t.{{idColumn}} IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- 所有业务更新必须在同一条 SQL 中同时约束 ID、租户、有效标记和版本号。 -->
+    <update id="updateAtomic">
+        UPDATE {{table}}
+        <set>
+            {{#columns}}
+            <if test="entity.{{field}} != null">
+                {{COLUMN}} = #{entity.{{field}}},
+            </if>
+            {{/columns}}
+            {{updateUserNoColumn}} = #{entity.updateUserNo},
+            {{updateDateTimeColumn}} = #{entity.updateDateTime},
+            {{revisionColumn}} = {{revisionColumn}} + 1
+        </set>
+        WHERE {{idColumn}} = #{entity.id}
+          AND {{companyIdColumn}} = #{companyId}
+          AND {{softDeleteColumn}} = {{softDeleteActiveValue}}
+          AND {{revisionColumn}} = #{expectedRevision}
+    </update>
+
+    <!-- 当前 profile 软删除口径：{{softDeleteComment}}；禁止物理 DELETE。 -->
+    <update id="softDeleteAtomic">
+        UPDATE {{table}}
+        SET {{softDeleteColumn}} = {{softDeleteDeletedValue}},
+            {{updateUserNoColumn}} = #{entity.updateUserNo},
+            {{updateDateTimeColumn}} = #{entity.updateDateTime},
+            {{revisionColumn}} = {{revisionColumn}} + 1
+        WHERE {{idColumn}} = #{entity.id}
+          AND {{companyIdColumn}} = #{companyId}
+          AND {{softDeleteColumn}} = {{softDeleteActiveValue}}
+          AND {{revisionColumn}} = #{entity.revision}
+    </update>
+
+</mapper>

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "baselineMode": "new-only",
+  "baselineFile": ".wl-skills-bd/review-baseline.json",
+  "blockSeverities": ["error"],
+  "requireCompleteRuleCoverage": true,
+  "warningBudget": 0,
+  "coverage": {
+    "required": false,
+    "reportPaths": [],
+    "minimumLine": null,
+    "minimumChangedLine": null
+  },
+  "exemptions": []
+}

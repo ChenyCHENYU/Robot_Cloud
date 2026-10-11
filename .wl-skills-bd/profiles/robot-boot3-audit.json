@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "robot-boot3-audit",
+  "status": "audit-only",
+  "codegenEnabled": false,
+  "java": 17,
+  "springBootMajor": 3,
+  "serviceStyle": "direct",
+  "apiDocumentation": "openapi3",
+  "validationNamespace": "jakarta.validation",
+  "response": {
+    "successCode": 0,
+    "envelope": ["code", "message", "msg", "data"],
+    "pageRecordsPath": "data.list",
+    "pageTotalPath": "data.total"
+  },
+  "tenant": {
+    "mode": "interceptor",
+    "column": "company_id",
+    "javaField": "companyId",
+    "provider": "AuthUtil.getLoginCompanyId()",
+    "requestSupplied": false
+  },
+  "softDelete": {
+    "column": "delete_flag",
+    "javaField": "deleteFlag",
+    "activeValue": 1,
+    "deletedValue": 0
+  },
+  "auditTime": { "mysqlType": "DATETIME" },
+  "optimisticLock": { "column": "revision", "javaField": "revision", "initialValue": 0 }
+}

@@ -1,0 +1,3 @@
+{
+  "servers": {"wl-skills-bd":{"type":"stdio","command":"npx","args":["--yes","@agile-team/wl-skills-bd@0.37.0","mcp"],"env":{"WL_PROJECT_ROOT":"${workspaceFolder}"}}}
+}

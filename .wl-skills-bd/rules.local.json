@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "tenant": {
+    "mode": "interceptor",
+    "evidence": "robot-common/robot-common-mybatis/src/main/java/com/robot/common/mybatis/config/RobotMybatisAutoConfiguration.java"
+  },
+  "softDelete": { "activeValue": 1, "deletedValue": 0 }
+}

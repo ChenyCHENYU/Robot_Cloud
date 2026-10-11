@@ -1,0 +1,94 @@
+package {{rootPackage}}.{{module}}.mapper;
+
+import com.jhict.common.data.mapper.JhBaseMapper;
+import {{rootPackage}}.api.entity.{{module}}.{{Entity}};
+import {{rootPackage}}.api.vo.{{module}}.{{Entity}}VO;
+import {{rootPackage}}.api.vo.{{module}}.{{Entity}}PageVO;
+import {{rootPackage}}.api.dto.{{module}}.{{Entity}}PageDTO;
+import com.jhict.common.data.mybatis.entity.JhPage;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.Collection;
+import java.util.List;
+
+/**
+ * {{apiDesc}}({{Entity}})表数据库访问层。
+ * <p>业务模块：{{module}}；租户由 Service 提供，Mapper 不承担接口权限校验与事务编排。
+ * <p>继承 JhBaseMapper 获得基础读写能力；默认业务模板只暴露租户安全的查询与软删除流程。
+ * <p>复杂查询/联表/动态条件写自定义方法 + XML。
+ *
+ * @author wl-skills-bd codegen
+ * @since 1.0.0
+ */
+@Mapper
+public interface {{Entity}}Mapper extends JhBaseMapper<{{Entity}}> {
+
+    /** XML 中引用查询参数的 key 名 */
+    String QUERY_PARAM_KEY = "param";
+
+    /** XML 中引用登录租户的 key 名 */
+    String COMPANY_ID_KEY = "companyId";
+
+    /**
+     * 分页查询{{apiDesc}}。
+     * <p>实现见同名 Mapper.xml（禁止 SELECT 星号，软删除条件常驻）。
+     *
+     * @param page 分页参数（current/size，由 MP 拦截器自动包裹）
+     * @param pageDTO 查询条件（@Param("param")，XML 用 param.xxx 引用）
+     * @param companyId 当前登录公司，由 Service 从 AuthUtil 获取，禁止接受前端传值
+     * @return 分页结果，元素为 {{Entity}}PageVO
+     */
+    JhPage<{{Entity}}PageVO> queryPage(
+            JhPage<{{Entity}}PageVO> page,
+            @Param(QUERY_PARAM_KEY) {{Entity}}PageDTO pageDTO,
+            @Param(COMPANY_ID_KEY) String companyId);
+
+    /**
+     * 按 ID + 租户查询详情（复杂详情/联表场景的 SQL 起点）。
+     * <p>用于 VO 查询；Service 写流程使用 selectActiveById 读取实体，不从请求接受租户。
+     *
+     * @param id 主键
+     * @param companyId 当前登录公司
+     * @return 详情 VO，无匹配返回 null
+     */
+    {{queryByIdMapperDeclaration}};
+
+    /**
+     * 按 ID + 租户 + 有效标记读取实体。
+     * <p>写操作和状态机统一从本方法加载，保证租户谓词在 Mapper SQL 中可审计、可测试。
+     *
+     * @param id 主键
+     * @param companyId 当前登录公司
+     * @return 有效实体，无匹配返回 null
+     */
+    {{selectActiveByIdMapperDeclaration}};
+
+    /**
+     * 按主键集合 + 租户 + 有效标记批量读取实体。
+     *
+     * @param ids 去重后的主键集合，调用方必须先校验非空且不超过 1000 条
+     * @param companyId 当前登录公司
+     * @return 有效实体列表
+     */
+    {{selectActiveByIdsMapperDeclaration}};
+
+    /**
+     * 租户 + 有效标记 + 乐观锁原子更新。
+     *
+     * @param entity 待更新实体及审计字段
+     * @param companyId 当前登录公司
+     * @param expectedRevision 客户端读取到的版本号
+     * @return 受影响行数；只能为 0 或 1
+     */
+    {{updateAtomicMapperDeclaration}};
+
+    /**
+     * 租户 + 有效标记 + 乐观锁原子软删除。
+     *
+     * @param entity 当前实体（携带 ID、版本及更新审计字段）
+     * @param companyId 当前登录公司
+     * @return 受影响行数；只能为 0 或 1
+     */
+    {{softDeleteAtomicMapperDeclaration}};
+}

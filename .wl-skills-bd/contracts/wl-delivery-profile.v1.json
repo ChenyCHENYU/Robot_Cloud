@@ -1,0 +1,38 @@
+{
+  "protocolVersion": "1.0",
+  "profileId": "robot-boot3-audit",
+  "independentUse": true,
+  "transport": {
+    "basePathPattern": "/sys/{resource}",
+    "operations": {
+      "page": { "method": "GET", "path": "" },
+      "detail": { "method": "GET", "path": "{id}" },
+      "create": { "method": "POST", "path": "" },
+      "update": { "method": "PUT", "path": "{id}" },
+      "remove": { "method": "DELETE", "path": "{id}" }
+    },
+    "responseEnvelope": { "successCode": 0, "codeField": "code", "messageField": "message", "dataField": "data" },
+    "pagination": {
+      "requestCurrent": "page",
+      "requestSize": "pageSize",
+      "defaultCurrent": 1,
+      "defaultSize": 10,
+      "maxSize": 200,
+      "responseRecords": "data.list",
+      "responseTotal": "data.total"
+    },
+    "concurrency": { "field": "revision", "requiredOnUpdate": true },
+    "permissionPattern": "{module}:{resource}:{operation}"
+  },
+  "traceMapping": {
+    "frontendPageExternalId": "design-model screen.id",
+    "backendEntityExternalId": "design-model table.id",
+    "fieldExternalId": "design-model field.id",
+    "required": false
+  },
+  "extensionPolicy": {
+    "customOperationsAllowed": true,
+    "customProfilesAllowed": true,
+    "deviationsMustBeExplicit": true
+  }
+}

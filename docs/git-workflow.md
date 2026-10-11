@@ -19,6 +19,7 @@ git config remote.pushDefault origin
 git config push.default simple
 git config pull.ff only
 git switch --track origin/dev
+bun install --frozen-lockfile
 ```
 
 上述配置仅作用于本地仓库。两个站点的默认分支均应设为 `main`；本地分支命名、远程跟踪和站点默认分支是不同设置。远程 SSH 权限需分别配置，只向站点登记公钥，私钥、访问令牌及真实环境配置不入库。
@@ -34,7 +35,7 @@ git pull --ff-only origin dev
 git switch -c feature/company-profile
 ```
 
-命名使用 `feature/<主题>`、`fix/<主题>`、`chore/<主题>` 或 `docs/<主题>`，主题采用简短英文，关联工单时可带编号。一个分支聚焦一项可独立审查的变化。
+命名使用 `feat/<主题>`（兼容既有 `feature/`）、`fix/<主题>`、`refactor/<主题>`、`chore/<主题>` 或 `docs/<主题>`，主题采用简短英文，关联工单时可带编号。一个分支聚焦一项可独立审查的变化。
 
 提交前查看 `git diff` 和 `git status`，按实际范围暂存文件，运行 `scripts/verify.sh`。涉及数据库升级时，在独立 loopback MySQL 上执行 `scripts/verify.sh --mysql-upgrade`，按 [部署说明](deployment.md) 配置验证变量。真实环境恢复和前端联调另行记录，不用单元测试代替。
 
@@ -76,6 +77,10 @@ git ls-remote --heads gitee main dev
 
 ## 提交与仓库卫生
 
-提交标题采用 `feat`、`fix`、`refactor`、`test`、`docs` 或 `chore`，按需附业务范围；描述结果，避免把所有变化写成“update”。成功行为、失败与恢复边界在 PR 中如实说明。
+提交标题必须采用 `type(scope): message`，scope 必填，类型白名单与 Robot Admin 相同：`wip`、`feat`、`fix`、`docs`、`style`、`refactor`、`perf`、`test`、`chore`、`revert`、`build`、`deps`。`ci` 不在这份白名单中，CI 变化使用 `chore(ci)` 或 `build(ci)`。scope 允许自定义，建议 `auth`、`gateway`、`system`、`security`、`common`、`api`、`bom`、`db`、`tooling`、`readme`；描述结果，避免写“update”。
+
+`bun install --frozen-lockfile` 安装固定版本的开发工具并启用 Husky 的 `commit-msg`；普通 `git commit` 自动运行 commitlint。完整格式、真实 Hook 测试和 CI 范围规则见 [贡献指南](../CONTRIBUTING.md)。本地 Hook 能被绕过，因此 CI 还会验证整个提交范围。`.commit-policy.json` 明确记录已共享历史的截止 SHA，之后所有可达提交都必须合规，不只检查 HEAD。已有历史不强推改名，不自动移动截止 SHA。
+
+BD 安装器附带的 `.githooks` 和 `.github/git-hooks` 保持未启用；`core.hooksPath` 使用 `.husky/_`。它们不是 Robot 的提交事实源，不叠加模块白名单或“功能点-具体内容”的额外要求。Git 自动产生的普通 merge 标题允许保留；普通功能标题和版本标签式标题仍须满足 commitlint。
 
 只提交源码、测试、机器契约、迁移、构建工具及文档。构建目录、运行日志、本地敏感配置、工具缓存和本机执行回执通过 `.gitignore` 排除；已有受跟踪文件需要取消跟踪，忽略规则才会生效。本次工作区原始证据保存在仓库外的 `output/`，仓库内的 [验收摘要](verification-2026-10-09.md) 和托管 CI artifact 分别保留可审查结果。

@@ -1,0 +1,91 @@
+<!--
+document-meta:
+  purpose: 规定大型后端工程的模块目录、关系快照、精准上下文和生成前置门禁
+  audience: backend-developers-ai-agents-and-maintainers
+  source-of-truth: .wl-skills-bd/catalog.config.json
+  maintained-by: wl-skills-bd
+-->
+
+# 27 · 项目目录与精准上下文规范
+
+## 1. 目标与边界
+
+Catalog 负责回答“有多少模块、服务、接口、数据库对象，谁拥有它们、如何关联、是否重复”。它不是第二份源码，也不要求每次读取全仓。
+
+默认开发模式必须指定当前模块。只有显式的 CI/治理任务才允许 `--full`。任何工具不得因为关联快照缺失而偷偷回退为全仓源码扫描。聚合工程的模块根由 Catalog `modules.*.root` 显式声明；未声明时只能从该模块的契约根/源码根共同祖先确定性推导，不得把仓库根当作每个模块根。
+
+## 2. 三层事实
+
+| 层 | 位置 | 责任 |
+|---|---|---|
+| 配置 | `.wl-skills-bd/catalog.config.json` | 模块边界、契约根、源码根、上游、下游、负责人、提交策略 |
+| 机器快照 | `.wl-skills-bd/catalog/modules/*.json` | 模块资源、服务、接口、库表、关系、源码证据与哈希 |
+| 人读文档 | `docs/backend/modules/*.md` | 当前模块事实入口；带用途、受众、范围、来源、哈希和不可手改注释头 |
+
+项目级 `project-catalog.json` 与 `docs/backend/INDEX.md` 只汇总模块快照，不重扫模块源码。人读文档由工具生成，修改事实应回到契约或配置。
+
+## 3. 模块增量刷新
+
+```bash
+wl-skills-bd catalog plan --module order
+wl-skills-bd catalog apply --module order --plan-hash <hash> --confirm
+wl-skills-bd catalog check --module order
+wl-skills-bd catalog show --module order
+wl-skills-bd catalog show --module order --section apis --limit 50 --cursor 0
+```
+
+模块模式只遍历当前模块配置的 `contractRoots` 与 `sourceRoots`；其他模块只读取固定快照文件。计划包含扫描模块、复用模块、缺失快照、操作哈希和 `planHash`。确认前重新计划；发生漂移、冲突或写入失败时整批零写入/回滚。
+
+目录只能把 `wl-contract.json`、`*.contract.json` 或具备 `contractId + entity` 形状的 JSON 当作契约；其他 manifest 仅作为证据文件。API 以 Controller 源码实际注解的 method/path/file/line 为观测事实；数据库镜像或集成投影不得合成虚构 CRUD 接口。`catalog show` 默认只返回统计摘要，大数组必须按 section/cursor 分页获取。
+
+```bash
+# 仅限 CI、初始化或全局治理
+wl-skills-bd catalog plan --full
+```
+
+## 4. 一跳上下文
+
+```bash
+wl-skills-bd context plan --module order --task "增加订单创建接口" --keywords "幂等,客户" --max-tokens 12000 --json
+```
+
+上下文选择规则：
+
+1. 当前模块目录 JSON 与模块文档是事实入口。
+2. 当前模块源码按任务关键词、契约和资源身份排序；中文任务按 2~4 字语义片段拆解，在文件数、字节数和估算 token 预算内选择。
+3. 最多加载显式登记的一跳上游/下游快照。
+4. 关联模块不遍历源码目录；只有关系命中的契约文件可进入候选。
+5. 输出必须声明 `scannedModules`、`loadedSnapshotModules`、`linkedSourceDirectoriesScanned=false`、`selectedTokens` 和 `contextHash`。
+6. 当前模块目录过期时阻断生成，先刷新当前模块；关联快照缺失只告警，不扩大扫描范围。
+
+默认预算为 40 个文件、512 KiB、约 16000 tokens、1 跳，可在安全上限内收紧。token 为本地确定性近似值，用于提前裁剪，不冒充模型供应商最终计费。禁止为了“保险”把 `maxHops` 扩大到 2 以上。
+若预算小到无法容纳当前模块机器目录，必须以 `context-budget-too-small` 阻断；不得在缺少权威入口时继续向 AI 提供“成功”的上下文计划。
+
+## 5. 去重与污染阻断
+
+以下身份在已有快照范围内必须唯一：契约 ID、Service/Controller/Mapper 全限定名、HTTP method+外部路径、权限码、库集群+引擎+表写归属、迁移位置+版本。冲突会阻断 Catalog apply 与后续代码生成。
+
+新代码生成前还必须通过当前模块目录新鲜度检查，并把 Catalog 上下文哈希纳入 codegen `planHash`。这样快照变化会使旧计划失效，避免拿过期上下文写入。
+
+## 6. 协作约定
+
+- 模块负责人维护本模块契约、源码与关系声明，不直接修改其他模块快照。
+- 调用方依赖上游公开契约，不复制对方 Controller、Service、Mapper 或表写逻辑。
+- 关系发生变化时先更新配置/契约并刷新相关模块，再生成代码。
+- 项目 Catalog 支持 kit/design 等包提供可选输入，但 bd 独立使用成熟需求文档时也必须能闭环；不把上游包产物设为硬依赖。
+
+## 7. 增量索引与缓存
+
+契约/迁移事实根统一由 Source Index 解析。启用 Catalog 后只相信显式 `contractRoots`；旧项目才使用受控默认目录，禁止缓存层扩大扫描范围。
+
+- 进程内缓存用于同一 MCP 会话重复调用；持久化缓存仅写 `.wl-skills-bd/.state/`，不属于受管源码事实。
+- 缓存键包含事实根，文件快照包含 dev/inode/size/mtime/ctime；任一变化必须真实重建。
+- 缓存损坏、权限不足、只读文件系统或显式禁用时安全退化为真实扫描，不得返回陈旧结果或把缓存错误冒充事实源错误。
+- 缓存文件必须原子写、0600 临时文件并跳过 symlink；扫描器排除 `.state`，避免自污染。
+- 输出应声明 memory/persistent/miss 命中层，供性能基准验证；缓存命中不能改变扫描结果语义。
+
+## 变更记录
+
+- 2026-08-31 v3：加入模块根解析、契约候选过滤、源码 API 观测和摘要/分区 token 预算。
+- 2026-08-24 v2：Source Index 两级缓存、指纹失效、损坏重建和只读降级进入机器约束。
+- 2026-07-19 v1：新增模块增量目录、一跳快照上下文、预算选择、全局身份冲突和 codegen 前置门禁。

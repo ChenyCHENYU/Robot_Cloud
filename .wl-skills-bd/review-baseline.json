@@ -1,0 +1,451 @@
+{
+  "findings": [
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/PermissionGovernanceController.java",
+      "fingerprint": "00680d7212913a3795bc8f000207894b3e19452bfdb159e2684209eb5f54a2e3",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/UserController.java",
+      "fingerprint": "047a987360881fe7b0a612107fecb4f3b761689dc496a3ec50eef42691aae478",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/dict/controller/DictController.java",
+      "fingerprint": "06f74fd981a657d7d33d276fc36755d0da4d63d47a6433ae240906ed5ed9aefd",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuController.java",
+      "fingerprint": "0710a38a7e06c6077e7d6736dab0614d06ac9888aa1a0b2ecc82ad57d5b64bca",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/account/controller/inner/LoginLogInnerController.java",
+      "fingerprint": "07458267d5db21ef5f753feaaf81d7e32535d8d67732a796e663482d937cdd5b",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/service/MenuService.java",
+      "fingerprint": "07908c69020156ccdc400db9c6734c181652d43fa78116ac09ed2a95ff904ce1",
+      "rule": "B17",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuButtonController.java",
+      "fingerprint": "099bbf1b5251f929b21d6f77018bfae9720e79aa15565b4c365ef18962bd1e69",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/PermissionGovernanceController.java",
+      "fingerprint": "155333ea9e1548ed41a02700ad9954c1532b4faee608f08a6ab092dc224dbfde",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/UserController.java",
+      "fingerprint": "1c31eddd9fe12c2de6f40dc4c642886e8a8ead1e33ff971c0c19f950eba9b7f8",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/PermissionGovernanceController.java",
+      "fingerprint": "1e6c9fb194c5bfea0aa2cb4d788c5cb3e88992b305231f415f323240d1c3a0ab",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/CacheOutboxGovernanceController.java",
+      "fingerprint": "2bd2a12fbd051e26b62b12089a152599b799dc93c922efcaec63cd865043932a",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/CacheOutboxGovernanceController.java",
+      "fingerprint": "2c04cd8e0bbda0b4d6a0c0c0e13f6ccb3773b3506080d9f4fdbb058434678b22",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuButtonController.java",
+      "fingerprint": "2f7125befb179aeda6b6906a3c274f0eac6d85205ecac47f31635965615e2fae",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/PermissionGovernanceController.java",
+      "fingerprint": "30d55fc2f61c241bbf98b74828e76d9e149c5d9f3c12964d48af0efdf8d60711",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/CacheOutboxGovernanceController.java",
+      "fingerprint": "344310c639a31772f1b1cfeea144a5317e8f770a68762bd603be1145404dab53",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/CacheOutboxGovernanceController.java",
+      "fingerprint": "35c48f2c4238705bc70b8f1d25a4b8f199a52e2483a837ee31db91bbbaae4ba5",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/inner/MenuInnerController.java",
+      "fingerprint": "3dbaff4f515663224aa88c90f09abf26aed96b54728498d1c3b7b71d76f5cd48",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/service/MenuService.java",
+      "fingerprint": "4021d82d1a3709e02b9ce626a275bcd38aae69a9986cb3aa92757e6990330f1c",
+      "rule": "B17",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/UserController.java",
+      "fingerprint": "405892dc60226f8d49e3d7875ed95c0cba1896111848e7506fbc1d3ca999ef13",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/role/controller/RoleController.java",
+      "fingerprint": "41dd2b391c21a1f6e1acf172c1b5c1deb07a860cd4843baaca7a1eaa76a9a9d7",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuController.java",
+      "fingerprint": "42ea4ef609e9f34b3524b5dabe92591d6330a41800a2f7ced97c1c403317cfcb",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/CacheOutboxGovernanceController.java",
+      "fingerprint": "452a6ccd3034fa9d7a75d4caa6042d227c6aeca53636ae26d024bb1a8063e4fe",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuController.java",
+      "fingerprint": "4b36daeceba523a2f3eb27783ca0a2c92ff41be1008201d6ac1c8c84e7dd481c",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/account/controller/AccountController.java",
+      "fingerprint": "4e0881b535c7fdf21f07036d03bdd30feef7bce0ab5e85ea647308050c4481bd",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/inner/UserInnerController.java",
+      "fingerprint": "51f28a53c8b4a65dc034d1cbb9d9d26f76ab73eda9bc566de4a54f00d2ca6767",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-auth/src/main/java/com/robot/auth/authn/controller/AuthController.java",
+      "fingerprint": "5260881e0f52642c9a5786338805c756fe23702ce7be1c138ccdabd6a652290d",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuController.java",
+      "fingerprint": "5938a6b368accbb2ee1bcb789e13907851deb963abae17ecf03c77cfc779a0ff",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuController.java",
+      "fingerprint": "5ad23d2282bf323ffe5bb25f594c8afa7b12fb3e5e3df9a47ad4fbad7429ee87",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-auth/src/main/java/com/robot/auth/authn/controller/AuthController.java",
+      "fingerprint": "5ae5d458a839be645507a51f1a033c4aa507b9d5d9ed8ce9de696e53f05d28f0",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/role/controller/RoleController.java",
+      "fingerprint": "5d753bb6e4f4406849f35df4238c2e04ad5b0b567bf8ab58cf9c2b824fac7b21",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuButtonController.java",
+      "fingerprint": "5db9de3341c2fcbbfa9c596b2ef73ec278b0fef5c2539c5e05b17ae9cde4c16c",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/test/java/com/robot/system/permission/service/CacheOutboxGovernanceIntegrationTest.java",
+      "fingerprint": "5e1d9f296b6eed91c0ab6ebe360e06378cc387eeeb225728d28cdee630a2d24f",
+      "rule": "B17",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/inner/MenuInnerController.java",
+      "fingerprint": "6087bea3dd2c6fa348fb3ea01cc43577edbd0ca0b6aa5f70dbb16e2f51ad4598",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/UserController.java",
+      "fingerprint": "60ba51630b2c61086522f4920b0666b8a590dcbf3c852db993813641adf1fb6c",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-auth/src/main/java/com/robot/auth/authn/controller/AuthController.java",
+      "fingerprint": "69ead102f49cb259d1648a5f7ad92e96b11283609436b94c0178f736fe869d67",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuButtonController.java",
+      "fingerprint": "6f7665d3725d6125f6cbf93e16d98949520091933858975faff1233eae894162",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/UserController.java",
+      "fingerprint": "711d548c5851c06640f2a0407feb4ab3e02628b3c07c1ea128db567cd6cec710",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/account/controller/AccountController.java",
+      "fingerprint": "73c98fa1ad85f5e12b16494da70a6f1ef77456c7930bd9ec1374da9bc4e94605",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/inner/UserInnerController.java",
+      "fingerprint": "73e5be8e99a22a6e44349699247aaa1b2ee0adf12cc93f50a97a945fe990983f",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/role/controller/RoleController.java",
+      "fingerprint": "7d949ae841530cbce094c81b8b7de0e25fb69555d63a8e88f5a64148224bdffa",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/dict/controller/DictController.java",
+      "fingerprint": "83441b0b358430885f8711c5f14b64f9ff61bf9b9a8f0a303bf2238953593462",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/role/controller/RoleController.java",
+      "fingerprint": "87343927e3871594f8131442bfb210fb7acde2c628088da6094e7365a986736c",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/inner/MenuInnerController.java",
+      "fingerprint": "8e0a28d4a2da963a91caa341fde7d04fe41135ae82ef78a85b594a9866beb7a1",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-auth/src/main/java/com/robot/auth/authn/controller/AuthController.java",
+      "fingerprint": "8f9874c4cdf5458761ed6d0c129243d51ca0c1203152299e61c4178bb5f6efa1",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/role/controller/RoleController.java",
+      "fingerprint": "8fc5d83fd1f040226b37144cd847008cc982a0005ad2c744546dd61c48b7667f",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuController.java",
+      "fingerprint": "941991b313b1f6766e63a2942a72c0199786ef833d1b14e5b7f1fada3caa9a08",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-auth/src/main/java/com/robot/auth/authn/controller/AuthController.java",
+      "fingerprint": "9484e7f67d048810c21d7988bad40dadffb248b79b8f64b823e05ecf86df96cd",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/account/controller/AccountController.java",
+      "fingerprint": "94a27d2c8357739d7e5577f1491d17397611fe57439d795c94c7176b0fc62dc9",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuController.java",
+      "fingerprint": "9537b882a25e74089c6fb2dac0f5bd4731bd086111427c03c285a8588a99522f",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/account/controller/AccountController.java",
+      "fingerprint": "998dee874b6c868e7c9ef0d11eba0ad582f3623c8b55a41bd7887b893c5d9cb7",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/dept/controller/DepartmentController.java",
+      "fingerprint": "9e892b5878108b38f1e98d40a4f02338c7c8df3b0d8265e84d98823edab99c57",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/UserController.java",
+      "fingerprint": "a12e2f486546f9767b4a8317239e2a5a069a6e2d3ec9e81bb5f5a4766b092fe7",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/inner/UserInnerController.java",
+      "fingerprint": "a6fa0458f513d611811b71d90c389d4516d31f4c57c2d408d2024c206d77713c",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/role/controller/RoleController.java",
+      "fingerprint": "a8bdffc73886d47372f59a9047aec280be20e20496895a09db59c9b3bfc19bbf",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/dict/controller/DictController.java",
+      "fingerprint": "aafad1444e9e9c60b170010d294f6d8dd21a103b885fc49ad96d760cc11a57ba",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/dict/controller/DictController.java",
+      "fingerprint": "afcf98cbe8c08a207ad12cf7e4be1d916fd207494b1df14b9fbc5f3b1a7be419",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-auth/src/main/java/com/robot/auth/authn/controller/AuthController.java",
+      "fingerprint": "b19d8e216fe5f29a1d8b8396c44f93e083a11b4f0d05e6b1c8fb2bb43a88639e",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/menu/controller/MenuController.java",
+      "fingerprint": "b48d07a017bd4bedf8a2cba67663e8ebb58989fda506c90a9b8688dea2a54e9e",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-auth/src/main/java/com/robot/auth/authn/controller/AuthController.java",
+      "fingerprint": "c4b31b87809a662f879d9234033708f5aa4082f504e98cfbcc6a874a421f03f8",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-auth/src/main/java/com/robot/auth/authn/controller/AuthController.java",
+      "fingerprint": "c76c556f70e9e8e627b2a2f8c14164752d53296948c2069a8541454f59e764a6",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/dict/controller/DictController.java",
+      "fingerprint": "cb8648255292805730679b50d3e1427745ff08e2458020bc874be5aba6f8bb37",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/role/controller/RoleController.java",
+      "fingerprint": "cdd5b0a4784bad2f54db41c9aee8b4c152a683e0903f765ee25834c8af9a6518",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/role/controller/RoleController.java",
+      "fingerprint": "db4b3b153f0dfaade00439da0c2c19f3c2d8e76192264e4be7cb8db8c4b2a6b4",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/dict/controller/DictController.java",
+      "fingerprint": "ddea9993bd67d754cf1d24e76b091bf1ff87dc8ff3f9e171ccbd5b5e23201e52",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/account/controller/AccountController.java",
+      "fingerprint": "ee556c1a5a277af6c2bba37f00430f1489230b3bb3add52fdf2c7a99b877ce5c",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/PermissionGovernanceController.java",
+      "fingerprint": "f133cf27a287ae63a25a0f67f3115e624e0fdce1a85684f405b590b8dfd518f1",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/role/controller/RoleController.java",
+      "fingerprint": "f16f3c500d7ebb1668f3449f1a52869e38bd92245016ca135664661ddf2ff9c6",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/account/controller/AccountController.java",
+      "fingerprint": "f37ba2d9dfb66ee91d9f2109fb490ff8c34cf3bee4a214c6718bb12e0114b253",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/UserController.java",
+      "fingerprint": "f463a4d7c094755822b75d20ba66aedf16b6bff0443978d826759b86b1ef31f4",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/role/controller/RoleController.java",
+      "fingerprint": "f9f6972c07d743def10a0cadc8d2b64581c0f504844a246c9aaf7905d5c74d87",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/PermissionGovernanceController.java",
+      "fingerprint": "fd462edf11a893a0feee6bce568817c703a7e7dea4ebd4c8ff4b840b1c8ba77a",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/permission/controller/PermissionGovernanceController.java",
+      "fingerprint": "fee779bbf4c01a652cce4883ef9337533cc1ba39c7c634747b593f2639d5b5ae",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-auth/src/main/java/com/robot/auth/authn/controller/AuthController.java",
+      "fingerprint": "ff77c0a6523738d4deedc070943c96403ae45077af7489852585594687608b10",
+      "rule": "B1",
+      "severity": "error"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/dict/service/DictService.java",
+      "fingerprint": "fff5edc487eba0977c7616d43966c663c877dd74c41ef9272801d894861b48f7",
+      "rule": "B17",
+      "severity": "error"
+    }
+  ],
+  "schemaVersion": 1,
+  "scope": "full",
+  "sourceCommit": "1b413f23a94aaca464cf3c45f2cd83d56ef172b0"
+}

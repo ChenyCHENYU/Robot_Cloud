@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "historicalHead": "1b413f23a94aaca464cf3c45f2cd83d56ef172b0",
+  "reason": "History already published before mandatory scope enforcement; never rewrite shared commits. Validate every reachable commit after this boundary."
+}

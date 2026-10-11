@@ -1,0 +1,777 @@
+{
+  "schemaVersion": 1,
+  "package": "@agile-team/wl-skills-bd",
+  "version": "0.37.0",
+  "installedAt": "2026-10-11T09:47:55.539Z",
+  "files": {
+    ".agents/skills/wl-skills-bd/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "95e9be48b350ccfa53b9de35c0b3e3e4f8352b75cf0bd7a8787368254887991d",
+      "installedHash": "95e9be48b350ccfa53b9de35c0b3e3e4f8352b75cf0bd7a8787368254887991d"
+    },
+    ".cursor/mcp.json": {
+      "kind": "mcp",
+      "container": "mcpServers",
+      "installedHash": "a62aa8d56e1776d279ddbcdf80d0ad32421fd1f666b6c3b9f09a848f784728e1",
+      "installedTextHash": "30b54afba17937e521e9e95b848029d307a8bb22b2a9a96bbe1f9fc62d017d14",
+      "sourceHash": "0e2bf1b97b0248b450b142a7eaf73a6257491394499b4008a4cf417bc90e3e20",
+      "createdFile": true
+    },
+    ".githooks/commit-msg": {
+      "kind": "file",
+      "sourceHash": "a1de22ffc4ed005d2bc009f9086df28441080d9ca7705ffc55ef3700489c6cf2",
+      "installedHash": "a1de22ffc4ed005d2bc009f9086df28441080d9ca7705ffc55ef3700489c6cf2"
+    },
+    ".github/copilot-instructions.md": {
+      "kind": "block",
+      "installedHash": "d1e1ca5aa7bf8670905c22d213cd50b77ffc79a42608b728b9b3a47391a3b4ab",
+      "sourceHash": "eb7d679453d3bc8c5969c49f8f19c41916e63a3a54e2047880f21ed1bbbd5d91",
+      "prefix": "",
+      "createdFile": true
+    },
+    ".github/git-hooks/commit-msg": {
+      "kind": "file",
+      "sourceHash": "a1de22ffc4ed005d2bc009f9086df28441080d9ca7705ffc55ef3700489c6cf2",
+      "installedHash": "a1de22ffc4ed005d2bc009f9086df28441080d9ca7705ffc55ef3700489c6cf2"
+    },
+    ".github/git-hooks/README.md": {
+      "kind": "file",
+      "sourceHash": "7babc115b882740287c4775c7481a3ef6d07ec7a7fbc36824b07cb86e31f7703",
+      "installedHash": "7babc115b882740287c4775c7481a3ef6d07ec7a7fbc36824b07cb86e31f7703"
+    },
+    ".github/guides/architecture.md": {
+      "kind": "block",
+      "installedHash": "5ad16c3650acdeb363bf5333214fc928616fa9ec8399eded7b5912349979c081",
+      "sourceHash": "deffe65b4543af8720e927a0f222f72e51633215451bf2b7845f93ea0263f3c2",
+      "prefix": "",
+      "createdFile": true
+    },
+    ".github/guides/business-closure-playbook.md": {
+      "kind": "file",
+      "sourceHash": "7acf35ddeb4d50e6d3f057d79a16dac2bc7818ca575da80cd062309d43cfa9c4",
+      "installedHash": "7acf35ddeb4d50e6d3f057d79a16dac2bc7818ca575da80cd062309d43cfa9c4"
+    },
+    ".github/guides/codegen-workflow.md": {
+      "kind": "file",
+      "sourceHash": "f6d6c7b6f15f883f062bc3b55125646e5e1d8916b4a4d826a4e9a644bd7d2a4d",
+      "installedHash": "f6d6c7b6f15f883f062bc3b55125646e5e1d8916b4a4d826a4e9a644bd7d2a4d"
+    },
+    ".github/guides/development-handbook-coverage.md": {
+      "kind": "file",
+      "sourceHash": "81a1fdddc086010da7164a5473b24a35d29e6a7c7c2275f4cd1dfe1fa9171255",
+      "installedHash": "81a1fdddc086010da7164a5473b24a35d29e6a7c7c2275f4cd1dfe1fa9171255"
+    },
+    ".github/guides/frontend-backend-contract.md": {
+      "kind": "file",
+      "sourceHash": "bb98b6b1574c88ccd7bacff2d48186214d1e1ba770103b1b4fa4ad605ca379d2",
+      "installedHash": "bb98b6b1574c88ccd7bacff2d48186214d1e1ba770103b1b4fa4ad605ca379d2"
+    },
+    ".github/guides/mcp-workflow.md": {
+      "kind": "file",
+      "sourceHash": "280a85b3f3ea963479906a6be983e7277250d52431cca932e2ace078e42578cf",
+      "installedHash": "280a85b3f3ea963479906a6be983e7277250d52431cca932e2ace078e42578cf"
+    },
+    ".github/guides/usage.md": {
+      "kind": "block",
+      "installedHash": "b09b0b03c7a4e4cf6e77a820867fc0812e566fef885bb71b13e3be237b8aacc5",
+      "sourceHash": "c0d55568218c5ba7eac17e8da79f264c532fb7a526e214ad7a0e651b1be733f7",
+      "prefix": "",
+      "createdFile": true
+    },
+    ".github/java-quality/archunit/LayerRulesTest.java": {
+      "kind": "file",
+      "sourceHash": "66f21443d52372498c13139c5e9c06f7d7d47a18b6fff072e77f56e15cfce6f2",
+      "installedHash": "66f21443d52372498c13139c5e9c06f7d7d47a18b6fff072e77f56e15cfce6f2"
+    },
+    ".github/java-quality/archunit/README.md": {
+      "kind": "file",
+      "sourceHash": "c29630f408f8c4193fb8b91f074d0d0e21da8d77f38567e514c74e9539ce9bf9",
+      "installedHash": "c29630f408f8c4193fb8b91f074d0d0e21da8d77f38567e514c74e9539ce9bf9"
+    },
+    ".github/java-quality/checkstyle/checkstyle.xml": {
+      "kind": "file",
+      "sourceHash": "04844b83c39595ba9f442d990ffcd038fe1303e0fdf442899351ad32d5a1bcd9",
+      "installedHash": "04844b83c39595ba9f442d990ffcd038fe1303e0fdf442899351ad32d5a1bcd9"
+    },
+    ".github/java-quality/checkstyle/README.md": {
+      "kind": "file",
+      "sourceHash": "58cb3700c4b73df48f448841b87a5b98e31ddee819560256b341ffcacc4336a2",
+      "installedHash": "58cb3700c4b73df48f448841b87a5b98e31ddee819560256b341ffcacc4336a2"
+    },
+    ".github/java-quality/jacoco/README.md": {
+      "kind": "file",
+      "sourceHash": "b8086aaa92177e6b76111573d228507a75c4811be024ceb7a54e25ba32415274",
+      "installedHash": "b8086aaa92177e6b76111573d228507a75c4811be024ceb7a54e25ba32415274"
+    },
+    ".github/java-quality/knife4j/knife4j-config.yml.tmpl": {
+      "kind": "file",
+      "sourceHash": "d2f63e153ad789cd02ca4c8bc1489bc2d94bdcf4d542e10d98c15f0eaadbf692",
+      "installedHash": "d2f63e153ad789cd02ca4c8bc1489bc2d94bdcf4d542e10d98c15f0eaadbf692"
+    },
+    ".github/java-quality/knife4j/README.md": {
+      "kind": "file",
+      "sourceHash": "8885c341d4386668df147da0c344c6d34471d75ced382e33f703965c574e50b1",
+      "installedHash": "8885c341d4386668df147da0c344c6d34471d75ced382e33f703965c574e50b1"
+    },
+    ".github/java-quality/maven-snippets/p3c-legacy-profile.xml": {
+      "kind": "file",
+      "sourceHash": "bde5efc5e8d3ae3a9447a09090695b9a46704a7ee78e118b3abd4711f98010d7",
+      "installedHash": "bde5efc5e8d3ae3a9447a09090695b9a46704a7ee78e118b3abd4711f98010d7"
+    },
+    ".github/java-quality/maven-snippets/quality-profile.xml": {
+      "kind": "file",
+      "sourceHash": "998d58d722096f7464ecc7ae35f5c3d981b90b3cdcc8e722bad91ab9f590b618",
+      "installedHash": "998d58d722096f7464ecc7ae35f5c3d981b90b3cdcc8e722bad91ab9f590b618"
+    },
+    ".github/java-quality/maven-snippets/README.md": {
+      "kind": "file",
+      "sourceHash": "3454fb0f60270b09ff09244bcd5572118bd6db0e805f575053f22c5ee33fda4b",
+      "installedHash": "3454fb0f60270b09ff09244bcd5572118bd6db0e805f575053f22c5ee33fda4b"
+    },
+    ".github/java-quality/pmd/pmd-ruleset.xml": {
+      "kind": "file",
+      "sourceHash": "34d6911ee9467666cde0b9623bd5d17224a0bad3892b9022b67c57a58e977c0c",
+      "installedHash": "34d6911ee9467666cde0b9623bd5d17224a0bad3892b9022b67c57a58e977c0c"
+    },
+    ".github/java-quality/pmd/README.md": {
+      "kind": "file",
+      "sourceHash": "e9b3a11e02ce3fffe4933af9e90c41d8529ed98b33438dce685325dfbe8f58a6",
+      "installedHash": "e9b3a11e02ce3fffe4933af9e90c41d8529ed98b33438dce685325dfbe8f58a6"
+    },
+    ".github/java-quality/README.md": {
+      "kind": "file",
+      "sourceHash": "7b75eafab9d4a77f43297e656b9b8a2ea7077111a6440ccd652dfd1623772a4a",
+      "installedHash": "7b75eafab9d4a77f43297e656b9b8a2ea7077111a6440ccd652dfd1623772a4a"
+    },
+    ".github/java-quality/spotbugs/README.md": {
+      "kind": "file",
+      "sourceHash": "4ae632a0e1d9ab8e4824775c2e18ebc4e282d340f13eac8ed0bf077584924fd5",
+      "installedHash": "4ae632a0e1d9ab8e4824775c2e18ebc4e282d340f13eac8ed0bf077584924fd5"
+    },
+    ".github/java-quality/spotbugs/spotbugs-exclude.xml": {
+      "kind": "file",
+      "sourceHash": "f79f77bbfe28c549a630ea01a686d4213418cf10e88088afc2501ef6ebed45bd",
+      "installedHash": "f79f77bbfe28c549a630ea01a686d4213418cf10e88088afc2501ef6ebed45bd"
+    },
+    ".github/java-quality/spotless/README.md": {
+      "kind": "file",
+      "sourceHash": "2d6107ff85d25f31d5baf7a6158f11ce0130890c283c8659936915a0c0cf568e",
+      "installedHash": "2d6107ff85d25f31d5baf7a6158f11ce0130890c283c8659936915a0c0cf568e"
+    },
+    ".github/reports/audit-report-template.md": {
+      "kind": "file",
+      "sourceHash": "7908081e1d05eeda9320612b67b13baf7823659518d3d9cd6d65b6383cd48dc3",
+      "installedHash": "7908081e1d05eeda9320612b67b13baf7823659518d3d9cd6d65b6383cd48dc3"
+    },
+    ".github/reports/README.md": {
+      "kind": "file",
+      "sourceHash": "6886cf7784ffbdf31d45eaa811337429aad56f2f989d67b92bfd91c45e86c9ad",
+      "installedHash": "6886cf7784ffbdf31d45eaa811337429aad56f2f989d67b92bfd91c45e86c9ad"
+    },
+    ".github/skills/_best-practices.md": {
+      "kind": "file",
+      "sourceHash": "b142c2991f95d468a259cf6256f77c69a59c8e0762c1686441c4e8694e723870",
+      "installedHash": "b142c2991f95d468a259cf6256f77c69a59c8e0762c1686441c4e8694e723870"
+    },
+    ".github/skills/_pipeline.md": {
+      "kind": "block",
+      "installedHash": "542a2d92a226fa5651d89fdb2a4ab7fcf41303380820df394e85cf709b51d9e4",
+      "sourceHash": "61e7dfb681e547cfc1bbbd7636d0b841c4b501db9f6fb1518f6fdc2012e02f3d",
+      "prefix": "",
+      "createdFile": true
+    },
+    ".github/skills/_registry.md": {
+      "kind": "block",
+      "installedHash": "dafc4a2372b10797ed38967901cb8f506bbbc351e0cc29edd27fe1e08eee0e16",
+      "sourceHash": "f5d6789384ee68e0ef3676c534fa49f51bc509f5fff5410cd942fb7de1f6f7cd",
+      "prefix": "",
+      "createdFile": true
+    },
+    ".github/skills/core/api-design-be/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "51b68baf7e870ff85ed27507645d8b7e36cc2023f60e5e0040d1785ade2ea1e5",
+      "installedHash": "51b68baf7e870ff85ed27507645d8b7e36cc2023f60e5e0040d1785ade2ea1e5"
+    },
+    ".github/skills/core/api-design-be/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "6b918db5fecf689183765da4fbd5be7c1f009e15b9cf8e5891282ae60e753f3f",
+      "installedHash": "6b918db5fecf689183765da4fbd5be7c1f009e15b9cf8e5891282ae60e753f3f"
+    },
+    ".github/skills/core/business-doc-extract-be/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "a5ae0786e189a3a0f68611556807a5a05dcca6f512733154299e3c3d26658715",
+      "installedHash": "a5ae0786e189a3a0f68611556807a5a05dcca6f512733154299e3c3d26658715"
+    },
+    ".github/skills/core/business-doc-extract-be/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "cdc0120f70718c9e82d366d6a1d9f4cf486682798ec2d191eba382a2d2b9d7c6",
+      "installedHash": "cdc0120f70718c9e82d366d6a1d9f4cf486682798ec2d191eba382a2d2b9d7c6"
+    },
+    ".github/skills/core/convention-audit-be/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "0fe03b604e7d053bece5e57cf341e91e2e292a855bf61c7221656b57afcde5e4",
+      "installedHash": "0fe03b604e7d053bece5e57cf341e91e2e292a855bf61c7221656b57afcde5e4"
+    },
+    ".github/skills/core/convention-audit-be/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "9d780b07c953e1aece9be5839b606ac5fa5235f131b46167cd3c92d41cd41c49",
+      "installedHash": "9d780b07c953e1aece9be5839b606ac5fa5235f131b46167cd3c92d41cd41c49"
+    },
+    ".github/skills/core/entity-codegen/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "141fc03f241f6d9ccccb1aeb6437950012403c503b3eaa7f605a90a7f9f41ecf",
+      "installedHash": "141fc03f241f6d9ccccb1aeb6437950012403c503b3eaa7f605a90a7f9f41ecf"
+    },
+    ".github/skills/core/entity-codegen/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "c0d052428edc8619b4938a9799f10a110d3e4e649baaafb13a75ec5d79379ccf",
+      "installedHash": "c0d052428edc8619b4938a9799f10a110d3e4e649baaafb13a75ec5d79379ccf"
+    },
+    ".github/skills/core/integration-adapter-be/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "ee45c80c3e2060439aba271485ffaf654ba8b0b48b6bbd2d2113f964e807319f",
+      "installedHash": "ee45c80c3e2060439aba271485ffaf654ba8b0b48b6bbd2d2113f964e807319f"
+    },
+    ".github/skills/core/integration-adapter-be/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "3181eefc4cf6801768fd4d539a868bd7f7649c300688e7b692d4da04d8ad314a",
+      "installedHash": "3181eefc4cf6801768fd4d539a868bd7f7649c300688e7b692d4da04d8ad314a"
+    },
+    ".github/skills/core/mapper-xml-gen/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "85a3dc1c1edcdd27069b56247f8a8ae045a4d481d01099ff3bfbf518d3a374c1",
+      "installedHash": "85a3dc1c1edcdd27069b56247f8a8ae045a4d481d01099ff3bfbf518d3a374c1"
+    },
+    ".github/skills/core/mapper-xml-gen/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "971d5e747f628500aaa8dcb0faf8efa74fa032af454b3250f30bd6c10fe7b630",
+      "installedHash": "971d5e747f628500aaa8dcb0faf8efa74fa032af454b3250f30bd6c10fe7b630"
+    },
+    ".github/skills/core/project-context-governance/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "9f717580d557b7474f33d1a450907ff0bee425e2d1d2e01e6f73cf753b36805a",
+      "installedHash": "9f717580d557b7474f33d1a450907ff0bee425e2d1d2e01e6f73cf753b36805a"
+    },
+    ".github/skills/core/project-context-governance/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "d315158b06230a994d315affd98c38d31df9e8b0943ca681c12e8798be4e0a1b",
+      "installedHash": "d315158b06230a994d315affd98c38d31df9e8b0943ca681c12e8798be4e0a1b"
+    },
+    ".github/skills/core/service-codegen/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "283b322f7a2607071400b6a2244ecaf86cf741708f1e5dc00f76822a9242d801",
+      "installedHash": "283b322f7a2607071400b6a2244ecaf86cf741708f1e5dc00f76822a9242d801"
+    },
+    ".github/skills/core/service-codegen/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "8b4f1582285f478b21b93a7bea23bcea3882bd49c7dc6451ddc71e3791825698",
+      "installedHash": "8b4f1582285f478b21b93a7bea23bcea3882bd49c7dc6451ddc71e3791825698"
+    },
+    ".github/skills/data/db-migration/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "f7bfd7399c9bbcd3d7712cd8da13df3195b2e75f82a53a25994af928a8511379",
+      "installedHash": "f7bfd7399c9bbcd3d7712cd8da13df3195b2e75f82a53a25994af928a8511379"
+    },
+    ".github/skills/data/db-migration/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "2f7cbea627e7eaac68602e2e326bed54f2de701b14362fd61043352f43fb5b61",
+      "installedHash": "2f7cbea627e7eaac68602e2e326bed54f2de701b14362fd61043352f43fb5b61"
+    },
+    ".github/skills/ops/code-fix-be/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "131155ea270d0669d34dc02e5e98febfdaf4d452d287cbc16eb51c0d665255bd",
+      "installedHash": "131155ea270d0669d34dc02e5e98febfdaf4d452d287cbc16eb51c0d665255bd"
+    },
+    ".github/skills/ops/code-fix-be/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "e35aae028e1f87d98c44eb9386de02e28185d64e1bf33f1567e64650fd371814",
+      "installedHash": "e35aae028e1f87d98c44eb9386de02e28185d64e1bf33f1567e64650fd371814"
+    },
+    ".github/skills/ops/data-safety/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "f40334b6501538fbe49e4525939b8e96dc3fe2b734b2c690000a34797072105b",
+      "installedHash": "f40334b6501538fbe49e4525939b8e96dc3fe2b734b2c690000a34797072105b"
+    },
+    ".github/skills/ops/data-safety/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "16a52a5a949b18e156126f58571399f6a70976f0b15626d18b13f7160b7f1f02",
+      "installedHash": "16a52a5a949b18e156126f58571399f6a70976f0b15626d18b13f7160b7f1f02"
+    },
+    ".github/skills/ops/standard-env-config-be/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "8b79fd691dba2b0e5bce69f19be765dba0df8d214e9b94d2bb4fea9d87b8b372",
+      "installedHash": "8b79fd691dba2b0e5bce69f19be765dba0df8d214e9b94d2bb4fea9d87b8b372"
+    },
+    ".github/skills/ops/standard-env-config-be/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "7ffdeb16d96576c3a98410fed84685a84b93b32f84754d383810b71fffc1e8f8",
+      "installedHash": "7ffdeb16d96576c3a98410fed84685a84b93b32f84754d383810b71fffc1e8f8"
+    },
+    ".github/skills/test/unit-test-gen/SKILL.md": {
+      "kind": "file",
+      "sourceHash": "ae27862d25e4b1b766a983847c1ed43859bab3cfce96da0788b4f6e4a7a957ac",
+      "installedHash": "ae27862d25e4b1b766a983847c1ed43859bab3cfce96da0788b4f6e4a7a957ac"
+    },
+    ".github/skills/test/unit-test-gen/USAGE.md": {
+      "kind": "file",
+      "sourceHash": "6b5536b82d2ed7648fc934b837b315c8d8092d5fadc25c3783c2fbbff95a81aa",
+      "installedHash": "6b5536b82d2ed7648fc934b837b315c8d8092d5fadc25c3783c2fbbff95a81aa"
+    },
+    ".github/standards/01-toolchain.md": {
+      "kind": "file",
+      "sourceHash": "02323c857c9cc8f521c9743fd4a3074ddf4817f2732223e59da84487f1c39baa",
+      "installedHash": "02323c857c9cc8f521c9743fd4a3074ddf4817f2732223e59da84487f1c39baa"
+    },
+    ".github/standards/02-project-structure.md": {
+      "kind": "file",
+      "sourceHash": "0c772a222eeec8082c120090e3fa99f88cc9a496d9c566ae3cb3f3e493fc4f48",
+      "installedHash": "0c772a222eeec8082c120090e3fa99f88cc9a496d9c566ae3cb3f3e493fc4f48"
+    },
+    ".github/standards/03-naming.md": {
+      "kind": "file",
+      "sourceHash": "0dac10b29b3885785c52d901abe81b4d5db81a47b66d0965dc41ca83f28c6494",
+      "installedHash": "0dac10b29b3885785c52d901abe81b4d5db81a47b66d0965dc41ca83f28c6494"
+    },
+    ".github/standards/04-controller.md": {
+      "kind": "file",
+      "sourceHash": "63c7a18258865f77c8787d06560d484397e72b9c58cf47391a32c25fbd7d3133",
+      "installedHash": "63c7a18258865f77c8787d06560d484397e72b9c58cf47391a32c25fbd7d3133"
+    },
+    ".github/standards/05-service.md": {
+      "kind": "file",
+      "sourceHash": "da2bd2d5ea1dc4215f61c93152e19e16e7769b6be14eef94ca4c3761fee41e5c",
+      "installedHash": "da2bd2d5ea1dc4215f61c93152e19e16e7769b6be14eef94ca4c3761fee41e5c"
+    },
+    ".github/standards/06-mapper-xml.md": {
+      "kind": "file",
+      "sourceHash": "a8f1642a30fe976e1f1c63db34b9b742f5a848739f5c200e9039d2e0fb6e42c6",
+      "installedHash": "a8f1642a30fe976e1f1c63db34b9b742f5a848739f5c200e9039d2e0fb6e42c6"
+    },
+    ".github/standards/07-entity-dto-vo.md": {
+      "kind": "file",
+      "sourceHash": "5ebb6ad6d0213e2062b3196534ec4425f5bd84f1064d1b81941eecf124071c4d",
+      "installedHash": "5ebb6ad6d0213e2062b3196534ec4425f5bd84f1064d1b81941eecf124071c4d"
+    },
+    ".github/standards/08-exception.md": {
+      "kind": "file",
+      "sourceHash": "5f0a26db797e3282b283684fbe22c466d26790c9c9b3ca4944eaf6581e68d207",
+      "installedHash": "5f0a26db797e3282b283684fbe22c466d26790c9c9b3ca4944eaf6581e68d207"
+    },
+    ".github/standards/09-logging.md": {
+      "kind": "file",
+      "sourceHash": "e8432fd84c5efad573f5258c2af0f442ee5b01bd8850cca145f78e159a7276ec",
+      "installedHash": "e8432fd84c5efad573f5258c2af0f442ee5b01bd8850cca145f78e159a7276ec"
+    },
+    ".github/standards/10-transaction.md": {
+      "kind": "file",
+      "sourceHash": "bdf9ced216b6d79890482db68018b53781643e84308136d72c202ea252c45d58",
+      "installedHash": "bdf9ced216b6d79890482db68018b53781643e84308136d72c202ea252c45d58"
+    },
+    ".github/standards/11-security-permission.md": {
+      "kind": "file",
+      "sourceHash": "b3f8c68ef84d82d754a8cbf0453bb9296367153a40f85a4c641db96dd2bb23b7",
+      "installedHash": "b3f8c68ef84d82d754a8cbf0453bb9296367153a40f85a4c641db96dd2bb23b7"
+    },
+    ".github/standards/12-database-ddl.md": {
+      "kind": "file",
+      "sourceHash": "7f6b79ea2f90701cfa429ca3edf57a42e8ea1f346eb323549c1892a9687392d7",
+      "installedHash": "7f6b79ea2f90701cfa429ca3edf57a42e8ea1f346eb323549c1892a9687392d7"
+    },
+    ".github/standards/13-api-doc-swagger.md": {
+      "kind": "file",
+      "sourceHash": "d0f4a2d862b4b8a56698d4f49756ed9c1a45520df00f5ca7f4835cf8676ac97b",
+      "installedHash": "d0f4a2d862b4b8a56698d4f49756ed9c1a45520df00f5ca7f4835cf8676ac97b"
+    },
+    ".github/standards/14-test-coverage.md": {
+      "kind": "file",
+      "sourceHash": "6c572b368af7a2c69d0f3aa47ffe59bfca210c06906e37a447849f936065116b",
+      "installedHash": "6c572b368af7a2c69d0f3aa47ffe59bfca210c06906e37a447849f936065116b"
+    },
+    ".github/standards/15-code-quality.md": {
+      "kind": "file",
+      "sourceHash": "a91d105fa5f926f7d6cb4cbc7282f4dbcf87642832cc13b1cf8a4e2cc8d22134",
+      "installedHash": "a91d105fa5f926f7d6cb4cbc7282f4dbcf87642832cc13b1cf8a4e2cc8d22134"
+    },
+    ".github/standards/16-performance.md": {
+      "kind": "file",
+      "sourceHash": "71f5d67c31e330643948283a74884d163f1c11c0996ff65c21423a624df5c81a",
+      "installedHash": "71f5d67c31e330643948283a74884d163f1c11c0996ff65c21423a624df5c81a"
+    },
+    ".github/standards/17-bug-prevention.md": {
+      "kind": "file",
+      "sourceHash": "cb6b360d3650002677e0261a30163b9200c411b13153e76aa97262d6da592bf4",
+      "installedHash": "cb6b360d3650002677e0261a30163b9200c411b13153e76aa97262d6da592bf4"
+    },
+    ".github/standards/18-git-commit.md": {
+      "kind": "file",
+      "sourceHash": "e1489cc8a3097a5c775f9a1b2a4443390fe4f76a709c8600288e691ac1768aea",
+      "installedHash": "e1489cc8a3097a5c775f9a1b2a4443390fe4f76a709c8600288e691ac1768aea"
+    },
+    ".github/standards/19-design.md": {
+      "kind": "file",
+      "sourceHash": "1c87b9a91bd9fc7cca1ae3f4d965a36f379ad9d92aabb30b621c29fa328394cf",
+      "installedHash": "1c87b9a91bd9fc7cca1ae3f4d965a36f379ad9d92aabb30b621c29fa328394cf"
+    },
+    ".github/standards/20-redis-cache.md": {
+      "kind": "file",
+      "sourceHash": "099355ee0b6eb5ef55a120e2d4cb8010239a1ec409ce1da70adeb947ddd6ced9",
+      "installedHash": "099355ee0b6eb5ef55a120e2d4cb8010239a1ec409ce1da70adeb947ddd6ced9"
+    },
+    ".github/standards/21-sensitive-write.md": {
+      "kind": "file",
+      "sourceHash": "f1f8379d56feec6f87cfdc999cc301f6e67725cbeafbd51a792e36d7f87779a9",
+      "installedHash": "f1f8379d56feec6f87cfdc999cc301f6e67725cbeafbd51a792e36d7f87779a9"
+    },
+    ".github/standards/22-resilience.md": {
+      "kind": "file",
+      "sourceHash": "bd3203de0a538a4d98fb7de2981d457c99342f7035108c20e535fca8d0558b54",
+      "installedHash": "bd3203de0a538a4d98fb7de2981d457c99342f7035108c20e535fca8d0558b54"
+    },
+    ".github/standards/23-scheduled-task.md": {
+      "kind": "file",
+      "sourceHash": "3455627a04092fd499c781927ac100590d161f65ce377dd75587586fb35f207e",
+      "installedHash": "3455627a04092fd499c781927ac100590d161f65ce377dd75587586fb35f207e"
+    },
+    ".github/standards/24-multi-env.md": {
+      "kind": "file",
+      "sourceHash": "d6495f9d32edc89745983f07c4cc2a11c616f8e15a6af96944ed57797d117f23",
+      "installedHash": "d6495f9d32edc89745983f07c4cc2a11c616f8e15a6af96944ed57797d117f23"
+    },
+    ".github/standards/25-config-layering.md": {
+      "kind": "file",
+      "sourceHash": "4fb8fa03a4f02e8e04ed5b3fca1e83d1b8e2e0ecc3612aa2cc9680434b4411e4",
+      "installedHash": "4fb8fa03a4f02e8e04ed5b3fca1e83d1b8e2e0ecc3612aa2cc9680434b4411e4"
+    },
+    ".github/standards/26-task-driven.md": {
+      "kind": "file",
+      "sourceHash": "a401e12b635a87c291318872248636706cc3f542d34fa18e78abd5ab5636e2a2",
+      "installedHash": "a401e12b635a87c291318872248636706cc3f542d34fa18e78abd5ab5636e2a2"
+    },
+    ".github/standards/27-project-catalog-context.md": {
+      "kind": "file",
+      "sourceHash": "6102ceba833bbf5dfc5c90f671f6cb537b49f6aed1e5490ff559c829466f8658",
+      "installedHash": "6102ceba833bbf5dfc5c90f671f6cb537b49f6aed1e5490ff559c829466f8658"
+    },
+    ".github/standards/28-production-assurance.md": {
+      "kind": "file",
+      "sourceHash": "a5d1ab305ad72e938d187bfb640998b4a53499f1717faf3a872ed6a904dba247",
+      "installedHash": "a5d1ab305ad72e938d187bfb640998b4a53499f1717faf3a872ed6a904dba247"
+    },
+    ".github/standards/29-database-source-governance.md": {
+      "kind": "file",
+      "sourceHash": "7c66b923e70171030458dc9f72e6e9776a7a2566da069cf183afb47ab2419904",
+      "installedHash": "7c66b923e70171030458dc9f72e6e9776a7a2566da069cf183afb47ab2419904"
+    },
+    ".github/standards/30-change-review-integration-adapter.md": {
+      "kind": "file",
+      "sourceHash": "76536dd00c87dcffa950cd7f929ce1fa64555b1248a3400fcfc5b890fa826f06",
+      "installedHash": "76536dd00c87dcffa950cd7f929ce1fa64555b1248a3400fcfc5b890fa826f06"
+    },
+    ".github/standards/index.md": {
+      "kind": "block",
+      "installedHash": "5eb12e8bb3cf8ee43643d23c213933a25265cdfbfd5e6331473670b2521a05b8",
+      "sourceHash": "5a1efc3e231a49ee7e818514e5ff543e319c823d213609f0e456a1dff1a6d261",
+      "prefix": "",
+      "createdFile": true
+    },
+    ".github/templates/Controller.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "269d5a3e41286604cce3b33c3428467fbbf71edf27c8dfb5e76814427b4544f7",
+      "installedHash": "269d5a3e41286604cce3b33c3428467fbbf71edf27c8dfb5e76814427b4544f7"
+    },
+    ".github/templates/ControllerTest.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "7d94504284c76b6a2702ae6ba802207185ed0448ec9e52ee6d51706e1fa7afe6",
+      "installedHash": "7d94504284c76b6a2702ae6ba802207185ed0448ec9e52ee6d51706e1fa7afe6"
+    },
+    ".github/templates/CreateDTO.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "2123cbf95ec2aea273d66430f22a8d04c7da87165f8445881564ca2f5b963180",
+      "installedHash": "2123cbf95ec2aea273d66430f22a8d04c7da87165f8445881564ca2f5b963180"
+    },
+    ".github/templates/DdlPreview.md.tmpl": {
+      "kind": "file",
+      "sourceHash": "105ab2887aa0b2b8a2875db5dc72cdf9eb4983a255bb32f9578b87a60e182c05",
+      "installedHash": "105ab2887aa0b2b8a2875db5dc72cdf9eb4983a255bb32f9578b87a60e182c05"
+    },
+    ".github/templates/Entity.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "18a5555e0683ecb81487558b9f05d08b5f30fb1c836060004d09366feeb4756d",
+      "installedHash": "18a5555e0683ecb81487558b9f05d08b5f30fb1c836060004d09366feeb4756d"
+    },
+    ".github/templates/examples/feature-category.contract.json": {
+      "kind": "file",
+      "sourceHash": "cba0897c8b3e8f6dd7bef2ffea75c1ec955f24d5e5c25d3021127ae505480265",
+      "installedHash": "cba0897c8b3e8f6dd7bef2ffea75c1ec955f24d5e5c25d3021127ae505480265"
+    },
+    ".github/templates/examples/sale-order-master-alter.contract.json": {
+      "kind": "file",
+      "sourceHash": "ec38f2e3cc8622af937441ae9e159e2b63ad59a86e4f031555a6a25420f1bb22",
+      "installedHash": "ec38f2e3cc8622af937441ae9e159e2b63ad59a86e4f031555a6a25420f1bb22"
+    },
+    ".github/templates/examples/sale-order-master.contract.json": {
+      "kind": "file",
+      "sourceHash": "ac417c84ae2d2194bb5841059ae4b796be3bf0f59c178332fb684d176d1f6d1d",
+      "installedHash": "ac417c84ae2d2194bb5841059ae4b796be3bf0f59c178332fb684d176d1f6d1d"
+    },
+    ".github/templates/Mapper.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "dd2083115fa5eab28259730c9fda4764136b3d1f1bebe2b7ec247a6cb7b33874",
+      "installedHash": "dd2083115fa5eab28259730c9fda4764136b3d1f1bebe2b7ec247a6cb7b33874"
+    },
+    ".github/templates/Mapper.xml.tmpl": {
+      "kind": "file",
+      "sourceHash": "d6a42c0d8d42a3cb52dafe860c1ad140982d561648bcb6f4cf9e80cd1f45bf01",
+      "installedHash": "d6a42c0d8d42a3cb52dafe860c1ad140982d561648bcb6f4cf9e80cd1f45bf01"
+    },
+    ".github/templates/Migration.sql.tmpl": {
+      "kind": "file",
+      "sourceHash": "238cf1afcee27ecbcefbe91bd56f7beca439b086c030edf35c056df73448e3a0",
+      "installedHash": "238cf1afcee27ecbcefbe91bd56f7beca439b086c030edf35c056df73448e3a0"
+    },
+    ".github/templates/OperationRequestDTO.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "8db7791f5dcc063218c0e335fa22bd56601e1aec36cce640a3a8a599cf0a7f89",
+      "installedHash": "8db7791f5dcc063218c0e335fa22bd56601e1aec36cce640a3a8a599cf0a7f89"
+    },
+    ".github/templates/PageDTO.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "130ca5e1ca20743fc76993fb9eae9df9310600f6b674f0fc4f7d14cedc1e27d6",
+      "installedHash": "130ca5e1ca20743fc76993fb9eae9df9310600f6b674f0fc4f7d14cedc1e27d6"
+    },
+    ".github/templates/PageVO.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "f0a29a364430a4039afa301ad819cbbdc65d648ee3fecf73b2a72895de61417b",
+      "installedHash": "f0a29a364430a4039afa301ad819cbbdc65d648ee3fecf73b2a72895de61417b"
+    },
+    ".github/templates/README.md": {
+      "kind": "file",
+      "sourceHash": "5d3f3edc9733075f7650a0fa73c06f7273fe1032428e79b5c446a3cbc9f7a8b9",
+      "installedHash": "5d3f3edc9733075f7650a0fa73c06f7273fe1032428e79b5c446a3cbc9f7a8b9"
+    },
+    ".github/templates/Rollback.md.tmpl": {
+      "kind": "file",
+      "sourceHash": "d2be54b0b1a583b859a69410c250e22bb319bab20230c0eea1a5bab6c7bba2d3",
+      "installedHash": "d2be54b0b1a583b859a69410c250e22bb319bab20230c0eea1a5bab6c7bba2d3"
+    },
+    ".github/templates/Service.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "2a4fb869b9fcb57cd71291c19170267d9b5116739978e3eb231f979453fdbad9",
+      "installedHash": "2a4fb869b9fcb57cd71291c19170267d9b5116739978e3eb231f979453fdbad9"
+    },
+    ".github/templates/ServiceTest.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "6c158bc39c7f8f397600e3c1e5014c61df368ab13f685d708d4eb22c5bf05fc7",
+      "installedHash": "6c158bc39c7f8f397600e3c1e5014c61df368ab13f685d708d4eb22c5bf05fc7"
+    },
+    ".github/templates/UpdateDTO.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "811215565f8d6300baf9a9606c9a6a9e5a53254c28baa65fc5fc16ab63b98c2d",
+      "installedHash": "811215565f8d6300baf9a9606c9a6a9e5a53254c28baa65fc5fc16ab63b98c2d"
+    },
+    ".github/templates/VO.java.tmpl": {
+      "kind": "file",
+      "sourceHash": "ed53647f2de6fba6225e071ee5c77b49c4b976617996db3ec247f1ad2d5e9b70",
+      "installedHash": "ed53647f2de6fba6225e071ee5c77b49c4b976617996db3ec247f1ad2d5e9b70"
+    },
+    ".kiro/settings/mcp.json": {
+      "kind": "mcp",
+      "container": "mcpServers",
+      "installedHash": "a62aa8d56e1776d279ddbcdf80d0ad32421fd1f666b6c3b9f09a848f784728e1",
+      "installedTextHash": "30b54afba17937e521e9e95b848029d307a8bb22b2a9a96bbe1f9fc62d017d14",
+      "sourceHash": "0e2bf1b97b0248b450b142a7eaf73a6257491394499b4008a4cf417bc90e3e20",
+      "createdFile": true
+    },
+    ".vscode/mcp.json": {
+      "kind": "mcp",
+      "container": "servers",
+      "installedHash": "dcb196819d1591897bc6bec8ae6a9cc73f24538ca13d1b31e1040645cd49aba8",
+      "installedTextHash": "ef240001ba5f5ccfdd4727f36d143ba5be13aaf9e5d51be590c26c5e86c3495d",
+      "sourceHash": "d0c9dcb47de24bce17e6385eb2742d1f4aa7ca4f2914c43121b6a15f4528ba37",
+      "createdFile": true
+    },
+    ".wl-skills-bd/capabilities.json": {
+      "kind": "file",
+      "sourceHash": "4c2532e5ae9d8fe64ab3407976233ea592ed8d708f25dd3507e85929baa0ec8a",
+      "installedHash": "4c2532e5ae9d8fe64ab3407976233ea592ed8d708f25dd3507e85929baa0ec8a"
+    },
+    ".wl-skills-bd/catalog.config.example.json": {
+      "kind": "file",
+      "sourceHash": "90026432f5077478445c1c8c7669bb3f0d6fbc3ebc91aa9e561e932b99066e1d",
+      "installedHash": "90026432f5077478445c1c8c7669bb3f0d6fbc3ebc91aa9e561e932b99066e1d"
+    },
+    ".wl-skills-bd/compatibility.json": {
+      "kind": "file",
+      "sourceHash": "159508422b11d8f430e2fc0544ff649358ddf6b530c49736875232791db4bc28",
+      "installedHash": "159508422b11d8f430e2fc0544ff649358ddf6b530c49736875232791db4bc28"
+    },
+    ".wl-skills-bd/config.json": {
+      "kind": "reference",
+      "projectOwned": true,
+      "installedHash": "4b9f3e851a750d215b6974bbd66125a1b6cefc56e75a76d8526886b5e6e63c13",
+      "sourceHash": "ca4a93f220f4b9c894951c97ef95bbe295978779691584e9d994f7872a78fea4"
+    },
+    ".wl-skills-bd/contracts/wl-delivery-profile.v1.json": {
+      "kind": "reference",
+      "projectOwned": true,
+      "installedHash": "75e0790166ddc77657afc2ff8fb976c33d5dd28617e303d12369cffab88a53d4",
+      "sourceHash": "b6db3c9ecaa6b8edd5b0e32502ca69408bf393284ed7573636242437551a4d1a"
+    },
+    ".wl-skills-bd/db-governance.example.json": {
+      "kind": "file",
+      "sourceHash": "5a0ea8a06f2087191fe46f2df8cd89ded8eb06288ef3fa5a9329d101d8700826",
+      "installedHash": "5a0ea8a06f2087191fe46f2df8cd89ded8eb06288ef3fa5a9329d101d8700826"
+    },
+    ".wl-skills-bd/integration-adapters.example.json": {
+      "kind": "file",
+      "sourceHash": "d5942647c8a53074e2c4c4c6a86badc80437c2174bca63ff26df57e4eec84452",
+      "installedHash": "d5942647c8a53074e2c4c4c6a86badc80437c2174bca63ff26df57e4eec84452"
+    },
+    ".wl-skills-bd/profiles/jh4j3-openapi3.json": {
+      "kind": "reference",
+      "projectOwned": true,
+      "installedHash": "60052963cf419fb5d53c93e663ec4cfc7527db3c0f7a116225b02f4cc9700548",
+      "sourceHash": "b616b7be309228c3f6b0409f7b2484b1fd9e13a243a05d2b653e670536cc4ce4"
+    },
+    ".wl-skills-bd/profiles/jh4j3-springfox-legacy.json": {
+      "kind": "reference",
+      "projectOwned": true,
+      "installedHash": "a8e1e295da457f32dfefbd19df94f28eac2bceac71207bfe6664e92c250bb7a4",
+      "sourceHash": "d54b04a6bda5b76c7b72581806dbc893a66ce33cf226c0ea6583d7d2d172f765"
+    },
+    ".wl-skills-bd/quality-assertions.example.json": {
+      "kind": "file",
+      "sourceHash": "88646a16f74ac91ed6e7a905fe85cfacae649bffe9309e3413ca430912a8cfe7",
+      "installedHash": "88646a16f74ac91ed6e7a905fe85cfacae649bffe9309e3413ca430912a8cfe7"
+    },
+    ".wl-skills-bd/quality-gate.example.json": {
+      "kind": "file",
+      "sourceHash": "5761d7d285cbe7ed761b400e50456f5fe3e61f15e22baf2db2b3820a1bc852ab",
+      "installedHash": "5761d7d285cbe7ed761b400e50456f5fe3e61f15e22baf2db2b3820a1bc852ab"
+    },
+    ".wl-skills-bd/rules/catalog.json": {
+      "kind": "file",
+      "sourceHash": "7b3cf820f24c7a742edf08056da8b882dedb02f19a62d14e454a5f9bc25535fa",
+      "installedHash": "7b3cf820f24c7a742edf08056da8b882dedb02f19a62d14e454a5f9bc25535fa"
+    },
+    ".wl-skills-bd/schemas/catalog-config.schema.json": {
+      "kind": "file",
+      "sourceHash": "2c94bd9de0a1bc1d745faab20b49547f3c8277ba3e1abbb5e9ecaf07dc387425",
+      "installedHash": "2c94bd9de0a1bc1d745faab20b49547f3c8277ba3e1abbb5e9ecaf07dc387425"
+    },
+    ".wl-skills-bd/schemas/collaboration-contract.schema.json": {
+      "kind": "file",
+      "sourceHash": "145768026bffa1703196a38651c87aaf2cb6a88308bc4b300588263218be641e",
+      "installedHash": "145768026bffa1703196a38651c87aaf2cb6a88308bc4b300588263218be641e"
+    },
+    ".wl-skills-bd/schemas/context-plan.schema.json": {
+      "kind": "file",
+      "sourceHash": "f5adb0562bef37db7735914a204d374d1e64d45093833daac4ac7e609c8ba815",
+      "installedHash": "f5adb0562bef37db7735914a204d374d1e64d45093833daac4ac7e609c8ba815"
+    },
+    ".wl-skills-bd/schemas/contract.schema.json": {
+      "kind": "file",
+      "sourceHash": "63cbbe54bff82eaf5b8120af315c8eda37b9cee78a68c7a8f4b3213ab8ecdd2c",
+      "installedHash": "63cbbe54bff82eaf5b8120af315c8eda37b9cee78a68c7a8f4b3213ab8ecdd2c"
+    },
+    ".wl-skills-bd/schemas/env-matrix.schema.json": {
+      "kind": "file",
+      "sourceHash": "be32ee885bdf460d101e7c1292e3536daaf23da220fa63c7cee71de08004fc49",
+      "installedHash": "be32ee885bdf460d101e7c1292e3536daaf23da220fa63c7cee71de08004fc49"
+    },
+    ".wl-skills-bd/schemas/integration-adapters.schema.json": {
+      "kind": "file",
+      "sourceHash": "4c81585428608db8fce77f5c218effef56178a681b3f0986ba9e2f77862c749a",
+      "installedHash": "4c81585428608db8fce77f5c218effef56178a681b3f0986ba9e2f77862c749a"
+    },
+    ".wl-skills-bd/schemas/module-catalog.schema.json": {
+      "kind": "file",
+      "sourceHash": "1cbd69cb2fac65dd3a2e50388295e9bcf2088a2c46bc707724e4e2cd9043cf8a",
+      "installedHash": "1cbd69cb2fac65dd3a2e50388295e9bcf2088a2c46bc707724e4e2cd9043cf8a"
+    },
+    ".wl-skills-bd/schemas/profile-local.schema.json": {
+      "kind": "file",
+      "sourceHash": "a4936d07ff555621607947b72a0591540b761ab7aea52dc038c0edc304bfa751",
+      "installedHash": "a4936d07ff555621607947b72a0591540b761ab7aea52dc038c0edc304bfa751"
+    },
+    ".wl-skills-bd/schemas/project-catalog.schema.json": {
+      "kind": "file",
+      "sourceHash": "a75184d43b38b13edabd0356322d59536ebee0c9aefbb25dcd413294973176c1",
+      "installedHash": "a75184d43b38b13edabd0356322d59536ebee0c9aefbb25dcd413294973176c1"
+    },
+    ".wl-skills-bd/schemas/quality-assertions.schema.json": {
+      "kind": "file",
+      "sourceHash": "e340e09763c7dafde2e34ca799fe9630d8dab747b451d4fbc49a70f9f5d99158",
+      "installedHash": "e340e09763c7dafde2e34ca799fe9630d8dab747b451d4fbc49a70f9f5d99158"
+    },
+    ".wl-skills-bd/schemas/quality-gate.schema.json": {
+      "kind": "file",
+      "sourceHash": "ea1f2849b3d5114f3644baf3515e689c6fee57b1d0a06614a0a59d93c9f0c93d",
+      "installedHash": "ea1f2849b3d5114f3644baf3515e689c6fee57b1d0a06614a0a59d93c9f0c93d"
+    },
+    ".wl-skills-bd/schemas/rules-config.schema.json": {
+      "kind": "file",
+      "sourceHash": "4918b919969635a3d33d069c038c692fa5adc273bb30453f6ae6bf082774dc49",
+      "installedHash": "4918b919969635a3d33d069c038c692fa5adc273bb30453f6ae6bf082774dc49"
+    },
+    ".wl-skills-bd/schemas/supply-chain.schema.json": {
+      "kind": "file",
+      "sourceHash": "ed1c7da5a5cd428e98a2068b7643bd67e4354261607d2adce7b0b061cc84e83b",
+      "installedHash": "ed1c7da5a5cd428e98a2068b7643bd67e4354261607d2adce7b0b061cc84e83b"
+    },
+    ".wl-skills-bd/supply-chain.example.json": {
+      "kind": "file",
+      "sourceHash": "4cb08c34bdf2e5b960f767ffc735fcce6be344453fa228a532face64de4d5bf4",
+      "installedHash": "4cb08c34bdf2e5b960f767ffc735fcce6be344453fa228a532face64de4d5bf4"
+    },
+    ".wl-skills-bd/templates/config/.env.example.tmpl": {
+      "kind": "file",
+      "sourceHash": "b82e1b516f786b58c69c6a90e6be0e21314ae4c75f94665177378dbccf8f2991",
+      "installedHash": "b82e1b516f786b58c69c6a90e6be0e21314ae4c75f94665177378dbccf8f2991"
+    },
+    ".wl-skills-bd/templates/config/application.yml.tmpl": {
+      "kind": "file",
+      "sourceHash": "7fd56f742abea4c5e134f49ddc14a65bc673da1db09ac0ac22f587cc7822b3fa",
+      "installedHash": "7fd56f742abea4c5e134f49ddc14a65bc673da1db09ac0ac22f587cc7822b3fa"
+    },
+    ".wl-skills-bd/templates/config/bootstrap.yml.tmpl": {
+      "kind": "file",
+      "sourceHash": "006ab9f87e20feaa6aa2f10de2445df9ab97ddd2fdc458e4bee556cb88ef05fd",
+      "installedHash": "006ab9f87e20feaa6aa2f10de2445df9ab97ddd2fdc458e4bee556cb88ef05fd"
+    },
+    ".wl-skills-bd/templates/config/k8s-configmap.yaml.tmpl": {
+      "kind": "file",
+      "sourceHash": "441d3a0808439d5ff45e896db2085b008eb0a0b8b938bef28c7fd184c8e66637",
+      "installedHash": "441d3a0808439d5ff45e896db2085b008eb0a0b8b938bef28c7fd184c8e66637"
+    },
+    ".wl-skills-bd/templates/config/k8s-deployment.yaml.tmpl": {
+      "kind": "file",
+      "sourceHash": "647a47431aa1b76fd429f5f5f8710a8bddf2124a08d63d1e2703d940961cbac3",
+      "installedHash": "647a47431aa1b76fd429f5f5f8710a8bddf2124a08d63d1e2703d940961cbac3"
+    },
+    ".wl-skills-bd/templates/config/k8s-secret.yaml.tmpl": {
+      "kind": "file",
+      "sourceHash": "563fc25ae64c2bd84810700c5c7a76eebc9ae856dc0d563f64e3fd4ab2a14fd4",
+      "installedHash": "563fc25ae64c2bd84810700c5c7a76eebc9ae856dc0d563f64e3fd4ab2a14fd4"
+    },
+    ".wl-skills-bd/templates/config/logback-spring.xml.tmpl": {
+      "kind": "file",
+      "sourceHash": "fa8ade23900f5a00eabf5258c939a76447e6fb81144581503df332e3f75f3c20",
+      "installedHash": "fa8ade23900f5a00eabf5258c939a76447e6fb81144581503df332e3f75f3c20"
+    },
+    "AGENTS.md": {
+      "kind": "block",
+      "installedHash": "e9a0ba74fe7a1ab6be5ea0c6ba0e137ff44e8862eecb8d6efcca6210001aa279",
+      "sourceHash": "6edf49515082a8e60ec5efbe75ff40d31cd4ac1dac72e5f4d61a0506f88ddb2e",
+      "prefix": "",
+      "createdFile": false
+    },
+    "CLAUDE.md": {
+      "kind": "block",
+      "installedHash": "d141a652f26256258d222f8f1bf26783376dd464e45ea850c1f1232dc7dd7219",
+      "sourceHash": "10eb4d84a946882b6778de4408b90ecd062ad40dd85b76dc66baacd9aa9db2ac",
+      "prefix": "",
+      "createdFile": true
+    }
+  }
+}
