@@ -18,7 +18,8 @@
     <a href="#本地构建与启动">快速开始</a> ·
     <a href="docs/architecture.md">架构与演进</a> ·
     <a href="docs/api-contract.md">API 契约</a> ·
-    <a href="docs/improvement-roadmap.md">改进计划</a> ·
+    <a href="docs/review-2026-10-14.md">全面审查</a> ·
+    <a href="docs/improvement-roadmap.md">改进台账</a> ·
     <a href="https://github.com/ChenyCHENYU/Robot_Admin">Robot Admin</a>
   </p>
 </div>
@@ -34,7 +35,11 @@ Robot Cloud 为 Robot Admin 提供认证、公司成员、组织与权限管理�
 - 工程组织：独立服务、五个公共组件、跨服务 API、统一依赖 BOM。
 - 演进方向：先巩固内部业务边界和持续验证，再按数据所有权、容量及独立部署需求拆分。
 
-[本轮验收](docs/verification-2026-10-09.md)记录实际结果及边界。[架构与演进](docs/architecture.md)描述设计与拆分路线；[API 契约](docs/api-contract.md)说明 Robot Admin 的请求字段、权限和兼容要求。
+最近一次完整审查为 **2026-10-14**，业务源码基线为 `29c42aa`。[全面审查](docs/review-2026-10-14.md)登记 REV01–REV24，覆盖架构、功能、授权、认证、数据库、性能、配置和交付；当前没有这些项的后续修复提交或验收记录，均保留待处理。优先级、产品决定及环境依赖见 [改进台账](docs/improvement-roadmap.md)，分批实施和完成标准见 [执行计划](docs/review-execution-plan.md)。
+
+该次默认验证通过 305 项 Java 测试、23 项 Python 测试及 17 个打包 Mapper 检查；独立探针仍发现未覆盖的缺陷。原生 BD 扫描有 74 项 error，完整基线审查无新增阻断，不能等同全部规范通过。真实 MySQL 升级、Admin 页面联调和生产 HA 未在该次审查重跑。文档复核取得 [verify 失败注释](https://api.github.com/repos/ChenyCHENYU/Robot_Cloud/check-runs/114446067171/annotations)：GitHub 账号因计费问题锁定，job 未启动，不能记为托管构建通过或源码构建失败。
+
+[2026-10-09 历史验收](docs/verification-2026-10-09.md)单独保留当时的升级和隔离运行结果。[架构与演进](docs/architecture.md)描述设计与拆分路线；[API 契约](docs/api-contract.md)说明 Robot Admin 的请求字段、权限和兼容要求。
 
 ## 目录
 
@@ -67,6 +72,8 @@ Robot Cloud 为 Robot Admin 提供认证、公司成员、组织与权限管理�
 | 验证与观测 | 行为/架构测试、机器契约、迁移/制品检查、升级验收、Prometheus 与 TraceId |
 
 通用字段权限、复杂工作流、业务消息平台、文件服务和完整 Redis HA 恢复属于后续建设。可选依赖登记或配置文件存在不能单独证明运行能力。
+
+已有能力仍有具体缺口：全局资源的写入授权边界待收口；菜单移到根级可能未持久化，动态路由名可能冲突；菜单/按钮/字典删除及移动的客户端版本保护未完整实现。公司成员尚无独立部门事实，Admin 的用户/角色命令与部分治理接口也未完成真实配对。详见 [审查发现](docs/review-2026-10-14.md#findings)。
 
 ## 服务拓扑
 
@@ -131,6 +138,8 @@ Robot_Cloud/
 | Redis | Spring Data Redis；Redisson 3.44.0 + `redisson-spring-data-32` |
 | 配置/流控 | Nacos、Sentinel，按 profile 启用 |
 | 文档/监控 | OpenAPI 3、Knife4j、Actuator、Micrometer/Prometheus |
+
+上述版本是仓库现状。Boot 3.2.12 是 3.2.x 最后一个 OSS 补丁，Cloud 2023.0.x 已结束支持，分别见 [Boot 官方公告](https://spring.io/blog/2024/11/21/spring-boot-3-2-12-available-now/)和 [Cloud 支持表](https://spring.io/projects/spring-cloud/)。实际 Security 6.2.8 落在 [BCrypt 安全公告](https://spring.io/security/cve-2025-22228/)影响区间。兼容升级、SBOM 和漏洞扫描仍待实施，见 [依赖维护项 REV18](docs/review-2026-10-14.md)。
 
 ## 本地构建与启动
 
@@ -236,6 +245,8 @@ nacos group 为 `ROBOT_CLOUD`，每个服务读取各自 YAML dataId。导入为
 
 字段和兼容语义见 [API 契约](docs/api-contract.md)。真实 Admin 页面联调需独立验收。
 
+以上是后端要求，尚不能认定配套 Admin 已满足。2026-10-14 对比发现用户/角色命令缺版本字段、临时授权模型不一致、提前撤回及部分治理保存缺后端入口；完整差异与验收路径见 [REV10](docs/review-2026-10-14.md#admin-contract)。前后端和 mock/remote 应采用同一合同，冲突时重新确认，不能自动拿最新版本覆盖。
+
 ## 持续验证与数据库升级
 
 ```bash
@@ -260,6 +271,8 @@ bash scripts/verify.sh --mysql-upgrade
 | 生产验收 | Nacos/Sentinel、Admin、容量、目标数据库版本、HA、备份恢复 |
 
 CI 使用同一入口并归档报告和制品摘要。远端 job 或生产演练未实际运行时保持未验证；测试数量从真实报告汇总，不作为固定完成指标。
+
+当前机器 HTTP 合同只覆盖用户/角色的 17 个路由，完整端点清单为 70 个；数据库合同为 6 表子集。ArchUnit 已实际执行，Checkstyle、PMD、SpotBugs、Spotless 与 JaCoCo 类级覆盖率门仍待接入。扫描基线和测试数量不能替代这些缺失的门禁。
 
 ## 缓存通知与运维
 
@@ -306,7 +319,15 @@ GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开
 
 ## 下一轮改进
 
-本项目持续区分源码事实、行为验证和目标环境验收。下一轮优先收口全局资源目录的写入授权、生产配置与初始化、密码处理边界，再完成 Admin 配对、托管 CI、成员部门模型及运行容量治理。具体证据、执行顺序和完成标准见 [改进计划](docs/improvement-roadmap.md)。
+以 [REV01–REV24 改进台账](docs/improvement-roadmap.md)持续追踪，每项保留证据、状态、依赖和完成标准：
+
+1. 先修明确的功能和安全边界：根级菜单持久化、稳定路由身份、密码 UTF-8 字节限制及敏感模型输出。
+2. 收口全局目录永久权威身份、生产配置与初始化、实际请求字节限制、认证失败门控与审计；开放业务前完成相应负例。
+3. 联合 Admin 完成版本命令、临时授权与治理合同，验证真实 MySQL 引用竞争和多公司部门模型。
+4. 并行补 Java 质量/覆盖率、依赖维护与真实 CI，处理刷新 CAS 后响应预算、数据库超时与统一重试时钟。
+5. 固定容量和运行目标后再优化身份查询、epoch、树和 Outbox，验收当前制品、HA、告警、发布与恢复。
+
+完整批次见 [执行与验收计划](docs/review-execution-plan.md)。继续保留 Gateway/Auth/System，角色、绑定、成功审计、epoch 与 Outbox 同事务；独立业务服务按数据属主和实际部署需求引入。
 
 品牌资产采用仓库内的原生 SVG，提供浅色、深色与单色版本，使用说明见 [品牌资产](docs/assets/brand/README.md)。
 
@@ -315,7 +336,9 @@ GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开
 | 文档 | 内容 |
 | --- | --- |
 | [架构与演进](docs/architecture.md) | 服务、数据属主、时序、边界、未来拆分 |
-| [改进计划](docs/improvement-roadmap.md) | 当前证据、优先级、执行批次和验收标准 |
+| [2026-10-14 全面审查](docs/review-2026-10-14.md) | REV01–REV24、源码证据、独立探针及验证边界 |
+| [改进台账](docs/improvement-roadmap.md) | 最新状态、优先级、旧 N 编号映射和待定输入 |
+| [执行与验收计划](docs/review-execution-plan.md) | 分批范围、必要负例、兼容/回滚及完成标准 |
 | [API 契约](docs/api-contract.md) | 前端协议、版本、权限和错误 |
 | [系统权限](docs/system-permission-contract.md) | 角色事实、授予上界、数据范围、临时授权 |
 | [认证生命周期](docs/auth-session-lifecycle.md) | 票据、刷新族、CAS、注销与故障 |
@@ -327,6 +350,6 @@ GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开
 | [贡献指南](CONTRIBUTING.md) | 必填 scope、提交 Hook、开发工具与 BD 门禁 |
 | [Git 维护流程](docs/git-workflow.md) | main/dev、功能分支、PR 与双远程同步 |
 | [品牌资产](docs/assets/brand/README.md) | SVG 标识、字标、配色与使用约定 |
-| [验收记录](docs/verification-2026-10-09.md) | 本轮构建、升级与隔离运行结果及边界 |
+| [2026-10-09 历史验收](docs/verification-2026-10-09.md) | 当时构建、升级与隔离运行结果及边界 |
 
 后续优先补运行保障并引入独立业务域。审计读模型、导出或异步任务在形成容量和交付需求后迁出；身份、成员、角色与授权的强一致写暂留 System。拆分条件及阶段见 [架构与演进](docs/architecture.md#演进路线与拆分条件)。
