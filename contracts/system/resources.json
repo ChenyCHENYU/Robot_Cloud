@@ -1,0 +1,572 @@
+{
+  "schemaVersion": 1,
+  "scope": "fixed MVC mappings and writable properties; behavior and authorization require referenced regression suites",
+  "controllers": [
+    "com.robot.system.menu.controller.MenuController",
+    "com.robot.system.menu.controller.MenuButtonController",
+    "com.robot.system.dict.controller.DictController",
+    "com.robot.system.dept.controller.DepartmentController"
+  ],
+  "routes": {
+    "DepartmentController.tree": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/departments"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:user:list"
+      ],
+      "response": "Result<List<DepartmentNode>>",
+      "parameters": {}
+    },
+    "DictController.create": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/dictionaries"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:dict:save"
+      ],
+      "response": "Result<String>",
+      "parameters": {
+        "body": {
+          "type": "DictionarySaveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "DictController.delete": {
+      "method": [
+        "DELETE"
+      ],
+      "paths": [
+        "/sys/dictionaries/{id}"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:dict:delete"
+      ],
+      "response": "Result<Void>",
+      "parameters": {
+        "id": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "expectedRevision": {
+          "type": "Integer",
+          "source": "query",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "DictController.itemsByCode": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/dictionaries/by-code"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<List<Map<String,String>>>",
+      "parameters": {
+        "code": {
+          "type": "String",
+          "source": "query",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "DictController.toggleStatus": {
+      "method": [
+        "PUT"
+      ],
+      "paths": [
+        "/sys/dictionaries/{id}/status"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:dict:save"
+      ],
+      "response": "Result<Void>",
+      "parameters": {
+        "id": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "body": {
+          "type": "DictionaryStatusRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "DictController.tree": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/dictionaries"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:dict:list"
+      ],
+      "response": "Result<List<DictNode>>",
+      "parameters": {}
+    },
+    "DictController.update": {
+      "method": [
+        "PUT"
+      ],
+      "paths": [
+        "/sys/dictionaries/{id}"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:dict:save"
+      ],
+      "response": "Result<Void>",
+      "parameters": {
+        "id": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "body": {
+          "type": "DictionarySaveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "MenuButtonController.create": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/menu-buttons"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:menu:save"
+      ],
+      "response": "Result<String>",
+      "parameters": {
+        "button": {
+          "type": "MenuButtonSaveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "MenuButtonController.delete": {
+      "method": [
+        "DELETE"
+      ],
+      "paths": [
+        "/sys/menu-buttons/{id}"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:menu:delete"
+      ],
+      "response": "Result<Void>",
+      "parameters": {
+        "id": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "expectedRevision": {
+          "type": "Integer",
+          "source": "query",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "MenuButtonController.list": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/menu-buttons"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:menu:list"
+      ],
+      "response": "Result<List<MenuButtonVO>>",
+      "parameters": {}
+    },
+    "MenuButtonController.update": {
+      "method": [
+        "PUT"
+      ],
+      "paths": [
+        "/sys/menu-buttons/{id}"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:menu:save"
+      ],
+      "response": "Result<Void>",
+      "parameters": {
+        "id": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "button": {
+          "type": "MenuButtonSaveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "MenuController.createButton": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/menus/buttons"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:menu:save"
+      ],
+      "response": "Result<String>",
+      "parameters": {
+        "button": {
+          "type": "MenuButtonSaveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "MenuController.createForm": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/menus"
+      ],
+      "consumes": [
+        "application/x-www-form-urlencoded",
+        "multipart/form-data"
+      ],
+      "permission": [
+        "sys:menu:save"
+      ],
+      "response": "Result<String>",
+      "parameters": {
+        "menu": {
+          "type": "MenuSaveRequest",
+          "source": "model",
+          "valid": true,
+          "required": false
+        }
+      }
+    },
+    "MenuController.createJson": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/menus"
+      ],
+      "consumes": [
+        "application/json"
+      ],
+      "permission": [
+        "sys:menu:save"
+      ],
+      "response": "Result<String>",
+      "parameters": {
+        "menu": {
+          "type": "MenuSaveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "MenuController.createPageButton": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/menus/{menuId}/buttons"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:menu:save"
+      ],
+      "response": "Result<String>",
+      "parameters": {
+        "menuId": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "button": {
+          "type": "MenuButtonSaveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "MenuController.delete": {
+      "method": [
+        "DELETE"
+      ],
+      "paths": [
+        "/sys/menus/{id}"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:menu:delete"
+      ],
+      "response": "Result<Void>",
+      "parameters": {
+        "id": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "expectedRevision": {
+          "type": "Integer",
+          "source": "query",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "MenuController.menuButtons": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/menus/{menuId}/buttons"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:menu:list"
+      ],
+      "response": "Result<List<MenuButtonVO>>",
+      "parameters": {
+        "menuId": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "MenuController.move": {
+      "method": [
+        "PUT"
+      ],
+      "paths": [
+        "/sys/menus/{id}/move"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:menu:update"
+      ],
+      "response": "Result<Void>",
+      "parameters": {
+        "id": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "body": {
+          "type": "MenuMoveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "MenuController.tree": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/menus"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:menu:list"
+      ],
+      "response": "Result<List<MenuTreeNode>>",
+      "parameters": {}
+    },
+    "MenuController.updateForm": {
+      "method": [
+        "PUT"
+      ],
+      "paths": [
+        "/sys/menus/{id}"
+      ],
+      "consumes": [
+        "application/x-www-form-urlencoded",
+        "multipart/form-data"
+      ],
+      "permission": [
+        "sys:menu:update"
+      ],
+      "response": "Result<Void>",
+      "parameters": {
+        "id": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "menu": {
+          "type": "MenuSaveRequest",
+          "source": "model",
+          "valid": true,
+          "required": false
+        }
+      }
+    },
+    "MenuController.updateJson": {
+      "method": [
+        "PUT"
+      ],
+      "paths": [
+        "/sys/menus/{id}"
+      ],
+      "consumes": [
+        "application/json"
+      ],
+      "permission": [
+        "sys:menu:update"
+      ],
+      "response": "Result<Void>",
+      "parameters": {
+        "id": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "menu": {
+          "type": "MenuSaveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    }
+  },
+  "requestModels": {
+    "com.robot.system.api.dto.dict.DictionarySaveRequest": {
+      "properties": {
+        "code": "String",
+        "dictLabel": "String",
+        "dictValue": "String",
+        "label": "String",
+        "name": "String",
+        "parentId": "String",
+        "remark": "String",
+        "revision": "Integer",
+        "sort": "Integer",
+        "status": "Integer",
+        "type": "String",
+        "typeCode": "String",
+        "value": "String"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.dict.DictionarySaveRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.dict.DictionaryStatusRequest": {
+      "properties": {
+        "revision": "Integer",
+        "status": "Integer"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.dict.DictionaryStatusRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.menu.MenuButtonSaveRequest": {
+      "properties": {
+        "menuId": "String",
+        "name": "String",
+        "permission": "String",
+        "remark": "String",
+        "revision": "Integer",
+        "sort": "Integer",
+        "status": "Integer"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.menu.MenuButtonSaveRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.menu.MenuMoveRequest": {
+      "properties": {
+        "position": "String",
+        "revision": "Integer",
+        "targetId": "String"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.menu.MenuMoveRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.menu.MenuSaveRequest": {
+      "properties": {
+        "component": "String",
+        "hidden": "Integer",
+        "icon": "String",
+        "keepAlive": "Boolean",
+        "keepAliveFlag": "Integer",
+        "menuName": "String",
+        "menuType": "String",
+        "name": "String",
+        "parentId": "String",
+        "path": "String",
+        "permCode": "String",
+        "permission": "String",
+        "redirect": "String",
+        "remark": "String",
+        "revision": "Integer",
+        "sort": "Integer",
+        "sortNo": "Integer",
+        "status": "Integer",
+        "statusFlag": "Integer",
+        "type": "String",
+        "visibleFlag": "Integer"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.menu.MenuSaveRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    }
+  },
+  "authorizationBoundary": "Sa-Token actions + independent permanent platform directory policy; by-code remains authenticated read"
+}

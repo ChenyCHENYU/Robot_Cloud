@@ -3,9 +3,9 @@ package com.robot.system.user.service;
 import com.robot.common.core.domain.ResultCode;
 import com.robot.common.core.exception.ServiceAssert;
 import com.robot.common.core.exception.ServiceException;
+import com.robot.common.core.util.PasswordPolicy;
 import com.robot.system.api.dto.user.UserSaveRequest;
 import com.robot.system.api.entity.SysUser;
-
 import java.util.Objects;
 
 /**
@@ -14,19 +14,25 @@ import java.util.Objects;
  * @author Robot Cloud
  * @since 1.0.0-SNAPSHOT
  */
-final class UserWriteValidation {
+public final class UserWriteValidation {
+    private static final int MAX_NICKNAME_LENGTH = 30;
+    private static final int MAX_EMAIL_LENGTH = 100;
+    private static final int MAX_PHONE_LENGTH = 20;
+
     static final String BUILTIN_ADMIN_USERNAME = "admin";
 
-    private UserWriteValidation() {
-    }
+    private UserWriteValidation() {}
 
     static void validateUsername(String value) {
-        ServiceAssert.isTrue(value != null && value.matches("^[a-zA-Z0-9_]{3,30}$"),
-                ResultCode.PARAM_INVALID, "用户名只允许3~30位字母数字下划线");
+        ServiceAssert.isTrue(
+                value != null && value.matches("^[a-zA-Z0-9_]{3,30}$"),
+                ResultCode.PARAM_INVALID,
+                "用户名只允许3~30位字母数字下划线");
     }
 
     static void assertUnchangedUsername(String actual, String requested) {
-        ServiceAssert.isTrue(Objects.equals(actual, requested), ResultCode.PARAM_INVALID, "用户名不可修改");
+        ServiceAssert.isTrue(
+                Objects.equals(actual, requested), ResultCode.PARAM_INVALID, "用户名不可修改");
     }
 
     static void assertMutableAccount(String username, String action) {
@@ -35,20 +41,37 @@ final class UserWriteValidation {
         }
     }
 
-    static void validatePassword(String value) {
-        ServiceAssert.isTrue(value != null && !value.isBlank() && value.length() >= 6 && value.length() <= 32,
-                ResultCode.USER_PASSWORD_WEAK, "密码长度6~32且不可为空");
+    /**
+     * 统一校验新密码字符、UTF-8字节及合法UTF-16约束，不截断输入。
+     *
+     * @param value 待校验或快照复制的输入值
+     */
+    public static void validatePassword(String value) {
+        PasswordPolicy.requireNewPassword(value);
     }
 
     static void validateStatus(Integer value) {
-        ServiceAssert.isTrue(value == null || value == 0 || value == 1, ResultCode.PARAM_INVALID, "状态只允许0/1");
+        ServiceAssert.isTrue(
+                value == null || value == 0 || value == 1, ResultCode.PARAM_INVALID, "状态只允许0/1");
     }
 
-    static void validateProfile(String nickname, String email, String phone) {
-        ServiceAssert.isTrue(nickname == null || !nickname.isBlank() && nickname.length() <= 30,
-                ResultCode.PARAM_INVALID, "昵称不可空且最长30");
-        ServiceAssert.isTrue((email == null || email.length() <= 100) && (phone == null || phone.length() <= 20),
-                ResultCode.PARAM_INVALID, "邮箱或电话超长");
+    /**
+     * 校验资料允许省略的值及最大长度，昵称空白值始终拒绝。
+     *
+     * @param nickname 昵称
+     * @param email 邮箱资料
+     * @param phone 电话资料
+     */
+    public static void validateProfile(String nickname, String email, String phone) {
+        ServiceAssert.isTrue(
+                nickname == null || !nickname.isBlank() && nickname.length() <= MAX_NICKNAME_LENGTH,
+                ResultCode.PARAM_INVALID,
+                "昵称不可空且最长30");
+        ServiceAssert.isTrue(
+                (email == null || email.length() <= MAX_EMAIL_LENGTH)
+                        && (phone == null || phone.length() <= MAX_PHONE_LENGTH),
+                ResultCode.PARAM_INVALID,
+                "邮箱或电话超长");
     }
 
     static void assertRevision(Integer actual, Integer expected, String field) {
@@ -58,10 +81,9 @@ final class UserWriteValidation {
     }
 
     static boolean hasProfileChanges(SysUser user, UserSaveRequest request) {
-        return !Objects.equals(user.getNickname(), request.getNickname())
-                || !Objects.equals(user.getEmail(), request.getEmail())
-                || !Objects.equals(user.getPhone(), request.getPhone())
-                || !Objects.equals(user.getDepartmentId(), request.getDepartmentId());
+        return request.isNicknamePresent()
+                        && !Objects.equals(user.getNickname(), request.getNickname())
+                || request.isEmailPresent() && !Objects.equals(user.getEmail(), request.getEmail())
+                || request.isPhonePresent() && !Objects.equals(user.getPhone(), request.getPhone());
     }
-
 }

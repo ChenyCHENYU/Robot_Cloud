@@ -7,10 +7,14 @@ import java.util.regex.Pattern;
 public final class TraceIds {
     private static final Pattern VALID_ID = Pattern.compile("[A-Za-z0-9_-]{1,64}");
 
-    private TraceIds() {
-    }
+    private TraceIds() {}
 
-    /** 保留合法既有标识；缺失或格式非法时生成新的 32 位十六进制标识，不回显原输入。 */
+    /**
+     * 保留合法标识，替换非法标识且不回显原输入。
+     *
+     * @param candidate 不可信的外部标识
+     * @return 已校验的标识或新的 32 位十六进制标识
+     */
     public static String resolve(String candidate) {
         if (candidate != null && VALID_ID.matcher(candidate).matches()) {
             return candidate;

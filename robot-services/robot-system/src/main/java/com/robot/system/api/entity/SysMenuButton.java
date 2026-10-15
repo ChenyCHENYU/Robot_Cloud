@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_menu_button")
 public class SysMenuButton extends BaseEntity {
 
+    @java.io.Serial private static final long serialVersionUID = 1L;
+
     private String menuId;
 
     private String buttonName;

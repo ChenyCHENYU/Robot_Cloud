@@ -1,6 +1,25 @@
 package com.robot.system.permission.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+
 import com.robot.common.redis.core.RedisHelper;
+import java.time.Duration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -8,19 +27,11 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.Duration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 /** 用真实 JDBC 事务验证提交、回滚、竞争和失败恢复；Redis 仅作为可注入的外部通知替身。 */
 class CommittedCacheChangesTest {
+    private static final int NOTIFICATION_TTL_DAYS = 7;
+    private static final int CONCURRENT_WORKERS = 8;
+    private static final int VERSION_INCREMENTS = 100;
 
     private JdbcTemplate jdbc;
     private TransactionTemplate transactions;
@@ -31,14 +42,24 @@ class CommittedCacheChangesTest {
 
     @BeforeEach
     void database() {
-        DriverManagerDataSource source = new DriverManagerDataSource(
-                "jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000", "sa", "");
+        DriverManagerDataSource source =
+                new DriverManagerDataSource(
+                        "jdbc:h2:mem:"
+                                + UUID.randomUUID()
+                                + ";MODE=MySQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000",
+                        "sa",
+                        "");
         jdbc = new JdbcTemplate(source);
-        jdbc.execute("CREATE TABLE sys_cache_epoch (scope VARCHAR(255) PRIMARY KEY, version BIGINT NOT NULL)");
+        jdbc.execute(
+                "CREATE TABLE sys_cache_epoch (scope VARCHAR(255) PRIMARY KEY, version BIGINT NOT"
+                        + " NULL)");
         jdbc.execute("INSERT INTO sys_cache_epoch VALUES ('permissions', 1)");
-        jdbc.execute("CREATE TABLE sys_cache_outbox (id VARCHAR(64) PRIMARY KEY, event_kind VARCHAR(16), "
-                + "cache_key VARCHAR(255), cache_version BIGINT, created_at TIMESTAMP, next_attempt_at TIMESTAMP, "
-                + "completed_at TIMESTAMP, attempts INT, last_error VARCHAR(255), delivery_revision BIGINT DEFAULT 0 NOT NULL, last_failure_id VARCHAR(36))");
+        jdbc.execute(
+                "CREATE TABLE sys_cache_outbox (id VARCHAR(64) PRIMARY KEY, event_kind VARCHAR(16),"
+                        + " cache_key VARCHAR(255), cache_version BIGINT, created_at TIMESTAMP,"
+                        + " next_attempt_at TIMESTAMP, completed_at TIMESTAMP, attempts INT, last_error"
+                        + " VARCHAR(255), delivery_revision BIGINT DEFAULT 0 NOT NULL, last_failure_id"
+                        + " VARCHAR(36), quarantined_at TIMESTAMP, archived_at TIMESTAMP)");
         jdbc.execute("CREATE TABLE business_change (id INT PRIMARY KEY)");
         DataSourceTransactionManager manager = new DataSourceTransactionManager(source);
         transactions = new TransactionTemplate(manager);
@@ -52,17 +73,21 @@ class CommittedCacheChangesTest {
     void notificationWaitsForCommitAndConfirmationPersists() throws Exception {
         var executor = Executors.newSingleThreadExecutor();
         try {
-            transactions.executeWithoutResult(status -> {
-                jdbc.update("INSERT INTO business_change VALUES (1)");
-                changes.permissionsChanged();
-                assertEquals(2, store.currentVersion("permissions"));
-                verifyNoInteractions(redis);
-                try {
-                    assertEquals(1L, executor.submit(() -> store.currentVersion("permissions")).get());
-                } catch (Exception error) {
-                    throw new AssertionError(error);
-                }
-            });
+            transactions.executeWithoutResult(
+                    status -> {
+                        jdbc.update("INSERT INTO business_change VALUES (1)");
+                        changes.permissionsChanged();
+                        assertEquals(2, store.currentVersion("permissions"));
+                        verifyNoInteractions(redis);
+                        try {
+                            assertEquals(
+                                    1L,
+                                    executor.submit(() -> store.currentVersion("permissions"))
+                                            .get());
+                        } catch (Exception error) {
+                            throw new AssertionError(error);
+                        }
+                    });
         } finally {
             executor.shutdownNow();
         }
@@ -70,35 +95,57 @@ class CommittedCacheChangesTest {
         verifyNoInteractions(redis);
         assertEquals(1, store.pending().size());
         dispatcher.retryPending();
-        verify(redis).advanceVersionTo(anyString(), eq(2L), eq(Duration.ofDays(7)));
-        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM sys_cache_outbox WHERE completed_at IS NOT NULL", Integer.class));
+        verify(redis)
+                .advanceVersionTo(anyString(), eq(2L), eq(Duration.ofDays(NOTIFICATION_TTL_DAYS)));
+        assertEquals(
+                1,
+                jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM sys_cache_outbox WHERE completed_at IS NOT NULL",
+                        Integer.class));
     }
 
     @Test
     void rollbackPublishesNothingAndKeepsOldVersion() {
-        assertThrows(IllegalArgumentException.class, () -> transactions.executeWithoutResult(status -> {
-            jdbc.update("INSERT INTO business_change VALUES (1)");
-            changes.permissionsChanged();
-            throw new IllegalArgumentException("force rollback");
-        }));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        transactions.executeWithoutResult(
+                                status -> {
+                                    jdbc.update("INSERT INTO business_change VALUES (1)");
+                                    changes.permissionsChanged();
+                                    throw new IllegalArgumentException("force rollback");
+                                }));
         assertEquals(1, store.currentVersion("permissions"));
         assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM business_change", Integer.class));
-        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM sys_cache_outbox", Integer.class));
+        assertEquals(
+                0, jdbc.queryForObject("SELECT COUNT(*) FROM sys_cache_outbox", Integer.class));
         verifyNoInteractions(redis);
     }
 
     @Test
     void redisFailureLeavesDurableEventAndDoesNotLoseCommittedEpoch() {
-        doThrow(new IllegalStateException("redis unavailable")).when(redis).advanceVersionTo(anyString(), anyLong(), any());
+        doThrow(new IllegalStateException("redis unavailable"))
+                .when(redis)
+                .advanceVersionTo(anyString(), anyLong(), any());
         transactions.executeWithoutResult(status -> changes.permissionsChanged());
         dispatcher.retryPending();
         assertEquals(2, store.currentVersion("permissions"));
-        assertEquals(1, jdbc.queryForObject("SELECT attempts FROM sys_cache_outbox", Integer.class));
-        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM sys_cache_outbox WHERE completed_at IS NULL", Integer.class));
+        assertEquals(
+                1, jdbc.queryForObject("SELECT attempts FROM sys_cache_outbox", Integer.class));
+        assertEquals(
+                1,
+                jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM sys_cache_outbox WHERE completed_at IS NULL",
+                        Integer.class));
         doNothing().when(redis).advanceVersionTo(anyString(), anyLong(), any());
-        jdbc.update("UPDATE sys_cache_outbox SET next_attempt_at = TIMESTAMP '2020-01-01 00:00:00'");
+        jdbc.update(
+                "UPDATE sys_cache_outbox SET next_attempt_at = TIMESTAMP '2020-01-01 00:00:00'");
         dispatcher.retryPending();
-        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM sys_cache_outbox WHERE completed_at IS NOT NULL", Integer.class));
+        assertEquals(
+                1,
+                jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM sys_cache_outbox WHERE completed_at IS NOT NULL",
+                        Integer.class));
         dispatcher.retryPending();
         verify(redis, times(2)).advanceVersionTo(anyString(), anyLong(), any());
     }
@@ -114,17 +161,25 @@ class CommittedCacheChangesTest {
 
     @Test
     void concurrentVersionsNeverLoseAnIncrement() throws Exception {
-        var executor = Executors.newFixedThreadPool(8);
+        var executor = Executors.newFixedThreadPool(CONCURRENT_WORKERS);
         try {
-            List<Future<Long>> futures = java.util.stream.IntStream.range(0, 100)
-                    .mapToObj(i -> executor.submit(() -> transactions.execute(
-                            status -> store.incrementVersion("permissions")))).toList();
+            List<Future<Long>> futures =
+                    java.util.stream.IntStream.range(0, VERSION_INCREMENTS)
+                            .mapToObj(
+                                    i ->
+                                            executor.submit(
+                                                    () ->
+                                                            transactions.execute(
+                                                                    status ->
+                                                                            store.incrementVersion(
+                                                                                    "permissions"))))
+                            .toList();
             HashSet<Long> versions = new HashSet<>();
             for (Future<Long> future : futures) {
                 versions.add(future.get());
             }
-            assertEquals(100, versions.size());
-            assertEquals(101, store.currentVersion("permissions"));
+            assertEquals(VERSION_INCREMENTS, versions.size());
+            assertEquals(VERSION_INCREMENTS + 1, store.currentVersion("permissions"));
         } finally {
             executor.shutdownNow();
         }
@@ -132,17 +187,25 @@ class CommittedCacheChangesTest {
 
     @Test
     void firstCreationOfADictionaryEpochIsSafeUnderConcurrency() throws Exception {
-        var executor = Executors.newFixedThreadPool(8);
+        var executor = Executors.newFixedThreadPool(CONCURRENT_WORKERS);
         try {
-            List<Future<Long>> futures = java.util.stream.IntStream.range(0, 100)
-                    .mapToObj(i -> executor.submit(() -> transactions.execute(
-                            status -> store.incrementVersion("dictionary:new")))).toList();
+            List<Future<Long>> futures =
+                    java.util.stream.IntStream.range(0, VERSION_INCREMENTS)
+                            .mapToObj(
+                                    i ->
+                                            executor.submit(
+                                                    () ->
+                                                            transactions.execute(
+                                                                    status ->
+                                                                            store.incrementVersion(
+                                                                                    "dictionary:new"))))
+                            .toList();
             HashSet<Long> versions = new HashSet<>();
             for (Future<Long> future : futures) {
                 versions.add(future.get());
             }
-            assertEquals(100, versions.size());
-            assertEquals(100, store.currentVersion("dictionary:new"));
+            assertEquals(VERSION_INCREMENTS, versions.size());
+            assertEquals(VERSION_INCREMENTS, store.currentVersion("dictionary:new"));
         } finally {
             executor.shutdownNow();
         }
@@ -156,8 +219,8 @@ class CommittedCacheChangesTest {
 
     @Test
     void deliveryInsideABusinessTransactionIsRejectedBeforeTakingAnotherConnection() {
-        transactions.executeWithoutResult(status ->
-                assertThrows(IllegalStateException.class, dispatcher::retryPending));
+        transactions.executeWithoutResult(
+                status -> assertThrows(IllegalStateException.class, dispatcher::retryPending));
         verifyNoInteractions(redis);
     }
 }

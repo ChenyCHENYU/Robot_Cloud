@@ -5,9 +5,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 /** 包围整个 Servlet 调度，覆盖鉴权拒绝、异常、无 handler 和异步调度的线程清理。 */
 public final class InnerTrustContextFilter extends OncePerRequestFilter {
@@ -22,8 +21,9 @@ public final class InnerTrustContextFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain chain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
         InnerTrustContext.clear();
         try {
             chain.doFilter(request, response);
@@ -33,8 +33,9 @@ public final class InnerTrustContextFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterNestedErrorDispatch(HttpServletRequest request, HttpServletResponse response,
-                                               FilterChain chain) throws ServletException, IOException {
+    protected void doFilterNestedErrorDispatch(
+            HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
         doFilterInternal(request, response, chain);
     }
 }

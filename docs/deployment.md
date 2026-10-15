@@ -1,184 +1,126 @@
-# 部署与运维
+# 部署、验证与恢复
 
-本文描述仓库当前配置与上线步骤。依赖版本以 `robot-dependencies/pom.xml` 为准；基础设施版本、生产容量与高可用方案需由部署环境单独锁定和验收。
+当前采用 Java17 / Boot4.1.1，版本事实见 [技术选择](tech-selection.md)。本次是 Cloud/Admin 配对升级，追加 V11–V13 并切换会话 schema2，不能与旧应用混跑；当前验收状态见 [改进台账](improvement-roadmap.md)。
 
-## 1. 端口与网络
+## 网络与配置
 
-| 服务 | 默认端口 | 暴露范围 |
-|---|---|---|
-| robot-gateway | 8080 | 前端 API 入口，由反向代理提供 TLS |
-| robot-auth | 9201 | 应用内网 |
-| robot-system | 9202 | 应用内网 |
-| MySQL | 3306 | 应用与迁移账号所在网段 |
-| Redis | 6379 | 应用网段 |
-| Nacos | 8848 / 9848 | 控制台/客户端访问；按所选服务端版本确认其他端口 |
-| Sentinel Dashboard | 8858 | 可选运维入口 |
+Gateway 默认8080对接反向代理TLS；Auth9201、System9202、MySQL/Redis仅允许应用内网访问。Gateway拒绝`/inner/**`并清洗外部全部`X-Inner-*`，服务仍验证主体、族及权限。Nacos配置/发现与Sentinel按profile显式启用，配置文件存在不代表实际可用。
 
-网关仅配置 `/auth/**`、`/sys/**`、`/account/**` 业务路由，拒绝 `/inner/**` 并清洗外部请求的全部 `X-Inner-*` 头。网关只检查 Bearer 头存在性与前缀；会话、刷新族和主体有效性由 auth/system 校验。不能靠网关替代后端鉴权，也不能把 9201/9202 暴露到公网。
+| 配置 | 含义与约束 |
+| --- | --- |
+| `SPRING_PROFILES_ACTIVE` | local关闭Nacos/Sentinel；prod/production/pre或显式生产环境信号启用护栏，不能混入local |
+| `ROBOT_ENV` | 所有实例一致、格式`[a-z0-9]+(?:-[a-z0-9]+)*`；生产非local，冷恢复安全世代须使用新值 |
+| `ROBOT_INNER_SECRET` | Auth/System可信调用共享密钥；生产至少32字符、非开发占位，从密钥系统注入 |
+| `ROBOT_MANAGEMENT_SECRET` | 独立管理密钥；生产访问非health Actuator用`X-Robot-Management-Token`，不复用登录token |
+| `ROBOT_BOOTSTRAP_COMPLETE` | 显式交接完成声明；System还检查真实种子账号状态/凭据，声明不能替代实际交接 |
+| `MYSQL_JDBC_URL` | 生产明确单一`sslMode=VERIFY_IDENTITY`及可信CA/主机；重复/伪装TLS参数拒绝。保留`connectTimeout=3000&socketTimeout=8000` |
+| `MYSQL_USERNAME/PASSWORD` | 专用DML账号，生产禁止root；密码至少32字符，禁止提交或输出 |
+| `MYSQL_MIGRATION_USERNAME/PASSWORD` | 与运行账号分离的DDL身份；由唯一迁移执行方持有。应用不迁移时显式关闭Flyway |
+| `REDIS_HOST/PORT/DATABASE/PASSWORD` | Auth/System同存储；生产TLS、至少32字符凭据及ACL/网络限制 |
+| `REDIS_SSL` / `ROBOT_REDIS_ISOLATED` | 生产均true；声明须对应真实独立Redis实例/数据库，自定义key环境段不隔离Sa-Token自身key |
+| `SPRING_DATA_REDIS_USERNAME` | 可选ACL用户名；空/空白用户名和密码归一为null，不发送空AUTH |
+| `ROBOT_AUTH_URI/ROBOT_SYSTEM_URI` | local网关直连；nacos按服务名发现 |
+| `ROBOT_SYSTEM_URL` | local Auth→System Feign目标 |
+| `NACOS_SERVER_ADDR/NACOS_NAMESPACE` | 独立控制面/环境；启用远端配置的生产必须用必需`nacos:`导入，拒绝`optional:nacos:` |
+| `ROBOT_CORS_ORIGINS` | 部署为Admin准确origin，限制浏览器来源 |
+| `DEBUG/LOGGING_LEVEL_*` | 认证环境关闭载荷调试；应用脱敏规则不能控制所有第三方DEBUG输出 |
 
-## 2. 配置与环境变量
+生产文档路径（含springdoc新路径）返回404，Gateway的`management.endpoint.gateway.access=none`，禁止暴露`gateway`或`*`。管理网络仍需限制；启动护栏不替代证书、DB权限、Redis隔离和控制面的实际验收。共享内部密钥目前是一个信任域，新增服务须审查内部接口受众，不能据此宣称已有逐服务mTLS身份。
 
-| 配置项 | 仓库默认 | 部署要求 |
-|---|---|---|
-| `SPRING_PROFILES_ACTIVE` | `local` | `nacos` profile 开启注册发现；按实际环境选择 |
-| `NACOS_SERVER_ADDR` | `127.0.0.1:8848` | 使用可达地址；按环境设置 `NACOS_NAMESPACE` |
-| `ROBOT_ENV` | `local` | dev/test/prod 显式设置；用于自定义 Robot Redis key 的环境段 |
-| `ROBOT_INNER_SECRET` | `robot-inner-dev-secret` | 开发占位值；生产显式替换为随机密钥，所有可信调用方与 system 一致 |
-| `ROBOT_AUTH_URI` / `ROBOT_SYSTEM_URI` | local：`http://127.0.0.1:9201` / `http://127.0.0.1:9202` | 网关目标；nacos 默认 `lb://robot-auth` / `lb://robot-system` |
-| `ROBOT_SYSTEM_URL` | local：`http://127.0.0.1:9202` | auth 的 `remoteSystemService` Feign 直连地址，仅 local 配置使用 |
-| `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_DATABASE` | `127.0.0.1` / `3306` / `robot_cloud` | system 数据源 |
-| `MYSQL_USERNAME` / `MYSQL_PASSWORD` | `root` / `root` | 生产使用专用账号，密码来自部署密钥配置 |
-| `REDIS_HOST` / `REDIS_PORT` / `REDIS_DATABASE` | `127.0.0.1` / `6379` / `0` | auth/system 指向相同会话存储；不同环境使用独立实例或 database |
-| `REDIS_PASSWORD` | 空 | 生产显式配置访问凭据并限制网络 |
-| `ROBOT_CORS_ORIGINS` | `http://localhost:*` | 网关生产收敛为 Robot Admin 的准确 origin |
-| `SENTINEL_DASHBOARD` | `127.0.0.1:8858` | 按是否部署控制台设置 |
+## 本地启动和首次平台交接
 
-`ROBOT_ENV` 由 JVM 属性 `robot.env` 或环境变量读取，不是 Nacos 中的同名 YAML 属性。它只隔离自定义 Robot key，不能据此认定 Sa-Token 自身 key 已按环境隔离。auth/system 必须使用一致的 Redis 连接和 Sa-Token 配置。
-
-Redis 的 username/password 为空或仅空白时归一为 `null`，避免 Redisson 对无密码 Redis 发送空 `AUTH`；非空凭据原样保留，包括两端空格。该处理不替代生产凭据与 ACL 配置。
-
-仓库仍保留内部密钥开发默认值；配置为空时内部鉴权拒绝请求，但**未配置变量仍会使用开发默认值**。生产启动前检查实际生效配置是否已替换，不在日志、镜像、命令历史中输出密钥。当前凭据是共享 bearer secret：持有它的服务进入同一信任域，不具备每个服务独立身份或 mTLS。密钥轮换需协调调用方与提供方；当前没有双密钥过渡机制。
-
-| profile | 注册/配置与寻址 |
-|---|---|
-| `local`（默认） | 不导入 Nacos 配置，关闭 config/discovery；网关 HTTP 直连 auth/system，auth 的 Feign HTTP 直连 system；关闭 Sentinel 及 Sentinel/Nacos discovery 健康检查 |
-| `nacos` | 导入各服务配置并开启 config/discovery；网关默认使用 `lb://`，auth 按服务名调用 system |
-
-三个服务已引入 Nacos Config starter，配置导入仅在 `application-nacos.yml`。dataId 为 `robot-gateway.yml`、`robot-auth.yml`、`robot-system.yml`，group 为 `ROBOT_CLOUD`；config 与 discovery 均配置 `NACOS_SERVER_ADDR`、`NACOS_NAMESPACE`。网关已引入 Sentinel Nacos datasource，规则 dataId 为 `robot-gateway-flow-rules`、group 为 `SENTINEL_GATEWAY_GROUP`。这些依赖与配置已具备，真实 Nacos 读取、注册和规则推送仍需独立验收。部署时核对最终生效配置。
-
-`local` 的健康检查不会探测未启用的 Nacos/Sentinel；它也不证明其他 profile 下这些组件健康。
-
-生产数据源应覆写仓库开发 JDBC URL 的 TLS 参数。MySQL DML 与迁移 DDL 账号分离；`spring.flyway.enabled` 默认开启，若流水线或 DBA 已负责迁移，应用部署显式设为 `false`，避免重复执行。
-
-## 3. local 启动步骤
-
-先准备已安装的 JDK 17 或 21，明确设置 `JAVA_HOME`；示例目录需替换为实际 JDK 根目录。macOS 的 `/usr/bin/java` 或 IDE 启动器不一定能找到该 JDK，提示无 Java runtime 时应检查 `JAVA_HOME` 和 IDE 的运行 JDK。
+设置真实JDK17，执行固定Wrapper；Enforcer拒绝其他主版本或不匹配Maven。
 
 ```bash
-export JAVA_HOME=/path/to/jdk17-or-jdk21
-"$JAVA_HOME/bin/java" -version
-export SPRING_PROFILES_ACTIVE=local
-export DEBUG=false
-export ROBOT_ENV=local
+export JAVA_HOME=/path/to/jdk17
+export PATH="$JAVA_HOME/bin:$PATH"
+./mvnw -version
+bash scripts/verify.sh
 ```
 
-1. **先启动 MySQL 和 Redis**，确认目标端口、账号与访问权限；local 无需 Nacos 或 Sentinel Dashboard。auth/system 依赖 Redis，system 还依赖 MySQL，缺少依赖不能完成启动和登录链路。
-2. 新环境先创建空数据库。以下以默认 `MYSQL_DATABASE=robot_cloud` 为例；修改库名时同步数据源配置。已有非空库先检查表结构与 Flyway history，不要盲目 baseline。
+local仍需独立MySQL/Redis。新库使用utf8mb4/utf8mb4_general_ci；非空无Flyway历史库先对账，默认不baseline、不repair。按System→Auth→Gateway启动同次制品：
 
-   ```sql
-   CREATE DATABASE robot_cloud CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-   ```
-
-3. 从项目根目录执行 `mvn clean verify`，保留结果；Maven 使用所设置的 `JAVA_HOME`。按实际基础设施注入前表的 MySQL/Redis 配置和一致的内部密钥。
-4. 在三个终端依次启动 system、auth、gateway；默认空库由 system 的 Flyway 执行迁移。
-
-   ```bash
-   "$JAVA_HOME/bin/java" -jar robot-services/robot-system/target/robot-system-1.0.0-SNAPSHOT.jar
-   "$JAVA_HOME/bin/java" -jar robot-services/robot-auth/target/robot-auth-1.0.0-SNAPSHOT.jar
-   "$JAVA_HOME/bin/java" -jar robot-gateway/target/robot-gateway-1.0.0-SNAPSHOT.jar
-   ```
-
-5. 分别检查 `http://127.0.0.1:9202/actuator/health`、`http://127.0.0.1:9201/actuator/health`、`http://127.0.0.1:8080/actuator/health`，再经网关验收登录与受保护接口。健康 UP 不等于登录、权限和缓存链路已通过。
-
-### 可选 Docker 模板
-
-以下模板仅用于独立开发环境，镜像标签是示例，未作为生产部署验证证据。实际使用前锁定补丁版本或 digest；默认密码和端口映射不能用于生产。
-
-```yaml
-services:
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_DATABASE: robot_cloud
-      MYSQL_ROOT_PASSWORD: root
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
-    ports: ["127.0.0.1:3306:3306"]
-    volumes: ["mysql-data:/var/lib/mysql"]
-  redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy noeviction
-    ports: ["127.0.0.1:6379:6379"]
-  nacos:
-    image: nacos/nacos-server:v2.2.3
-    environment:
-      MODE: standalone
-    ports: ["127.0.0.1:8848:8848", "127.0.0.1:9848:9848"]
-volumes:
-  mysql-data:
+```bash
+java -jar robot-services/robot-system/target/robot-system-1.0.0-SNAPSHOT.jar
+java -jar robot-services/robot-auth/target/robot-auth-1.0.0-SNAPSHOT.jar
+java -jar robot-gateway/target/robot-gateway-1.0.0-SNAPSHOT.jar
 ```
 
-会话和刷新族使用 Redis；容量不足、驱逐或数据恢复都可能影响登录态。生产需验证持久化、内存策略和恢复流程，不能将上述单节点模板视为 HA 方案。
+`admin/admin123`仅用于隔离local开发。全局目录写入需要`sys_user.platform_admin_flag=1`，公司SUPER_ADMIN不等于平台管理员。可信启动交接显式注入：
 
-## 4. 本次升级：受控切换
+- `ROBOT_PLATFORM_ADMIN_BOOTSTRAP=true`。
+- `ROBOT_PLATFORM_ADMIN_USER_ID`为已有、启用且具备合法公司身份的账号ID。
+- 可选`ROBOT_PLATFORM_ADMIN_BOOTSTRAP_PASSWORD`为受控新密码，字符/严格UTF8均合法，不可用admin123。不要放在命令参数、Git或日志中。
 
-本次 token Session、刷新族 CAS 与账号/成员 `securityVersion` 协议不兼容旧版账户 Session、明文 refresh payload 和旧 loginTicket。公开字段保持不变不代表旧会话可用。**必须要求用户重新登录，不能混跑新旧 auth/system 节点或盲目滚动回退。** 故障语义见 [认证会话生命周期](auth-session-lifecycle.md)。
+首次交接在事务和协调锁内只授予一个平台身份，安全版本、成功审计、epoch/Outbox同时提交；已交接的同账号重复启动不会重复改密，不能用启动配置追加另一个管理员。成功后移除启用开关和交接密码。生产护栏检查开发凭据是否仍可用，不能把历史种子删除当作正常交接。平台管理员后续治理须另行设计受控用例，普通User DTO不接受该标志。
 
-1. 构建同一发布版本：执行 `mvn clean verify`，保存实际测试结果、制品摘要与生效配置清单。测试通过仅证明所执行范围。
-2. 在真实 MySQL 的备份副本上执行 V6–V10 迁移与重复数据预检，核对 Flyway history、表结构、唯一约束和存量数据。预检与约束说明见 [缓存与字典契约](cache-and-dictionary-contract.md)。发现冲突先由业务负责人裁决，不自动删除授权关系。
-3. 备份数据库及 Redis，明确停机窗口和恢复点；暂停外部登录、刷新和业务写入，排空在途请求，停止全部旧版 auth/system 节点。
-4. 由唯一迁移执行方应用已审查的迁移。默认 `baseline-on-migrate=false` 拒绝非空无历史库，已有库仍需先核对基线；禁止改写已发布迁移或无审查修复 checksum。
-5. 部署同一版本的 system、auth、gateway，核对所有实例的 API 契约、内部密钥与 Redis 环境。按已审批的环境隔离方案使旧会话失效，保留其他应用与环境数据；不使用整库清空替代精确处理。
-6. 完成下列冒烟后开放流量，并通知客户端重新登录。客户端应合并同设备并行刷新，已消费的 refresh/loginTicket 不能自动重放签发。
+## 统一验证与升级
 
-回退也必须停止流量、统一切换节点并按已验证方案处理会话与数据库。V7–V9 增加或替换唯一约束，本轮没有证明旧应用能直接运行于迁移后的 schema；不能承诺“只回退镜像、数据库天然兼容”。
+```bash
+export ROBOT_VERIFY_MYSQL_HOST=127.0.0.1
+export ROBOT_VERIFY_MYSQL_PORT="<isolated-port>"
+export ROBOT_VERIFY_MYSQL_USER="<isolated-test-user>"
+# 密码从受控环境注入
+bash scripts/verify.sh --mysql-upgrade
+```
 
-## 5. 验收与运行边界
+默认入口执行Python负例、Java17 `clean verify -Probot-quality`、实际Checkstyle/PMD/SpotBugs/Spotless和逐CLASS JaCoCo、CycloneDX→完整OSV/许可证政策、Mapper装配和制品哈希。网络失败、未知许可、未修漏洞、陈旧/缺失/跳过报告均阻断，见 [质量规则](../quality/README.md)及 [供应链](../quality/supply-chain.md)。测试数量以当前XML为准；没有执行的检查不能标绿。
 
-| 验收项 | 必须观察的行为 |
-|---|---|
-| 登录与上下文 | 单公司登录、多公司激活、两设备分别保持公司 A/B；切换仅轮换当前设备 |
-| 刷新/注销 | 并发刷新单一提交；旧 access 被拒绝；过期 access 可定位注销其尚有效刷新族 |
-| 主体撤销 | 改密、账号/成员停用后旧 access/refresh 被拒绝，重新启用不恢复旧版本会话 |
-| 内部信任 | 网关拒绝 `/inner/**`；直连 system 的缺失/错误密钥与不一致委托返回 403 |
-| 权限/字典 | 提交后读到数据库新 epoch；Redis 通知失败可重试，不恢复旧授权；stale revision 拒绝 |
-| 服务健康 | `/actuator/health`、注册发现、真实 Feign 调用、迁移状态与 Redis 连接可用 |
+MySQL入口只创建`robot_verify_<随机ID>`并清理自己创建的库，拒绝非loopback或指定已有业务库。固定golden核对20表全部列/索引属性；新建、V10升级、V5历史升级及真实屏障竞争分别验证。已发布V1–V10不改写；V11新增平台事实/公司成员主部门/登录事件幂等，V12新增通知隔离/归档与查询索引，V13补齐权限治理导航并验证既有属主、冲突和接口权限不扩大。
 
-仓库内实际范围摘要见 [本轮验收](verification-2026-10-09.md)。[本轮 evidence.json](../../../output/robot-cloud-iteration-2026-10-09/evidence.json)是开发工作区回执，独立clone不自带；托管CI另留artifact。历史启动报告仅代表之前源码，不能替代本轮制品验证。
+上线前在备份副本完整演练，暂停业务写和认证、排空请求，唯一迁移方执行迁移，统一切换Cloud/Admin版本和安全世代，再做实际业务冒烟。不能滚动混跑旧会话格式；所有客户端重新登录。主部门由成员事实读取，无双写全局部门；回退前必须核对多公司差异，不承诺旧镜像直接兼容新数据。MySQL DDL可能隐式提交，失败需核对Flyway状态和已执行DDL，不能假定整段自动回滚或直接repair。
 
-| 入口 | 证明范围 |
+## 生产授权时间的 UTC 交接
+
+新临时授权以 UTC 解释无偏移时间，数据库连接会话须实际为 `+00:00`，授权 Clock 使用 UTC。`SystemProductionBootstrapGuard` 在生产护栏中检查持久合同：`sys_cache_epoch` 必须有字节精确的 `scope = authorization-time-utc-v1` 且 `version >= 1`。这是临时授权时间解释的确认 marker，不是权限 epoch、字典版本或配置布尔开关；普通 HTTP 不维护它。
+
+没有合格 marker 时，护栏统计 `sys_temp_authorization` 中全部 `delete_flag=1 AND status_flag=1` 记录，包含未来、当前和已到期的时间窗。只要仍有这类存量，或统计结果不明，就拒绝生产启动；不会按当前时间过滤、删除记录、自动改写时间或凭 JVM 默认时区确认。已存在合格 marker 后可在后续重启保留新的 UTC 授权，不会因存在正常授权再次要求空库。
+
+只有上述存量为零才允许条件初始化 marker 为 1：插入语句再次检查没有该类记录，并在写后重新读取合格 marker。并发出现授权、写入失败、已有无效版本或排序等价但非精确的 scope，均不能被自动提升为已确认合同。上游应按 readiness 开放流量，不能在启动检查完成前对外接入业务。
+
+有存量时，先停止新旧写入并保存备份，在副本核对历史写入节点的 JVM 时区、JDBC/数据库会话时区以及授权人原本指定的生效/到期时刻。记录每条窗口的时间解释和边界对账结果，必要调整须使用受控、可审计的版本化变更；不能将历史无偏移 DATETIME 直接当作 UTC 或统一减去固定小时数。完成授权和复核后才由受控交接维护精确 marker，再重新启动并验证生产护栏。Outbox 与历史审计时间也需按原写入合同独立对账，这个 marker 不证明全部历史时间已经转换。
+
+只读预检可在有权限的副本执行；不要只用默认大小写不敏感排序比较来确认 marker：
+
+```sql
+SELECT scope, version FROM sys_cache_epoch
+ WHERE CAST(scope AS BINARY) = CAST('authorization-time-utc-v1' AS BINARY)
+   AND version >= 1;
+SELECT COUNT(*) AS unconfirmed_legacy_grants FROM sys_temp_authorization
+ WHERE delete_flag = 1 AND status_flag = 1;
+```
+
+上述运行合同描述源码行为；目标库历史时间对账、交接授权和生产启动结果仍需单独留证。
+
+## 请求预算和可靠投递
+
+| 层 | 当前预算/边界 |
 | --- | --- |
-| `bash scripts/verify.sh` | clean verify、ArchUnit/行为/机器契约、SQL 清单、最终 JAR 的 17 个 Mapper 和每个 Mapper 的 4 个基础 statement |
-| `bash scripts/verify.sh --mysql-upgrade` | 增加真实 MySQL 随机新建库；V5 存量数据→V6 旧 pending 通知→最新版本；对账列/唯一索引/校验和、保全原数据、拒绝重复基线和非空无历史库 |
-| `scripts/runtime/` | 两 System 共享隔离 MySQL/Redis；真实 TCP 断网、Lua 应用后丢失/迟到 ACK、同预览并发重放、通知单调性；进程重启与旧缓存回填另由运行回执记录 |
-| GitHub Actions | push/PR/manual 使用同一门禁，归档报告；配置 JDK 17/MySQL 8.0，实际是否执行以托管 job 为准 |
+| Gateway | 连接3秒，响应15秒；实际流式字节上限，有限并发聚合与取消释放 |
+| Auth→System | connect1秒/read2秒，不自动重试认证写/一次性消费 |
+| Auth Redis | 命令1秒；状态与可靠审计单次Lua同槽提交，队列满/错误类型在状态改变前拒绝 |
+| System DB | Hikari取连接5秒，JDBC connect3秒/socket8秒，SQL/锁5秒；写事务声明期限，控制操作另有10秒预算 |
+| DB时钟 | 连接会话UTC，Outbox到期/重排用DB相对时间；应用JSON时间按UTC合同解释并要求节点时钟同步 |
 
-本机使用 JDK 21、MySQL 8.4.11、Redis 7.4.2。Flyway 9 对 MySQL 8.4 提示支持范围警告；执行成功不能据此承诺官方兼容。仓库已接入 GitHub/Gitee，托管 CI 结果以对应提交的 Actions 记录为准；目标 MySQL 8.0/JDK 17 运行、真实 Admin 页面、Nacos/Sentinel、Redis 主从/cluster/旧快照恢复需独立验收。机器数据库合同覆盖用户/角色聚合的六张业务表，不是所有表全部治理属性的认证。
+这些是分层上限，不能相加或等同于一个全链路取消期限；异常/锁占用/网络回收仍以故障验收为准。Auth可靠审计在Redis AOF/容量保障下重试，System仅在真实`Result.success`后幂等确认eventId；Feign降级不会假ACK。CAS之后异步清理有界，旧索引不能用于读取业务、刷新或注销后继族。认证失败按账号及实际远端连接地址共用窗口，不信任XFF；经过Gateway时Auth看到代理地址，共享来源窗口需按实际拓扑调整。主页面使用login→必要时ticket激活，不为每次输入密码触发BCrypt。
 
-升级验收只创建 `robot_verify_<随机ID>` 库并清理自己创建的库；只接受 loopback，不能指向已有业务数据库。默认不执行 `clean`/`repair`/自动 baseline。真实生产备份、容量、DDL 失败恢复仍需对应环境的演练。
+## Outbox治理和观测
 
-逐族注销仅保存在 Redis，异步复制回退可能恢复旧族；数据库安全版本可阻断已发生版本变更的身份，但不能替代逐族注销持久性证明。上述外部 HTTP 并发检查不替代确定性 CAS 时序与 HA 验证。
+数据库epoch是权限事实源。业务、审计、epoch与`sys_cache_outbox`同事务，调度器重试单调Redis通知；响应成功不等于通知已送达。默认5秒扫描、指数退避且上限300秒，毒事件进入QUARANTINED，不从待处理事实消失。
 
-## 6. 监控与运维待办
+全局通知治理同时要求专属权限、当前公司永久超管及独立平台管理员。重放先预览、显式确认同planHash，锁内核对当前版本和操作者；只重排通知，不重执行业务。逻辑归档只处理完成且达到30–3650天保留期的历史，批量1–500，审计/版本同事务；pending、隔离和漂移事件不能归档。详见 [API合同](api-contract.md)。
 
-actuator 默认包含 health/info/prometheus，网关还包含 gateway。生产应限制这些端点以及 `doc.html`、`/v3/api-docs` 的网络访问；后端当前将相关路径列为免登录，不能只依赖业务鉴权。监控健康、连接池、请求延迟/错误率、Redis 内存与写入失败、MySQL 慢查询，阈值按压测基线确定。
+Prometheus包含pending/due/隔离、最老年龄、快照年龄、重试/分类/投递耗时、在途与结果；业务结果另覆盖HTTP200中失败。双实例共享积压取max而非求和。部署须指定阈值、接收人和处理责任；低基数标签不包含账号、事件、token、key或任意异常消息。诊断仅受控分类及traceId/failureId。
 
-### 缓存通知与告警
+## 恢复边界
 
-Outbox 默认每 5 秒扫描，失败指数退避并加入有限抖动，上限 300 秒；单轮有界读取。`robot.cache-outbox.enabled` 可禁用调度，`robot.cache-outbox.retry-delay-ms` 可调整扫描间隔。生产不要因短暂断网清空 pending 或回退 epoch。
+会话族撤销和Auth审计队列依赖Redis持久状态，当前没有独立数据库逐族撤销账本。
 
-| Prometheus 指标 | 观察目的 |
-| --- | --- |
-| `robot_cache_outbox_pending` / `due` | 未完成/已到期积压 |
-| `robot_cache_outbox_failed_pending` / `retries_pending` / `max_attempts` | 重试范围与失败强度 |
-| `robot_cache_outbox_oldest_age_seconds` | 最老 pending 年龄，体现处理延迟 |
-| `robot_cache_outbox_snapshot_age_seconds` | 数据库快照新鲜度；抓取成功也可能是旧快照 |
-| `robot_cache_outbox_inflight` | 当前实例在途投递 |
-| `robot_cache_outbox_results_total{outcome}` | confirmed/retried/superseded/database_failure/replayed |
-| `robot_cache_outbox_failures_total{category}` | 受控失败分类，无事件/用户/key高基数标签 |
-| `robot_cache_outbox_delivery_seconds_*` | 投递耗时 |
+- 确认完整的最新AOF恢复、进程重启，可在同namespace继续，须对账pending和幂等投递。
+- 旧/未知快照、异步复制回退或可能丢写的灾难恢复，停流量并采用新的`ROBOT_ENV`与隔离存储安全世代，强制所有用户重新登录；先前已注销族不能沿旧namespace复活。
+- 旧pending审计须受控提取、核对eventId后补投，切换namespace不会自动迁移它；禁止FLUSHDB或清空其他环境。
+- 普通单设备注销/切换不影响其他合法设备；灾难恢复中的全量重新登录是明确的恢复策略，不能称为逐设备RPO0或无感HA。
 
-积压 gauge 是各实例读取的同一个数据库事实，双实例查询应取 `max`，不能直接求和；每实例计数器可按职责汇总。年龄和积压阈值需依据业务允许延迟、扫描间隔和压测设置，避免把尚未刷新或采集失败的零值解释成健康。
+`verify-auth-redis.sh`仅接受明确声明的自有loopback Redis、高位端口和随机verify namespace；full/prepare/verify分别验证原子性与AOF恢复。`scripts/runtime/`为双System/TCP断网、应用后丢ACK、迟到ACK、重放围栏及旧缓存回填探针，SQL fixture不冒充HTTP业务写。当前制品、样本规模、恢复结果与限制须随回执保存。目标生产拓扑、容量、RTO/RPO、Nacos/Sentinel和真正主从/cluster切换未定义时不推断通过。
 
-处理流程：确认 Redis/数据库连接及容量→查询 `/sys/cache-outbox/summary` 和有界事件摘要→核对受控错误类别与 failureId→永久超管提交 `replay-preview`→人工确认 reason/事件状态→使用同一 planHash 提交 replay→检查追加审计与完成状态。预览变化返回40902，须重新检查，不绕过哈希。API 细节见 [接口契约](api-contract.md)。重放只重新安排通知，不再次执行用户或角色写命令。
-
-**已完成 outbox 的保留期、归档/清理作业和容量告警规则需运维策略落地**，不得删除 pending 记录。权限 epoch 是数据库权威，Redis 权限版本只单调推进；字典缓存按数据库版本隔离。业务拒绝和通知处理失败应只记录受控类别、traceId/failureId，不能输出 token、password、共享密钥、缓存 payload 或原始下游报文。
-
-### 隔离故障演练
-
-仅在独立新建 `robot_iteration_*` 库、高位 loopback 端口和独立 Redis 中使用 `scripts/runtime/redis-fault-proxy.py`；代理只解析协议、输出数量，不记录命令载荷。Auth 直连 Redis，两 System 经代理连接；`offline` 关闭现存连接并拒绝重连，`hold_ack/drop_ack` 对已经执行成功的单 key 权限 Lua 回包门控。20 秒 Redis timeout 仅用于确定性迟到 ACK 演练，不能直接用作生产超时建议。
-
-`cache-outbox-probe.py --help` 列出前置条件。凭据从 `PROBE_USERNAME/PROBE_PASSWORD/PROBE_CONTEXT_ID` 环境传入；`--confirm-isolated-fixture` 与明确权限 key 为必要参数。SQL fixture 仅在同事务推进 epoch 并入队，不等同于“Redis 断网时用户 MVC 写命令成功”；完整业务回滚由 Spring/数据库事务测试另行证明。进程管理和重启由演练控制者负责，脚本不杀其他服务。结果需保留检查清单、制品 SHA 和演练边界。
-
-应用异常日志只记录固定错误类别、业务码和traceId，不展开下游消息、堆栈或原始URI；技术异常响应为固定提示，业务/字段校验保留面向用户的规则消息。X-Trace-Id仅沿用 `[A-Za-z0-9_-]{1,64}`，非法输入重新生成并回传。格式约束不代表能够阻止客户端主动把合法形态的敏感值当作标识。
-
-显式使用 `DEBUG=false`，收敛 `logging.level` 与第三方HTTP/Redis诊断日志；应用处理器的安全输出不控制第三方组件在DEBUG/TRACE下记录请求/响应载荷。日志按 `traceId` 关联，完整链路与并发效果仍需部署验收。Nacos 控制台鉴权、环境命名空间、Redis ACL/网络、备份恢复与凭据轮换由生产运行方案落实。
+历史验收 [2026-10-09](verification-2026-10-09.md)只保留当时范围。托管CI未启动或分支保护未验证须明确记录；本地门禁成功和远程SHA一致不等于已经部署上线。

@@ -1,6 +1,62 @@
-# wl-skills-bd 通用规范映射
+# wl-skills-bd 与 Robot 规则映射
 
-本文记录当前实现与 Robot 协议的适配，不是全量合规证明。适用的是非平台定制的分层、权限、数据隔离、软删、治理字段、事务、缓存与迁移要求；jh4j/wl 固定坐标、Java 8 profile、响应码和目录命名不能直接套到 Robot。
+当前版本：`@agile-team/wl-skills-bd@0.37.0`；本轮runId：`41f534f8-623d-4673-80ea-462e2f5e1907`。目标为Java17后端，不适用PC Kit或JH4J固定目录、Java8、成功码及数据库约定。原生包资产、原始报告和项目适配规则分别保留，不把适配门通过写成供应商32条或J门全部通过。
+
+## 当前执行入口
+
+| 入口 | 实际作用与限制 |
+| --- | --- |
+| `bun run check:bd` | 原始B1–B32及B2–B32审查保留退出码和finding；按既有精确fingerprint基线及独立源码语义复核计算项目有效门，新增error/warning阻断，禁止自动刷新基线 |
+| 精确语义复核 | 三个已排除Lombok输出的确切字段与23文件认证测试同包建议，按路径、类型、注解及固定源码哈希复核；保留原始失败，未知项与哈希漂移阻断，不停用B25/B6或放宽零警告预算 |
+| `scripts/tooling/robot_policy.mjs` | 8项RBD检查补Robot实际Sa-Token/公共和本人端点/内部调用、公司隔离与软删、分页、DTO输出及机器合同；覆盖静态路径，运行授权仍由行为测试验真 |
+| 输入快照 | 递归记录真实业务源码、合同、配置及规则；只排除物理生成目录、工具收据和私有环境文件。不得用文件名屏蔽业务源码 |
+| `bun run test:tooling` | 提交父数、范围内中间提交、真实hook、生成profile阻断、规则适配和缓存TTL负例 |
+| `scripts/verify.sh --mysql-upgrade` | 真实Java17/Maven固定工具链；行为、架构、HTTP/全结构数据库合同；逐类Checkstyle/PMD7/SpotBugs/Spotless/JaCoCo；完整SBOM/漏洞/许可；真实MySQL升级竞争及最终Mapper/许可打包检查 |
+| 原生 `bd status` | 同runId收尾；保留原始失败、pending/gap和宿主自动加载未验证；不能通过模型自报把J门改成通过 |
+
+当前正式Java质量由父POM的`robot-quality`执行，默认验证脚本强制启用，不沿用供应商Java8示例或只登记pluginManagement。每个服务实现类（含业务helper/内部类）要求行覆盖率≥70%、分支≥60%；每个Controller行覆盖率≥50%。原生报告必须属于同次成功Maven、无缺失/陈旧/处理错误；不使用包均值或整包排除。
+
+供应链按当前CycloneDX真实解析版本执行OSV完整批量及分页查询；网络错误、身份不一致、未知许可、漏洞及过期评审失败关闭。MySQL Connector的GPL/Universal FOSS条款仅按该确切版本、根MIT许可、公开对应源码及保留原始通知条件评审，不声明闭源使用自动获准。
+
+## 当前项目规则
+
+| 要求 | 当前落地 |
+| --- | --- |
+| 架构 | Controller→Service→Mapper；common/API不依赖服务实现。User查询/成员角色命令、菜单拓扑/写值/投影、CacheOutboxStore持久化职责分别收敛，保持聚合事务 |
+| 身份 | Sa-Token与必需Servlet主体核验；公司/context来自可信会话；内部敏感认证供给限已验证服务身份，新增受众需单独准入 |
+| 授权 | 独立永久平台管理员维护全局目录；公司超管不替代平台事实；授予受永久上界约束，临授为按用户授已有角色 |
+| 数据 | 公司成员主部门为事实源；账号和成员状态/版本独立。关系软删1有效/0删除；非法/停用范围拒绝 |
+| 事务 | 客户端版本CAS，引用写与删除在公司协调锁内重验；业务、成功审计、epoch、Outbox同事务；失败无成功副作用 |
+| 缓存 | 数据库epoch权威；通知在事务外，delivery revision围栏；quarantine、受控重放、完成历史逻辑归档及分页，不删除pending |
+| 迁移 | 已发布V1–V10不可改；追加V11–V13；固定golden覆盖20表全部列和索引，新建与V10升级同时验证；V13只补导航，不增加接口权限 |
+| 时间/预算 | JSON无偏移时间表示UTC并严格校验日历；显式UTC Clock/审计，JDBC4.2不经默认时区转换；数据库相对退避和有限网络/锁预算；存量临授解释由生产UTC marker确认 |
+| 密码与日志 | 新密码6–32字符单元且合法UTF-8≤72字节；登录独立检查字节；DTO不输出密码/摘要，日志只记录受控类别及匿名关联 |
+| 观测 | HTTP200业务失败进入低基数结果计数；不将账号/事件/key/密码设为标签；告警接收与目标阈值需要环境验收 |
+
+正式notice、复核及status最终状态以本轮真实收据为准。托管CI因账户账单锁定未启动；用户授权完成本地验证后提交推送，不等待账户恢复。分支保护及宿主自动发现未经读取/执行确认，不宣称已生效。
+
+## 2026-10-15 本轮实际回执
+
+统一Java17门通过115套/679测试、20项真实MySQL与83个业务类逐类质量；运行工具UTC修补后Python53+19项通过，Node63项通过。当前不可变制品及真实运行见[本轮验收](verification-2026-10-15.md)。
+
+同runId全规则原始报告81 error/1 warning、coverage complete，原始review仍exit1：77项B1、3项B25、1项既有B17与1项B6建议。8项Robot静态适配覆盖79端点通过；精确语义复核4项后有效门0新增/0阻断、1既有B17，原baseline及warningBudget0不变。两份原始失败保留，原生status不能被项目有效门覆盖，包J门与宿主自动加载保留各自未验证状态。
+
+## 使用与更新
+
+```bash
+bun install --frozen-lockfile
+bun run bd task --input '<具体任务>' --target . --json
+WL_TASK_RUN_ID=<notice.runId> bun run check:bd
+bun run bd status --target . --run-id <notice.runId> --json
+bun run bd check --target . --json
+bun run bd doctor-host --host codex --target . --json
+```
+
+同一任务复用runId。只在依赖、锁文件和安装清单一致时更新；不自动重建问题基线，不在多项目工作区根安装/更新。完整交付状态见[改进台账](improvement-roadmap.md)，原始发现见[全面审查](review-2026-10-14.md)。
+
+## 历史接入记录（以下为2026-10-11及更早的执行快照）
+
+以下原文中的版本、测试计数、“当前”与待办均指当次执行，不能覆盖上方2026-10-15实现或证明本轮验收。
 
 ## 正式接入（2026-10-11）
 
@@ -109,3 +165,5 @@ bun run bd doctor-host --host codex --target . --json
 真实运行结果按 MySQL 升级、HTTP 写命令、双 System 缓存故障、重启恢复和旧权限缓存回填分别登记。单主 Redis 成功不推导 HA/cluster、旧会话快照恢复或生产容量通过。当前临时授权产品模型、全局目录写权限归属、字段策略仍需产品及部署验收。
 
 相关操作见 [部署](deployment.md)、[API](api-contract.md)、[缓存与字典](cache-and-dictionary-contract.md)。
+
+原生同runId聚合status实际为`executionStatus=failed`、`validationStatus=stale`、`stale/planStale=true`、`outdatedChecker=false`，早期回执仍保留。最终四份执行收据分别记录完整输入快照、检查期间无变化；项目静态适配/精确语义门通过不覆盖聚合status，也不把其J门pending改成通过。

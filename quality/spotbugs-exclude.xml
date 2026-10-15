@@ -1,0 +1,255 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<FindBugsFilter>
+  <Match>
+    <Class name="com.robot.common.web.handler.BusinessResultMetrics" />
+    <Method name="&lt;init&gt;" params="io.micrometer.core.instrument.MeterRegistry" returns="void" />
+    <Field name="registry" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.common.redis.core.RedisHelper" />
+    <Method name="&lt;init&gt;" params="org.springframework.data.redis.core.StringRedisTemplate,org.springframework.data.redis.core.RedisTemplate" returns="void" />
+    <Field name="stringTemplate" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.common.redis.core.RedisHelper" />
+    <Method name="&lt;init&gt;" params="org.springframework.data.redis.core.StringRedisTemplate,org.springframework.data.redis.core.RedisTemplate" returns="void" />
+    <Field name="objectTemplate" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.account.service.AccountService" />
+    <Method name="&lt;init&gt;" params="com.robot.system.user.service.UserService,com.robot.system.account.service.OwnAccountCommandService,com.robot.system.account.mapper.SysLoginLogMapper,com.robot.system.mapper.SysPermissionAuditLogMapper,com.robot.system.permission.service.EffectiveRoleResolver" returns="void" />
+    <Field name="userService" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.config.PlatformAdministratorBootstrap" />
+    <Method name="&lt;init&gt;" params="org.springframework.core.env.Environment,org.springframework.jdbc.core.JdbcTemplate,com.robot.system.permission.service.PermissionStateStore,org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder" returns="void" />
+    <Field name="jdbc" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.config.PlatformAdministratorBootstrap" />
+    <Method name="&lt;init&gt;" params="org.springframework.core.env.Environment,org.springframework.jdbc.core.JdbcTemplate,com.robot.system.permission.service.PermissionStateStore,org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder" returns="void" />
+    <Field name="state" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.config.SystemProductionBootstrapGuard" />
+    <Method name="&lt;init&gt;" params="org.springframework.core.env.Environment,org.springframework.jdbc.core.JdbcTemplate,org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder" returns="void" />
+    <Field name="jdbc" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.dept.controller.DepartmentController" />
+    <Method name="&lt;init&gt;" params="com.robot.system.dept.service.DepartmentService" returns="void" />
+    <Field name="departmentService" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.dict.controller.DictController" />
+    <Method name="&lt;init&gt;" params="com.robot.system.dict.service.DictService" returns="void" />
+    <Field name="dictService" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.dict.service.DictService" />
+    <Method name="&lt;init&gt;" params="com.robot.system.dict.mapper.SysDictItemMapper,com.robot.common.redis.core.RedisHelper,com.robot.system.permission.service.PermissionStateStore,com.robot.system.permission.service.CommittedCacheChanges,jakarta.validation.Validator,com.robot.system.permission.service.GlobalDirectoryPolicy" returns="void" />
+    <Field name="cacheState" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.dict.service.DictService" />
+    <Method name="&lt;init&gt;" params="com.robot.system.dict.mapper.SysDictItemMapper,com.robot.common.redis.core.RedisHelper,com.robot.system.permission.service.PermissionStateStore,com.robot.system.permission.service.CommittedCacheChanges,jakarta.validation.Validator,com.robot.system.permission.service.GlobalDirectoryPolicy" returns="void" />
+    <Field name="redisHelper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.menu.controller.MenuButtonController" />
+    <Method name="&lt;init&gt;" params="com.robot.system.menu.service.MenuService,com.robot.system.menu.service.MenuQueryService" returns="void" />
+    <Field name="menuService" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.menu.controller.MenuController" />
+    <Method name="&lt;init&gt;" params="com.robot.system.menu.service.MenuService,com.robot.system.menu.service.MenuQueryService" returns="void" />
+    <Field name="menuService" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.menu.service.MenuService" />
+    <Method name="&lt;init&gt;" params="com.robot.system.menu.mapper.SysMenuButtonMapper,com.robot.system.role.mapper.SysRoleMenuMapper,com.robot.system.role.mapper.SysRoleButtonMapper,com.robot.system.permission.service.PermissionChangeRecorder,com.robot.system.permission.service.PermissionStateStore,com.robot.system.permission.service.GlobalDirectoryPolicy" returns="void" />
+    <Field name="stateStore" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.permission.service.CacheEventDispatcher" />
+    <Method name="&lt;init&gt;" params="com.robot.system.permission.service.PermissionStateStore,com.robot.common.redis.core.RedisHelper,org.springframework.transaction.PlatformTransactionManager,com.robot.system.permission.service.CacheOutboxMetrics" returns="void" />
+    <Field name="redis" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.permission.service.CacheEventDispatcher" />
+    <Method name="&lt;init&gt;" params="com.robot.system.permission.service.PermissionStateStore,com.robot.common.redis.core.RedisHelper,org.springframework.transaction.PlatformTransactionManager,com.robot.system.permission.service.CacheOutboxMetrics" returns="void" />
+    <Field name="store" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.permission.service.CacheOutboxGovernanceService" />
+    <Method name="&lt;init&gt;" params="com.robot.system.permission.service.PermissionStateStore,com.robot.system.permission.service.PermissionGrantPolicy,com.robot.system.permission.service.CacheEventDispatcher,com.robot.system.permission.service.CacheOutboxMetrics,com.fasterxml.jackson.databind.ObjectMapper,com.robot.system.permission.service.GlobalDirectoryPolicy" returns="void" />
+    <Field name="objectMapper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.permission.service.CacheOutboxGovernanceService" />
+    <Method name="&lt;init&gt;" params="com.robot.system.permission.service.PermissionStateStore,com.robot.system.permission.service.PermissionGrantPolicy,com.robot.system.permission.service.CacheEventDispatcher,com.robot.system.permission.service.CacheOutboxMetrics,com.fasterxml.jackson.databind.ObjectMapper,com.robot.system.permission.service.GlobalDirectoryPolicy" returns="void" />
+    <Field name="store" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.permission.service.CommittedCacheChanges" />
+    <Method name="&lt;init&gt;" params="com.robot.system.permission.service.PermissionStateStore" returns="void" />
+    <Field name="store" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.permission.service.PermissionChangeRecorder" />
+    <Method name="&lt;init&gt;" params="com.robot.system.mapper.SysPermissionAuditLogMapper,com.robot.system.permission.service.CommittedCacheChanges,com.fasterxml.jackson.databind.ObjectMapper" returns="void" />
+    <Field name="objectMapper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.permission.service.PermissionStateStore" />
+    <Method name="&lt;init&gt;" params="org.springframework.jdbc.core.JdbcTemplate" returns="void" />
+    <Field name="jdbc" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.permission.service.RobotStpInterface" />
+    <Method name="&lt;init&gt;" params="com.robot.system.role.mapper.SysRoleMenuMapper,com.robot.system.role.mapper.SysRoleButtonMapper,com.robot.system.menu.mapper.SysMenuMapper,com.robot.system.menu.mapper.SysMenuButtonMapper,com.robot.system.permission.service.EffectiveRoleResolver,com.robot.common.redis.core.RedisHelper,com.robot.system.permission.service.PermissionStateStore,java.time.Clock" returns="void" />
+    <Field name="redisHelper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.permission.service.RobotStpInterface" />
+    <Method name="&lt;init&gt;" params="com.robot.system.role.mapper.SysRoleMenuMapper,com.robot.system.role.mapper.SysRoleButtonMapper,com.robot.system.menu.mapper.SysMenuMapper,com.robot.system.menu.mapper.SysMenuButtonMapper,com.robot.system.permission.service.EffectiveRoleResolver,com.robot.common.redis.core.RedisHelper,com.robot.system.permission.service.PermissionStateStore,java.time.Clock" returns="void" />
+    <Field name="stateStore" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.role.controller.RoleController" />
+    <Method name="&lt;init&gt;" params="com.robot.system.role.service.RoleQueryService,com.robot.system.role.service.RoleCommandService" returns="void" />
+    <Field name="roleCommands" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.role.service.RoleCommandService" />
+    <Method name="&lt;init&gt;" params="com.robot.system.role.mapper.SysRoleMenuMapper,com.robot.system.role.mapper.SysRoleButtonMapper,com.robot.system.menu.mapper.SysMenuMapper,com.robot.system.menu.mapper.SysMenuButtonMapper,com.robot.system.permission.service.PermissionGrantPolicy,com.robot.system.user.mapper.SysUserRoleMapper,com.robot.system.role.mapper.SysTempAuthorizationMapper,com.robot.system.permission.service.PermissionChangeRecorder,java.time.Clock,com.robot.system.permission.service.PermissionStateStore" returns="void" />
+    <Field name="stateStore" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.role.service.TemporaryAuthorizationCommandService" />
+    <Method name="&lt;init&gt;" params="com.robot.system.role.mapper.SysRoleMapper,com.robot.system.role.mapper.SysTempAuthorizationMapper,com.robot.system.user.mapper.SysUserMapper,com.robot.system.user.mapper.SysUserCompanyMapper,com.robot.system.permission.service.PermissionGrantPolicy,com.robot.system.permission.service.PermissionChangeRecorder,java.time.Clock,com.robot.system.permission.service.PermissionStateStore" returns="void" />
+    <Field name="stateStore" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.user.controller.UserController" />
+    <Method name="&lt;init&gt;" params="com.robot.system.user.service.UserService" returns="void" />
+    <Field name="userService" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.user.service.UserService" />
+    <Method name="&lt;init&gt;" params="com.robot.system.user.mapper.SysUserCompanyMapper,com.robot.system.dept.mapper.SysDepartmentMapper,com.robot.system.permission.service.PermissionGrantPolicy,org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder,com.robot.system.permission.service.PermissionChangeRecorder,com.robot.system.permission.service.PermissionStateStore,com.robot.system.user.service.UserQueryService,com.robot.system.user.service.MemberRoleCommandSupport,com.robot.system.permission.service.GlobalDirectoryPolicy" returns="void" />
+    <Field name="memberRoles" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.system.user.service.UserService" />
+    <Method name="&lt;init&gt;" params="com.robot.system.user.mapper.SysUserCompanyMapper,com.robot.system.dept.mapper.SysDepartmentMapper,com.robot.system.permission.service.PermissionGrantPolicy,org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder,com.robot.system.permission.service.PermissionChangeRecorder,com.robot.system.permission.service.PermissionStateStore,com.robot.system.user.service.UserQueryService,com.robot.system.user.service.MemberRoleCommandSupport,com.robot.system.permission.service.GlobalDirectoryPolicy" returns="void" />
+    <Field name="stateStore" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.common.security.interceptor.InnerCallInterceptor" />
+    <Method name="&lt;init&gt;" params="com.robot.common.security.config.RobotSecurityProperties" returns="void" />
+    <Field name="properties" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.common.security.session.RedisSessionStateVerifier" />
+    <Method name="&lt;init&gt;" params="com.robot.common.redis.core.RedisHelper,com.fasterxml.jackson.databind.ObjectMapper,org.springframework.beans.factory.ObjectProvider" returns="void" />
+    <Field name="objectMapper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.common.security.session.RedisSessionStateVerifier" />
+    <Method name="&lt;init&gt;" params="com.robot.common.redis.core.RedisHelper,com.fasterxml.jackson.databind.ObjectMapper,org.springframework.beans.factory.ObjectProvider" returns="void" />
+    <Field name="redisHelper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.gateway.filter.AuthGlobalFilter" />
+    <Method name="&lt;init&gt;" params="com.robot.gateway.properties.AuthProperties" returns="void" />
+    <Field name="authProperties" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.auth.authn.service.AuthAuditQueue" />
+    <Method name="&lt;init&gt;" params="com.robot.common.redis.core.RedisHelper,com.robot.api.system.feign.RemoteSystemService,com.fasterxml.jackson.databind.ObjectMapper,org.springframework.beans.factory.ObjectProvider" returns="void" />
+    <Field name="mapper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.auth.authn.service.AuthAuditQueue" />
+    <Method name="&lt;init&gt;" params="com.robot.common.redis.core.RedisHelper,com.robot.api.system.feign.RemoteSystemService,com.fasterxml.jackson.databind.ObjectMapper,org.springframework.beans.factory.ObjectProvider" returns="void" />
+    <Field name="redis" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.auth.authn.service.AuthCredentials" />
+    <Method name="&lt;init&gt;" params="com.robot.api.system.feign.RemoteSystemService,org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder,com.robot.auth.authn.service.AuthAttemptGate,com.robot.auth.authn.service.AuthAuditQueue" returns="void" />
+    <Field name="audit" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.auth.authn.service.AuthService" />
+    <Method name="&lt;init&gt;" params="com.robot.api.system.feign.RemoteSystemService,com.robot.common.redis.core.RedisHelper,com.robot.auth.authn.service.AuthSessionManager,com.fasterxml.jackson.databind.ObjectMapper,com.robot.auth.authn.service.AuthCredentials" returns="void" />
+    <Field name="objectMapper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.auth.authn.service.AuthService" />
+    <Method name="&lt;init&gt;" params="com.robot.api.system.feign.RemoteSystemService,com.robot.common.redis.core.RedisHelper,com.robot.auth.authn.service.AuthSessionManager,com.fasterxml.jackson.databind.ObjectMapper,com.robot.auth.authn.service.AuthCredentials" returns="void" />
+    <Field name="redisHelper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.auth.authn.service.AuthService" />
+    <Method name="&lt;init&gt;" params="com.robot.api.system.feign.RemoteSystemService,com.robot.common.redis.core.RedisHelper,com.robot.auth.authn.service.AuthSessionManager,com.fasterxml.jackson.databind.ObjectMapper,com.robot.auth.authn.service.AuthCredentials" returns="void" />
+    <Field name="sessions" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.auth.authn.service.AuthSessionManager" />
+    <Method name="&lt;init&gt;" params="com.robot.common.redis.core.RedisHelper,com.robot.auth.authn.service.AuthAccessTokens,com.fasterxml.jackson.databind.ObjectMapper,com.robot.auth.authn.service.AuthAuditQueue,com.robot.auth.authn.service.AuthCleanupWorker" returns="void" />
+    <Field name="auditQueue" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.auth.authn.service.AuthSessionManager" />
+    <Method name="&lt;init&gt;" params="com.robot.common.redis.core.RedisHelper,com.robot.auth.authn.service.AuthAccessTokens,com.fasterxml.jackson.databind.ObjectMapper,com.robot.auth.authn.service.AuthAuditQueue,com.robot.auth.authn.service.AuthCleanupWorker" returns="void" />
+    <Field name="objectMapper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <Match>
+    <Class name="com.robot.auth.authn.service.AuthSessionManager" />
+    <Method name="&lt;init&gt;" params="com.robot.common.redis.core.RedisHelper,com.robot.auth.authn.service.AuthAccessTokens,com.fasterxml.jackson.databind.ObjectMapper,com.robot.auth.authn.service.AuthAuditQueue,com.robot.auth.authn.service.AuthCleanupWorker" returns="void" />
+    <Field name="redisHelper" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+</FindBugsFilter>

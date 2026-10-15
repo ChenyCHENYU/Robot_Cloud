@@ -3,12 +3,14 @@ CREATE TABLE sys_user (
   id VARCHAR(64) PRIMARY KEY, username VARCHAR(30), password_hash VARCHAR(255), nickname VARCHAR(30),
   email VARCHAR(100), phone VARCHAR(20), department_id VARCHAR(64), status_flag INT, security_version BIGINT DEFAULT 0,
   create_user_no VARCHAR(64), create_date_time TIMESTAMP, update_user_no VARCHAR(64),
-  update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0
+  update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0,
+  platform_admin_flag INT DEFAULT 0
 );
 CREATE TABLE sys_user_company (
   id VARCHAR(64) PRIMARY KEY, user_id VARCHAR(64), company_id VARCHAR(64), primary_flag INT,
   status_flag INT, security_version BIGINT DEFAULT 0, create_user_no VARCHAR(64), create_date_time TIMESTAMP,
-  update_user_no VARCHAR(64), update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0
+  update_user_no VARCHAR(64), update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0,
+  department_id VARCHAR(64)
 );
 CREATE TABLE sys_user_role (
   id VARCHAR(64) PRIMARY KEY, user_id VARCHAR(64), company_id VARCHAR(64), role_id VARCHAR(64),
@@ -46,3 +48,7 @@ INSERT INTO sys_role (id,company_id,role_name,role_code,status_flag) VALUES ('r1
 INSERT INTO sys_user_role (id,user_id,company_id,role_id) VALUES ('b1','u1','c1','r1');
 INSERT INTO sys_temp_authorization (id,user_id,company_id,role_id,status_flag) VALUES
   ('temp1','u1','c1','r1',1),('temp2','u1','c2','r2',1);
+
+CREATE TABLE sys_cache_epoch (scope VARCHAR(255) PRIMARY KEY, version BIGINT NOT NULL DEFAULT 1);
+INSERT INTO sys_cache_epoch VALUES ('permissions',1),('menu-tree',1);
+UPDATE sys_user_company SET department_id = (SELECT department_id FROM sys_user WHERE id = sys_user_company.user_id);

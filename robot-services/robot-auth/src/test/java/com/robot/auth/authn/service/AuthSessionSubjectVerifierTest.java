@@ -1,5 +1,14 @@
 package com.robot.auth.authn.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.robot.api.system.dto.RemoteUserContextDTO;
 import com.robot.api.system.dto.RemoteUserDTO;
 import com.robot.api.system.feign.RemoteSystemService;
@@ -7,16 +16,16 @@ import com.robot.common.core.domain.Result;
 import com.robot.common.core.domain.ResultCode;
 import com.robot.common.core.exception.ServiceException;
 import com.robot.common.security.context.LoginUser;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 /** 使用真实 Auth 请求主体判断，远程系统事实为可控制替身；不连接基础设施。 */
 class AuthSessionSubjectVerifierTest {
+    private static final long ACCOUNT_VERSION = 3L;
+    private static final long MEMBERSHIP_VERSION = 7L;
+    private static final long CHANGED_ACCOUNT_VERSION = 4L;
+    private static final long CHANGED_MEMBERSHIP_VERSION = 8L;
 
     private RemoteSystemService remote;
     private AuthSessionSubjectVerifier verifier;
@@ -29,13 +38,29 @@ class AuthSessionSubjectVerifierTest {
     void setUp() {
         remote = mock(RemoteSystemService.class);
         verifier = new AuthSessionSubjectVerifier(remote);
-        current = RemoteUserDTO.builder().id("user-a").statusFlag(1).securityVersion(3L)
-                .passwordHash("test-only-password-hash").build();
-        context = RemoteUserContextDTO.builder().contextId("membership-a").companyId("company-a")
-                .tenantId("tenant-a").securityVersion(7L).build();
-        snapshot = LoginUser.builder().userId("user-a").contextId("membership-a")
-                .companyId("company-a").tenantId("tenant-a")
-                .userSecurityVersion(3L).contextSecurityVersion(7L).build();
+        current =
+                RemoteUserDTO.builder()
+                        .id("user-a")
+                        .statusFlag(1)
+                        .securityVersion(ACCOUNT_VERSION)
+                        .passwordHash("test-only-password-hash")
+                        .build();
+        context =
+                RemoteUserContextDTO.builder()
+                        .contextId("membership-a")
+                        .companyId("company-a")
+                        .tenantId("tenant-a")
+                        .securityVersion(MEMBERSHIP_VERSION)
+                        .build();
+        snapshot =
+                LoginUser.builder()
+                        .userId("user-a")
+                        .contextId("membership-a")
+                        .companyId("company-a")
+                        .tenantId("tenant-a")
+                        .userSecurityVersion(ACCOUNT_VERSION)
+                        .contextSecurityVersion(MEMBERSHIP_VERSION)
+                        .build();
         fingerprint = AuthTokenSecrets.digest(current.getPasswordHash());
         when(remote.getUserById("user-a")).thenReturn(Result.success(current));
         when(remote.getUserContexts("user-a")).thenReturn(Result.success(List.of(context)));
@@ -57,13 +82,13 @@ class AuthSessionSubjectVerifierTest {
 
     @Test
     void changedAccountVersionRejectsEvenAnUnchangedPasswordFingerprint() {
-        current.setSecurityVersion(4L);
+        current.setSecurityVersion(CHANGED_ACCOUNT_VERSION);
         assertFalse(verifier.verify(snapshot, fingerprint));
     }
 
     @Test
     void changedMembershipVersionRejectsAfterDisableAndReenable() {
-        context.setSecurityVersion(8L);
+        context.setSecurityVersion(CHANGED_MEMBERSHIP_VERSION);
         assertFalse(verifier.verify(snapshot, fingerprint));
     }
 
@@ -101,7 +126,7 @@ class AuthSessionSubjectVerifierTest {
     void missingVersionFieldsFailClosed() {
         current.setSecurityVersion(null);
         assertFalse(verifier.verify(snapshot, fingerprint));
-        current.setSecurityVersion(3L);
+        current.setSecurityVersion(ACCOUNT_VERSION);
         context.setSecurityVersion(null);
         assertFalse(verifier.verify(snapshot, fingerprint));
     }
@@ -109,11 +134,12 @@ class AuthSessionSubjectVerifierTest {
     @Test
     void transientAccountRpcFailureIsUnavailableNotARevokedSubject() {
         when(remote.getUserById("user-a")).thenReturn(Result.failed(ResultCode.FAILED));
-        ServiceException error = assertThrows(ServiceException.class, () -> verifier.verify(snapshot, fingerprint));
+        ServiceException error =
+                assertThrows(ServiceException.class, () -> verifier.verify(snapshot, fingerprint));
         assertEquals(ResultCode.FAILED.getCode(), error.getCode());
         when(remote.getUserById("user-a")).thenReturn(null);
-        ServiceException missingResponse = assertThrows(ServiceException.class,
-                () -> verifier.verify(snapshot, fingerprint));
+        ServiceException missingResponse =
+                assertThrows(ServiceException.class, () -> verifier.verify(snapshot, fingerprint));
         assertEquals(ResultCode.FAILED.getCode(), missingResponse.getCode());
         when(remote.getUserById("user-a")).thenReturn(Result.success(current));
         assertTrue(verifier.verify(snapshot, fingerprint));
@@ -122,7 +148,8 @@ class AuthSessionSubjectVerifierTest {
     @Test
     void transientContextRpcFailureIsUnavailableAndAHealthyRetryIsAccepted() {
         when(remote.getUserContexts("user-a")).thenReturn(Result.failed(ResultCode.FAILED));
-        ServiceException error = assertThrows(ServiceException.class, () -> verifier.verify(snapshot, fingerprint));
+        ServiceException error =
+                assertThrows(ServiceException.class, () -> verifier.verify(snapshot, fingerprint));
         assertEquals(ResultCode.FAILED.getCode(), error.getCode());
         when(remote.getUserContexts("user-a")).thenReturn(Result.success(List.of(context)));
         assertTrue(verifier.verify(snapshot, fingerprint));

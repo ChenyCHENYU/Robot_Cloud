@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_company")
 public class SysCompany extends BaseEntity {
 
+    @java.io.Serial private static final long serialVersionUID = 1L;
+
     private String tenantId;
 
     private String companyName;

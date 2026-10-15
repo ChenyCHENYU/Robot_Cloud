@@ -88,3 +88,35 @@ test('unknown adoption commit and unsafe range fail closed', async (t) => {
   await assert.rejects(checkCommits({ cwd, historicalHead: 'f'.repeat(40) }))
   await assert.rejects(checkCommits({ cwd, historicalHead: baseline, range: '--all' }), /invalid Git range/)
 })
+
+function mergeFixture(t, message) {
+  const { cwd, git, baseline } = fixture(t)
+  git('checkout', '--quiet', '-b', 'side', baseline)
+  git('commit', '--quiet', '--allow-empty', '-m', 'feat(tooling): side change')
+  git('checkout', '--quiet', '-b', 'trunk', baseline)
+  git('commit', '--quiet', '--allow-empty', '-m', 'feat(tooling): trunk change')
+  git('merge', '--quiet', '--no-ff', 'side', '-m', message)
+  return { cwd, git, baseline }
+}
+
+for (const message of ["Merge branch 'side'", 'feat(tooling): disguise a merge as a normal change']) {
+  test(`range gate rejects a two-parent commit regardless of its message: ${message}`, async (t) => {
+    const { cwd, baseline } = mergeFixture(t, message)
+    const report = await checkCommits({ cwd, historicalHead: baseline })
+    const rejected = report.commits.filter((commit) => !commit.valid)
+    assert.equal(report.ok, false)
+    assert.equal(rejected.length, 1)
+    assert.equal(rejected[0].parents, 2)
+    assert.ok(rejected[0].errors.some((error) => error.name === 'linear-history'))
+  })
+}
+
+test('range gate preserves a published historical merge while enforcing its descendants', async (t) => {
+  const { cwd, git } = mergeFixture(t, "Merge branch 'side'")
+  const publishedBoundary = git('rev-parse', 'HEAD')
+  git('commit', '--quiet', '--allow-empty', '-m', 'docs(tooling): legitimate linear descendant')
+  const report = await checkCommits({ cwd, historicalHead: publishedBoundary })
+  assert.equal(report.ok, true)
+  assert.equal(report.checked, 1)
+  assert.equal(report.commits[0].parents, 1)
+})

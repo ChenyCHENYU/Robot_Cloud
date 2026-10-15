@@ -25,10 +25,7 @@
   ],
   "unknownRequestFields": "ignored by Jackson; never bind domain entity/governance fields",
   "authorization": "SaCheckPermission metadata checked here; effective authorization/tenant/transaction behavior checked by service and MVC tests",
-  "productPending": [
-    "temporary-role product model",
-    "global directory write boundary"
-  ],
+  "productPending": [],
   "controller": "com.robot.system.role.controller.RoleController",
   "routes": [
     {
@@ -136,7 +133,7 @@
       "method": "GET",
       "path": "/sys/roles/{id}/temp-authorizations",
       "permission": "sys:role:query",
-      "response": "Result<List<SysTempAuthorization>>",
+      "response": "Result<List<TemporaryAuthorizationVO>>",
       "body": null,
       "validBody": false,
       "query": [],
@@ -149,6 +146,18 @@
       "path": "/sys/roles/{id}/users",
       "permission": "sys:role:query",
       "response": "Result<List<RoleUserVO>>",
+      "body": null,
+      "validBody": false,
+      "query": [],
+      "pathVariables": [
+        "id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/sys/roles/{id}/users/page",
+      "permission": "sys:role:query",
+      "response": "Result<PageResult<RoleUserVO>>",
       "body": null,
       "validBody": false,
       "query": [],
@@ -576,34 +585,34 @@
       "id": {
         "javaType": "String",
         "jsonType": "string",
-        "semanticId": "role.id",
-        "sourceOfTruth": "com.robot.system.api.vo.role.RoleUserVO public projection / sys_role",
+        "semanticId": "account.id",
+        "sourceOfTruth": "sys_user.id",
         "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
-        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+        "definition": "当前角色成员的平台账号ID，不是角色ID或成员关系contextId。"
       },
       "username": {
         "javaType": "String",
         "jsonType": "string",
-        "semanticId": "role.username",
-        "sourceOfTruth": "com.robot.system.api.vo.role.RoleUserVO public projection / sys_role",
+        "semanticId": "account.username",
+        "sourceOfTruth": "sys_user.username",
         "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
-        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+        "definition": "当前角色成员的平台账号登录名。"
       },
       "name": {
         "javaType": "String",
         "jsonType": "string",
-        "semanticId": "role.name",
-        "sourceOfTruth": "com.robot.system.api.vo.role.RoleUserVO public projection / sys_role",
+        "semanticId": "account.nickname",
+        "sourceOfTruth": "sys_user.nickname",
         "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
-        "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
+        "definition": "当前角色成员的全局显示昵称；wire字段保留name。"
       },
       "status": {
         "javaType": "String",
         "jsonType": "string",
-        "semanticId": "role.status",
-        "sourceOfTruth": "com.robot.system.api.vo.role.RoleUserVO public projection / sys_role",
+        "semanticId": "membership.effective-status",
+        "sourceOfTruth": "sys_user.status_flag + sys_user_company.status_flag",
         "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
-        "definition": "角色启停（1启用、0停用）。"
+        "definition": "当前公司未删除成员与全局账号均启用时active，否则disabled；不等同角色启停。"
       }
     },
     "com.robot.system.api.vo.permission.DataScopeVO": {
@@ -623,6 +632,88 @@
         "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
         "definition": "当前公司角色公开只读投影或明确兼容别名；具体类型由真实Jackson输出门禁校验。"
       }
+    },
+    "com.robot.system.api.vo.role.TemporaryAuthorizationVO": {
+      "id": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "temporary-role-grant.id",
+        "sourceOfTruth": "sys_temp_authorization + current-company bounded user/role projections",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司临时授予的公开管理字段。"
+      },
+      "userId": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "temporary-role-grant.userId",
+        "sourceOfTruth": "sys_temp_authorization + current-company bounded user/role projections",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司临时授予的公开管理字段。"
+      },
+      "roleId": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "temporary-role-grant.roleId",
+        "sourceOfTruth": "sys_temp_authorization + current-company bounded user/role projections",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司临时授予的公开管理字段。"
+      },
+      "userNickname": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "temporary-role-grant.userNickname",
+        "sourceOfTruth": "sys_temp_authorization + current-company bounded user/role projections",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司临时授予的公开管理字段。"
+      },
+      "roleName": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "temporary-role-grant.roleName",
+        "sourceOfTruth": "sys_temp_authorization + current-company bounded user/role projections",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司临时授予的公开管理字段。"
+      },
+      "effectFrom": {
+        "javaType": "LocalDateTime",
+        "jsonType": "string",
+        "semanticId": "temporary-role-grant.effectFrom",
+        "sourceOfTruth": "sys_temp_authorization + current-company bounded user/role projections",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "生效开始（包含）。"
+      },
+      "effectTo": {
+        "javaType": "LocalDateTime",
+        "jsonType": "string",
+        "semanticId": "temporary-role-grant.effectTo",
+        "sourceOfTruth": "sys_temp_authorization + current-company bounded user/role projections",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "生效结束（不包含）。"
+      },
+      "reason": {
+        "javaType": "String",
+        "jsonType": "string",
+        "semanticId": "temporary-role-grant.reason",
+        "sourceOfTruth": "sys_temp_authorization + current-company bounded user/role projections",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "当前公司临时授予的公开管理字段。"
+      },
+      "statusFlag": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "temporary-role-grant.statusFlag",
+        "sourceOfTruth": "sys_temp_authorization + current-company bounded user/role projections",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "1为未撤回、0为已撤回，是否正在生效另由effectFrom/effectTo半开窗口判断。"
+      },
+      "revision": {
+        "javaType": "Integer",
+        "jsonType": "number",
+        "semanticId": "temporary-role-grant.revision",
+        "sourceOfTruth": "sys_temp_authorization + current-company bounded user/role projections",
+        "constraintSource": "Jackson introspection + RobotWebAutoConfiguration",
+        "definition": "临时授权CAS版本；撤回必须匹配。"
+      }
     }
   },
   "queryModels": {
@@ -636,6 +727,5 @@
   "actionVersions": {
     "delete": "RoleVO.revision",
     "assignPermissions": "RoleVO.revision"
-  },
-  "legacyResponseBoundary": "temp-authorizations still returns SysTempAuthorization; product model retained, not claimed full VO convergence"
+  }
 }

@@ -1,5 +1,10 @@
 package com.robot.common.security.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import cn.dev33.satoken.SaManager;
 import cn.dev33.satoken.config.SaTokenConfig;
 import cn.dev33.satoken.context.SaTokenContext;
@@ -15,8 +20,6 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 /** 真正的 Sa-Token 内存 DAO + Servlet request，防止测试桩掩盖账户 Session 污染。 */
 class AuthHolderTokenSessionTest {
 
@@ -27,8 +30,14 @@ class AuthHolderTokenSessionTest {
         SaTokenDao originalDao = SaManager.getSaTokenDao();
         SaTokenDaoDefaultImpl memoryDao = new SaTokenDaoDefaultImpl();
         StpLogic logic = new StpLogic("auth-holder-context-test");
-        logic.setConfig(new SaTokenConfig().setTokenName("Authorization").setTokenPrefix("Bearer")
-                .setIsConcurrent(true).setIsShare(false).setIsReadCookie(false).setIsLog(false));
+        logic.setConfig(
+                new SaTokenConfig()
+                        .setTokenName("Authorization")
+                        .setTokenPrefix("Bearer")
+                        .setIsConcurrent(true)
+                        .setIsShare(false)
+                        .setIsReadCookie(false)
+                        .setIsLog(false));
         try {
             SaManager.setSaTokenDao(memoryDao);
             SaManager.setSaTokenContext(new SaTokenContextForSpringInJakartaServlet());
@@ -36,25 +45,33 @@ class AuthHolderTokenSessionTest {
             bind(null);
             StpUtil.login("same-user");
             String first = StpUtil.getTokenValue();
-            AuthHolder.setSessionAttr(AuthHolder.SESSION_LOGIN_USER,
+            AuthHolder.setSessionAttr(
+                    AuthHolder.SESSION_LOGIN_USER,
                     LoginUser.builder().userId("same-user").companyId("company-a").build());
             bind(null);
             StpUtil.login("same-user");
             String second = StpUtil.getTokenValue();
-            AuthHolder.setSessionAttr(AuthHolder.SESSION_LOGIN_USER,
+            AuthHolder.setSessionAttr(
+                    AuthHolder.SESSION_LOGIN_USER,
                     LoginUser.builder().userId("same-user").companyId("company-b").build());
             assertNotEquals(first, second);
             bind(first);
-            assertEquals("company-a", AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER,
-                    LoginUser.class).getCompanyId());
+            assertEquals(
+                    "company-a",
+                    AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER, LoginUser.class)
+                            .getCompanyId());
             assertNull(StpUtil.getSession().get(AuthHolder.SESSION_LOGIN_USER));
             bind(second);
-            assertEquals("company-b", AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER,
-                    LoginUser.class).getCompanyId());
+            assertEquals(
+                    "company-b",
+                    AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER, LoginUser.class)
+                            .getCompanyId());
             StpUtil.logoutByTokenValue(first);
             assertTrue(StpUtil.isLogin());
-            assertEquals("company-b", AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER,
-                    LoginUser.class).getCompanyId());
+            assertEquals(
+                    "company-b",
+                    AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER, LoginUser.class)
+                            .getCompanyId());
         } finally {
             RequestContextHolder.resetRequestAttributes();
             StpUtil.setStpLogic(originalLogic);
@@ -69,7 +86,7 @@ class AuthHolderTokenSessionTest {
         if (token != null) {
             request.addHeader("Authorization", "Bearer " + token);
         }
-        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request,
-                new MockHttpServletResponse()));
+        RequestContextHolder.setRequestAttributes(
+                new ServletRequestAttributes(request, new MockHttpServletResponse()));
     }
 }

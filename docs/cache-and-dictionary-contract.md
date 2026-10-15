@@ -1,6 +1,8 @@
 # 缓存提交与字典契约
 
-本文以当前CommittedCacheChanges、PermissionStateStore、CacheEventDispatcher与DictService为准。SQL仅供有权限的隔离环境只读预检；实际 MySQL/Redis 与双 System 故障验证结果见 [部署文档](deployment.md)，Redis HA 仍需单独演练。
+本文以当前CommittedCacheChanges、PermissionStateStore、CacheOutboxStore、CacheEventDispatcher与DictService为准。PermissionStateStore维护epoch与协调锁，内部CacheOutboxStore维护通知SQL和围栏，拆分不改变同事务提交。SQL仅供有权限的隔离环境只读预检；实际 MySQL/Redis 与双 System 故障验证结果见 [部署文档](deployment.md)，Redis HA 仍需单独演练。
+
+本轮新增V11–V13，已发布V1–V10保持不变。全局菜单/按钮/字典写同时要求独立平台管理员事实；目录删除必须提交客户端expectedRevision，不能从数据库代填。授权模型已确定为按用户临时授予已有角色，公司成员主部门独立。数据库固定golden覆盖全部20表结构。
 
 ## 提交点与读取时序
 
@@ -144,19 +146,31 @@ V7–V9的生成列只对delete_flag=1生成业务值，否则NULL；status停�
 
 隔离基础设施环境至少覆盖：
 
-1. 真实MySQL新库V1–V10及V5存量库升级；重复预检、历史软删重建、唯一primary、生成列/排序规则、并发移动和失败DDL恢复。
+1. 真实MySQL新库V1–V13、V10及V5存量库升级；重复预检、历史软删重建、唯一primary、生成列/排序规则、并发移动、失败DDL恢复和纯DML导航迁移回滚。
 2. Redis失败后outbox保持pending，恢复投递并完成；业务/审计回滚无事件、通知乱序不倒退、Redis清空后不复用旧授权命名空间。
 3. 字典负缓存后新增、类型禁用再启用、重命名、跨类型移动和旧删除交错，旧/新编码查询符合已提交状态。
 4. 真实Redis单key Lua、两auth实例refresh/logout竞争、TTL和HA故障切换/旧快照恢复；单主CAS与内存模型不能证明撤销持久性。
 5. Robot_Admin读取并提交revision，版本冲突重新读取后由用户决定是否重试；不能静默代填当前版本。
 
-本地H2/MVC及serializer回归不覆盖上述真实环境全部行为。completed_at非空的outbox记录目前仍保留在表中，没有自动归档/清理任务；保留天数、审计要求、批量清理窗口、容量告警和责任人仍待运维确定，不能以pending已归零声称长期容量已治理。全局菜单/字典写权限归属和临时授权产品模型待决定，本契约不擅自扩大授权能力。
+本地H2/MVC及serializer回归不覆盖上述真实环境全部行为。V12已提供完成历史的受控逻辑归档，记录仍保留在表中；物理数据生命周期、备份与容量告警由部署策略决定，不能以pending归零推断生产长期容量已验收。
 
 ## V10 通知围栏与运维重放
 
 `delivery_revision` 初值0，每次条件确认、失败重排和人工重放递增。worker 在事务外调用 Redis，返回后以读取时围栏更新；同一事件被另一 worker 或运维推进后，旧更新0行，记 superseded，不覆盖新计划。多节点可能重复发送，通知本身仍需幂等；围栏不是分布式 exactly-once 保证。
 
-`sys_cache_outbox_replay_log` 只追加操作者、公司、受控原因与前后围栏。永久超管先查询和预览，再明确确认 planHash；Service 行锁内重新计算哈希，漂移拒绝，安排投递和成功审计同事务。审计失败回滚安排，重放不递增业务 epoch，不修改通知携带的业务版本，不清空失败次数。
+`sys_cache_outbox_replay_log` 只追加操作者、公司、受控原因与前后围栏。独立平台管理员且具备当前公司永久超管身份先查询和预览，再明确确认planHash；Service行锁内重算哈希，漂移拒绝，安排投递和成功审计同事务。审计失败回滚安排，重放不递增业务epoch、不修改通知版本、不清空失败次数。
+
+## V12 隔离、逻辑归档与时间
+
+无法合法投递的毒事件登记quarantined_at，状态QUARANTINED，仍计入未解决pending，调度扫描跳过；经过受控重放可重新排队。ARCHIVED只表示已完成历史隐藏，不表示业务删除或epoch回退。归档限定30–3650天保留期、单批1–500，预览摘要绑定操作者/候选/版本/保留期；锁内重新核验，漂移整批回滚并保留追加审计。pending、隔离、新重放和未到保留期事件不归档。
+
+到期判断及退避使用MySQL相对时间和UTC会话，JDBC4.2直接读取LocalDateTime，不经JVM默认时区的Timestamp转换。新授权Clock与审计写入明确UTC；无偏移JSON字符串表示UTC，客户端选择转换后提交。历史无时区数据不能凭字段名批量改写，切换前在备份副本对账原写入节点时区。
+
+生产还要求`sys_cache_epoch`中存在字节精确的`authorization-time-utc-v1` scope且version>=1，确认临时授权采用UTC解释；该marker独立于`permissions`和字典epoch，不通过缓存通知或普通HTTP推进。缺少合格marker时，启动护栏检查全部delete_flag=1且status_flag=1的临时授权，包含已到期记录；有任何存量或统计不明便拒绝启动，不自动删授予或改写历史时间。
+
+仅上述存量为零时允许条件初始化version=1，并在插入时再次检查无存量、写后复验精确marker。已有低于1的版本、排序等价但非精确的scope或并发授予不能靠重复启动自动确认；合格marker已持久化后，正常的新UTC授予不阻止后续重启。存量环境须停写、备份、逐项核对旧节点/连接时区与业务预期时刻，经受控授权完成必要调整和marker交接。它只确认临时授权解释，不证明所有Outbox或历史审计时间已转换，流程见 [生产UTC交接](deployment.md#生产授权时间的-utc-交接)。
+
+V12索引覆盖due、recent、archive以及公司审计/临时授权分页。实际规模和SQL计划以当前制品隔离测量为准；索引存在不能代替测量，也不能宣称物理表因逻辑归档自动缩小。
 
 失败持久化仅允许枚举 category 和随机 failureId，历史旧错误对外映射 LEGACY_FAILURE；事件 API 不输出 cache_key 或原始错误。指标读取已提交数据库快照，抓取只读内存，需同时检查快照年龄。详细端点、指标与事故步骤见 [API 契约](api-contract.md)和 [部署与运维](deployment.md)。
 

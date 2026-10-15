@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-10-15",
+  "owner": "Robot maintainers",
+  "reviewReference": "quality/backend-semantic-reviews.md",
+  "fields": [
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/api/entity/SysUser.java",
+      "className": "com.robot.system.api.entity.SysUser",
+      "field": "passwordHash",
+      "type": "String",
+      "sourceSHA256": "4fb9f1e158f838759c5805c192220fbbd25e7f9844a3262bf41769549817a953",
+      "reason": "BCrypt摘要字段已有直属Lombok ToString.Exclude；native扫描仅看声明前几行，漏掉同一行真实注解。仅此类/字段/源快照接受语义复核。"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/api/entity/SysUser.java",
+      "className": "com.robot.system.api.entity.SysUser",
+      "field": "email",
+      "type": "String",
+      "sourceSHA256": "4fb9f1e158f838759c5805c192220fbbd25e7f9844a3262bf41769549817a953",
+      "reason": "邮箱字段已有直属Lombok ToString.Exclude；native扫描漏掉同一声明注解。JSON与实际字符串输出仍由正式Java隐私合同独立保护。"
+    },
+    {
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/api/dto/user/UserSaveRequest.java",
+      "className": "com.robot.system.api.dto.user.UserSaveRequest",
+      "field": "emailPresent",
+      "type": "boolean",
+      "sourceSHA256": "8aa1ba728a8136f687675a95a222ddd59c0274fd754f2faa9734d78a8f462414",
+      "reason": "该boolean仅记录客户端字段是否提交，不保存联系值，且同一声明已有ToString.Exclude。只复核此确切字段，不对email类字段统一排除。"
+    }
+  ],
+  "testDirectory": {
+    "path": "robot-services/robot-auth/src/test/java/com/robot/auth/authn/service",
+    "package": "com.robot.auth.authn.service",
+    "javaFileCount": 23,
+    "mainPath": "robot-services/robot-auth/src/main/java/com/robot/auth/authn/service",
+    "files": [
+      {
+        "name": "AuthAttemptGateTest.java",
+        "sha256": "5608e00372933851bf921e968192d3de15aefcf11721e783725aec7e6194a60d"
+      },
+      {
+        "name": "AuthAuditQueueTest.java",
+        "sha256": "92adb78d4bf0ec29f2212a86288d1523dfa1e78c98c7d65f2f3fdd99e4c372ea"
+      },
+      {
+        "name": "AuthCompanyDiscoveryWebTest.java",
+        "sha256": "a30789a80aea7d7b1ca4f8b775c7ae675f6ba852a692f1fd192be5140aacd71d"
+      },
+      {
+        "name": "AuthControllerWebContractTest.java",
+        "sha256": "85f830d9d4932e409dfca1ab771a703f3f4b9b6cebe14bb8d12a99d2aad52fc6"
+      },
+      {
+        "name": "AuthFailureAuditTest.java",
+        "sha256": "57a40e02335a76ba579256869fa60b17fdba7155d6e30d53c35b5d8656002847"
+      },
+      {
+        "name": "AuthFamilyStatesTest.java",
+        "sha256": "1666c9210c0e0792703248413a9921aa7b7d3df8006ec0b01c8ae6442a49d8a0"
+      },
+      {
+        "name": "AuthLifecycleServiceTest.java",
+        "sha256": "d1818dc693dcd46880891fb7836a6974421c09a6b2bd40c70042fb0aa7e2fd16"
+      },
+      {
+        "name": "AuthLogoutAuditIdentityTest.java",
+        "sha256": "374fcbeb36ea9089626dfb59e8628f4b0dc3c6083a04a52b821a57fde978cd1b"
+      },
+      {
+        "name": "AuthLogoutAuditTest.java",
+        "sha256": "87a5587bbafb12eb3194299a48c211835d73585cef85a5dd171674b4eda2a9bc"
+      },
+      {
+        "name": "AuthLogoutOwnershipTest.java",
+        "sha256": "21f9ffd13f1460e7afb7e64f70f2aa9c5cd1edb49179c16508ef16b947faa1a8"
+      },
+      {
+        "name": "AuthRedisOutboxProbe.java",
+        "sha256": "2c0b3dd5f67a6eee5bba3bbc2cc177921bc33c443e52918c416e15509e3d1f02"
+      },
+      {
+        "name": "AuthRedisTransportTest.java",
+        "sha256": "6004f0947e310d4642a269e210500e5f68d0cfc360306a44f73bd0181f434a6d"
+      },
+      {
+        "name": "AuthResolvedAccountGateTest.java",
+        "sha256": "eb6c4eaea6d461d5e0c72d4a68cd7753185497cc0387b95aded65ebecaca1c76"
+      },
+      {
+        "name": "AuthResolvedAccountRedisProbe.java",
+        "sha256": "607aa70c57c69777a7efd28a1a3e2e470e18be2738cc8aca536a6fdddf1ecf60"
+      },
+      {
+        "name": "AuthSensitiveStateOutputTest.java",
+        "sha256": "72b20ec08b99e9314e569ed1da0f06d13454a919bd4427714f2e152072b96fb5"
+      },
+      {
+        "name": "AuthServiceTest.java",
+        "sha256": "768a0132a87571841e3351d8c3b9341bd4d3646034d7b396dfb69be57e4abf3d"
+      },
+      {
+        "name": "AuthSessionManagerTest.java",
+        "sha256": "7dfa3672dcd3375c2ab45fc79259ecc30b84767ec76368ac91e95b488bdd82f8"
+      },
+      {
+        "name": "AuthSessionSubjectVerifierTest.java",
+        "sha256": "b4ccb4ec7223db368cd17b35b5ffd83ce8ef5558591923403ae06cfe826ec7d7"
+      },
+      {
+        "name": "AuthSessionViewsTest.java",
+        "sha256": "f8f608dba27d68cf730ea63e8ba4409ea7c3dd9ff5513328e8d8d8ca1d8f401e"
+      },
+      {
+        "name": "AuthStateTestSupport.java",
+        "sha256": "b6387e6a5d76b5ed4e21da839296394a684f63785c552924169f87102d4d6b06"
+      },
+      {
+        "name": "AuthTokenSecretsTest.java",
+        "sha256": "bb9126d9ba509c80c96dac7b959a37ea4adc7453b7cfece1c44bd9a82ce09728"
+      },
+      {
+        "name": "AuthViewIsolationTest.java",
+        "sha256": "4c4b50152806c7eb9f279a643e46fcfcb410d83c3370a12e6aabc79dd1571070"
+      },
+      {
+        "name": "SaTokenAccessTokensTest.java",
+        "sha256": "6f705d48f665ebdb977642975513a9eed6f42474d7de4817fd379f28ac5f093c"
+      }
+    ],
+    "mainFiles": [
+      {
+        "name": "AuthAccessTokens.java",
+        "sha256": "f85d6da810fc1715013f55e29136360eeeaad4a18f2a6c0dac727826fc73125f"
+      },
+      {
+        "name": "AuthAttemptGate.java",
+        "sha256": "8de3a2dff518808d137105f5d96ab2c827721b3ad7a57ad8bf268efe9a648b3b"
+      },
+      {
+        "name": "AuthAuditQueue.java",
+        "sha256": "45c59f72f067f8e20c811030dea53b10b5ffc339bbad75cf45cb8884396f4dfd"
+      },
+      {
+        "name": "AuthCleanupWorker.java",
+        "sha256": "5b67cf1b2d53122cc5eeffa849317bd39d28836315d649c8fd032a88b7d46d7d"
+      },
+      {
+        "name": "AuthCredentials.java",
+        "sha256": "636744c2a68e48595d29aa1d73501be819f9e8cd7ad8563dc8bf86a81cb3c58a"
+      },
+      {
+        "name": "AuthFamilyStates.java",
+        "sha256": "0094d6bfb36d75765fff81a5c6dff8d5c54f7550588f472ddb74f3bb61e4199e"
+      },
+      {
+        "name": "AuthKeys.java",
+        "sha256": "044f0784c533fcbf11d7d927f1afaa3fcdd50708d52e7dac254a55a23141f05e"
+      },
+      {
+        "name": "AuthLogoutAudit.java",
+        "sha256": "e3cafded01a02948ec83f666db1be056304dae69938bed4708b3cbef0be9540f"
+      },
+      {
+        "name": "AuthService.java",
+        "sha256": "1ee06728514e440adfc8523d00d70298dfcb2f7ec39724191e4c4bc8515d76a8"
+      },
+      {
+        "name": "AuthSessionManager.java",
+        "sha256": "5a45c40c29cf9ff32083315da500ea719e576346eeccdf49239b169d80219181"
+      },
+      {
+        "name": "AuthSessionSubjectVerifier.java",
+        "sha256": "7add9e138166a9751d9080a3ff99c557cee2c1e9ab05d280eb34bc0aba7c99b8"
+      },
+      {
+        "name": "AuthSessionViews.java",
+        "sha256": "6997dd42b948c84b03bd76ed4e022b2f4bc7c4c3cb1e88dc0ec99641dfeaa37c"
+      },
+      {
+        "name": "AuthTokenSecrets.java",
+        "sha256": "0a1f8ff2964aa03cc9fab892089dbfad1306ade541df7167a249c56250064342"
+      },
+      {
+        "name": "SaTokenAccessTokens.java",
+        "sha256": "41375748f8500fcdacca03730d82fce46f7e082ce1f5d5b8a2ef30d233a176ce"
+      }
+    ],
+    "reason": "此确切Auth测试包23个Java文件仍为同一认证生命周期域；共享package-private AuthStateTestSupport和生产内聚协作者AuthFamilyStates/AuthLogoutAudit要求同包可见性。main目录按实际文件/hash记录（当前14），没有业务域耦合理由要求按测试数量拆包。B6主源或其他目录继续阻断，20文件建议和warning budget 0均不修改。"
+  }
+}

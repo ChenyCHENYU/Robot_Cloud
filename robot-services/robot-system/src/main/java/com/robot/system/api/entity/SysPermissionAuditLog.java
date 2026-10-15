@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_permission_audit_log")
 public class SysPermissionAuditLog extends TenantEntity {
 
+    @java.io.Serial private static final long serialVersionUID = 1L;
+
     /** 操作人。 */
     private String actorUserNo;
 

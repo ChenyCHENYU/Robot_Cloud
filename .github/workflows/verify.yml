@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 30
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:8.4.11@sha256:24989179f58856db763f418010c1169fecc944e3ec1ea7e921572d83eb070f70
         env:
           MYSQL_ROOT_PASSWORD: ephemeral-ci-only
           MYSQL_ROOT_HOST: '%'
@@ -23,6 +23,15 @@ jobs:
           - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -pephemeral-ci-only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+      redis:
+        image: redis:7.4.11@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
+        ports:
+          - 16379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=30
@@ -54,13 +63,21 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
-      - name: Same local entry including isolated V5 upgrade, contracts and packaged mappers
+      - name: Same local Java17 quality, full schema and isolated upgrade entry
         env:
           ROBOT_VERIFY_MYSQL_HOST: 127.0.0.1
           ROBOT_VERIFY_MYSQL_PORT: '3306'
           ROBOT_VERIFY_MYSQL_USER: root
           ROBOT_VERIFY_MYSQL_PASSWORD: ephemeral-ci-only
         run: scripts/verify.sh --mysql-upgrade
+      - name: Actual packaged Auth reliable Redis state and audit contract
+        env:
+          ROBOT_VERIFY_REDIS_DISPOSABLE: '1'
+          ROBOT_VERIFY_REDIS_HOST: 127.0.0.1
+          ROBOT_VERIFY_REDIS_PORT: '16379'
+        run: |
+          export ROBOT_VERIFY_REDIS_NAMESPACE="$(python3 -c 'import secrets; print("verify-" + secrets.token_hex(6))')"
+          scripts/verify-auth-redis.sh full
       - name: Full native BD evidence and Robot generic rule gate
         if: always()
         run: bun run check:bd
@@ -74,5 +91,10 @@ jobs:
           path: |
             **/target/surefire-reports/TEST-*.xml
             **/target/failsafe-reports/TEST-*.xml
+            **/target/checkstyle-result.xml
+            **/target/pmd.xml
+            **/target/spotbugsXml.xml
+            **/target/site/jacoco/jacoco.xml
+            target/bom.json
             target/verification/*.json
             target/verification/*.log

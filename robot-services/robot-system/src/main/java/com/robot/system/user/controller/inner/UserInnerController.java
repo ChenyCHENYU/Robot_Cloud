@@ -5,17 +5,14 @@ import com.robot.api.system.dto.RemoteUserDTO;
 import com.robot.common.core.domain.Result;
 import com.robot.system.user.service.UserSupplyService;
 import io.swagger.v3.oas.annotations.Operation;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
-/**
- * 用户内部接口（/inner/**：仅供服务间 Feign 调用；网关已屏蔽外部访问）。
- */
+/** 用户内部接口（/inner/**：仅供服务间 Feign 调用；网关已屏蔽外部访问）。 */
 @RestController
 @RequiredArgsConstructor
 public class UserInnerController {

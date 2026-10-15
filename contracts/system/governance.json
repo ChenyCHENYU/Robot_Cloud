@@ -1,0 +1,418 @@
+{
+  "schemaVersion": 1,
+  "scope": "fixed MVC mappings and writable properties; behavior and authorization require referenced regression suites",
+  "controllers": [
+    "com.robot.system.permission.controller.PermissionGovernanceController",
+    "com.robot.system.permission.controller.CacheOutboxGovernanceController"
+  ],
+  "routes": {
+    "CacheOutboxGovernanceController.archive": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/cache-outbox/archive"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:cache-outbox:manage"
+      ],
+      "response": "Result<Integer>",
+      "parameters": {
+        "request": {
+          "type": "CacheOutboxArchiveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "CacheOutboxGovernanceController.archivePreview": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/cache-outbox/archive-preview"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:cache-outbox:manage"
+      ],
+      "response": "Result<CacheOutboxArchivePreview>",
+      "parameters": {
+        "request": {
+          "type": "CacheOutboxArchiveRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "CacheOutboxGovernanceController.events": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/cache-outbox/events"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:cache-outbox:manage"
+      ],
+      "response": "Result<List<CacheOutboxEventView>>",
+      "parameters": {
+        "limit": {
+          "type": "int",
+          "source": "query",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "CacheOutboxGovernanceController.preview": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/cache-outbox/{eventId}/replay-preview"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:cache-outbox:manage"
+      ],
+      "response": "Result<CacheOutboxReplayPreview>",
+      "parameters": {
+        "eventId": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "request": {
+          "type": "CacheOutboxPreviewRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "CacheOutboxGovernanceController.replay": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/cache-outbox/{eventId}/replay"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:cache-outbox:manage"
+      ],
+      "response": "Result<CacheOutboxReplayResult>",
+      "parameters": {
+        "eventId": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "request": {
+          "type": "CacheOutboxReplayRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "CacheOutboxGovernanceController.replayHistory": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/cache-outbox/{eventId}/replays"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:cache-outbox:manage"
+      ],
+      "response": "Result<List<ReplayAudit>>",
+      "parameters": {
+        "eventId": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "CacheOutboxGovernanceController.summary": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/cache-outbox/summary"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:cache-outbox:manage"
+      ],
+      "response": "Result<OutboxSnapshot>",
+      "parameters": {}
+    },
+    "PermissionGovernanceController.auditLogs": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/permission-audit-logs"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:list"
+      ],
+      "response": "Result<List<SysPermissionAuditLog>>",
+      "parameters": {}
+    },
+    "PermissionGovernanceController.auditPage": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/permission-audit-logs/page"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:list"
+      ],
+      "response": "Result<PageResult<PermissionAuditVO>>",
+      "parameters": {
+        "query": {
+          "type": "PermissionAuditPageQuery",
+          "source": "model",
+          "valid": true,
+          "required": false
+        }
+      }
+    },
+    "PermissionGovernanceController.capabilities": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/governance-capabilities"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:list"
+      ],
+      "response": "Result<Map<String,Map<String,Boolean>>>",
+      "parameters": {}
+    },
+    "PermissionGovernanceController.constraints": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/permission-constraints"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:list"
+      ],
+      "response": "Result<List<SysPermissionConstraint>>",
+      "parameters": {}
+    },
+    "PermissionGovernanceController.createTempAuthorization": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/sys/temp-authorizations"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:tempAuthorize"
+      ],
+      "response": "Result<String>",
+      "parameters": {
+        "request": {
+          "type": "TempAuthorizationCreateRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "PermissionGovernanceController.dataPermissions": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/data-permissions"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:list"
+      ],
+      "response": "Result<List<DataScopeVO>>",
+      "parameters": {}
+    },
+    "PermissionGovernanceController.list": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/permissions"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:list"
+      ],
+      "response": "Result<List<PermissionItem>>",
+      "parameters": {}
+    },
+    "PermissionGovernanceController.revoke": {
+      "method": [
+        "PUT"
+      ],
+      "paths": [
+        "/sys/temp-authorizations/{id}/revoke"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:tempAuthorize"
+      ],
+      "response": "Result<Void>",
+      "parameters": {
+        "id": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        },
+        "request": {
+          "type": "TempAuthorizationRevokeRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "PermissionGovernanceController.tempAuthorizationPage": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/temp-authorizations/page"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:list"
+      ],
+      "response": "Result<PageResult<TemporaryAuthorizationVO>>",
+      "parameters": {
+        "query": {
+          "type": "TemporaryAuthorizationPageQuery",
+          "source": "model",
+          "valid": true,
+          "required": false
+        }
+      }
+    },
+    "PermissionGovernanceController.tempAuthorizations": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/temp-authorizations"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:list"
+      ],
+      "response": "Result<List<TemporaryAuthorizationVO>>",
+      "parameters": {}
+    },
+    "PermissionGovernanceController.tree": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/sys/permissions/tree"
+      ],
+      "consumes": [],
+      "permission": [
+        "sys:permission:list"
+      ],
+      "response": "Result<List<PermissionNode>>",
+      "parameters": {}
+    }
+  },
+  "requestModels": {
+    "com.robot.system.api.dto.cache.CacheOutboxArchiveRequest": {
+      "properties": {
+        "limit": "Integer",
+        "planHash": "String",
+        "retentionDays": "Integer"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.cache.CacheOutboxArchiveRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.cache.CacheOutboxPreviewRequest": {
+      "properties": {
+        "reason": "com.robot.system.api.dto.cache.CacheOutboxReplayReason"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.cache.CacheOutboxPreviewRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.cache.CacheOutboxReplayRequest": {
+      "properties": {
+        "planHash": "String",
+        "reason": "com.robot.system.api.dto.cache.CacheOutboxReplayReason"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.cache.CacheOutboxReplayRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.role.PermissionAuditPageQuery": {
+      "properties": {
+        "action": "String",
+        "from": "java.time.LocalDateTime",
+        "page": "Integer",
+        "pageSize": "Integer",
+        "target": "String",
+        "to": "java.time.LocalDateTime"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.role.PermissionAuditPageQuery + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.role.TempAuthorizationCreateRequest": {
+      "properties": {
+        "effectFrom": "java.time.LocalDateTime",
+        "effectTo": "java.time.LocalDateTime",
+        "reason": "String",
+        "roleId": "String",
+        "userId": "String"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.role.TempAuthorizationCreateRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.role.TempAuthorizationRevokeRequest": {
+      "properties": {
+        "expectedRevision": "Integer"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.role.TempAuthorizationRevokeRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.role.TemporaryAuthorizationPageQuery": {
+      "properties": {
+        "page": "Integer",
+        "pageSize": "Integer",
+        "roleId": "String",
+        "statusFlag": "Integer",
+        "userId": "String"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.role.TemporaryAuthorizationPageQuery + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    }
+  },
+  "authorizationBoundary": "Sa-Token actions, permanent delegation ceiling, global Outbox platform policy"
+}

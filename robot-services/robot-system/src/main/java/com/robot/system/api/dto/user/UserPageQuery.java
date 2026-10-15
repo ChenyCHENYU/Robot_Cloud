@@ -1,11 +1,10 @@
 package com.robot.system.api.dto.user;
 
 import com.robot.common.core.domain.PageQuery;
+import java.io.Serial;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-
-import java.io.Serial;
 
 /** 用户分页查询（GET /sys/users 查询参数，字段与前端 UserListParams 对齐）。 */
 @Data
@@ -13,8 +12,7 @@ import java.io.Serial;
 @EqualsAndHashCode(callSuper = true)
 public class UserPageQuery extends PageQuery {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
+    @Serial private static final long serialVersionUID = 1L;
 
     /** 关键词：匹配用户名/昵称/邮箱。 */
     private String keyword;

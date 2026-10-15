@@ -18,7 +18,7 @@ CREATE TABLE sys_dict_item (
 CREATE TABLE sys_cache_epoch (scope VARCHAR_IGNORECASE(255) PRIMARY KEY, version BIGINT NOT NULL);
 CREATE TABLE sys_cache_outbox (id VARCHAR(64) PRIMARY KEY, event_kind VARCHAR(16), cache_key VARCHAR(255),
  cache_version BIGINT, created_at TIMESTAMP, next_attempt_at TIMESTAMP, completed_at TIMESTAMP, attempts INT, last_error VARCHAR(255),
- delivery_revision BIGINT DEFAULT 0 NOT NULL, last_failure_id VARCHAR(36));
+ delivery_revision BIGINT DEFAULT 0 NOT NULL, last_failure_id VARCHAR(36), quarantined_at TIMESTAMP, archived_at TIMESTAMP);
 INSERT INTO sys_dict_type (id,type_code,type_name) VALUES ('t1','state','State'),('t2','other','Other');
-INSERT INTO sys_cache_epoch VALUES ('dictionary:state',1),('dictionary:other',1);
+INSERT INTO sys_cache_epoch VALUES ('dictionary:state',1),('dictionary:other',1),('menu-tree',1);
 INSERT INTO sys_dict_item(id,type_id,item_label,item_code,item_value) VALUES ('i1','t1','Active','enabled','0');

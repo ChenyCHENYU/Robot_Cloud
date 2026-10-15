@@ -2,6 +2,8 @@
 
 本文说明当前服务、数据所有权、关键时序及未来迭代方式。面向后端开发、Robot Admin 开发和部署维护者。
 
+本文依据当前源码描述已实现的边界；执行结果和仍需目标环境验证的内容见 [改进台账](improvement-roadmap.md)。源码、配置或测试存在不等同验收通过。
+
 当前采用 Gateway、Auth、System 三个服务。System 内保持账号、公司成员、角色及授权的本地强一致写入，通过业务分包和独立命令收敛职责。未来新增服务应具有独立业务数据和交付需求；每次拆分同时设计契约、数据迁移及故障恢复。
 
 ## 阅读地图
@@ -26,7 +28,7 @@ flowchart TB
     Gateway -->|"/auth/**"| Auth["robot-auth :9201"]
     Gateway -->|"/sys/** /account/**"| System["robot-system :9202"]
     Auth -->|"RemoteSystemService"| System
-    Auth --> Sessions[("Redis 会话、刷新族、票据")]
+    Auth --> Sessions[("Redis 会话、刷新族、票据、认证审计队列")]
     System --> Sessions
     System --> DB[("MySQL robot_cloud")]
     System --> Worker["缓存 Outbox 调度"]
@@ -38,15 +40,15 @@ flowchart TB
 
 | 服务 | 当前职责 | 依赖及故障含义 |
 | --- | --- | --- |
-| Gateway | 路由、Bearer 头检查、内部路径阻断、内部头清洗、TraceId | 无业务数据库、无会话 Redis 读取；Auth/System 不可达时请求不能成功 |
-| Auth | 登录、公司选择/切换、票据、设备刷新族、注销 | Redis 保存会话，System 提供账号与成员事实；下游失败不能伪造登录成功 |
+| Gateway | 路由、Bearer 头检查、内部路径阻断、内部头清洗、TraceId、实际字节与管理入口边界 | 无业务数据库、无会话 Redis 读取；Auth/System 不可达时请求不能成功 |
+| Auth | 凭据验证、公司选择/切换、票据、设备刷新族、注销、可靠认证审计 | Redis 保存会话与待确认事件，System 提供账号/成员事实并幂等接收审计；下游失败不能伪造成功 |
 | System | 账号/成员、组织、角色、权限、菜单/按钮、字典、审计、缓存治理 | MySQL 为业务事实源；Redis 支撑请求态校验与缓存，通知失败可恢复 |
 
 ### 寻址与配置
 
 `local` 默认关闭 Nacos config/discovery、Sentinel 和对应健康指标。Gateway 用 HTTP 直连 Auth/System；Auth 的 Feign contextId `remoteSystemService` 使用 `ROBOT_SYSTEM_URL`。此 profile 仍依赖 MySQL 和 Redis。
 
-`nacos` 导入各服务配置，使用同一地址、namespace 和 `ROBOT_CLOUD` group。Gateway 默认 `lb://robot-auth`、`lb://robot-system`，Auth 使用服务发现。当前导入为 `optional:`，需验证配置确实加载、实例注册、真实调用和规则生效。
+`nacos` 导入各服务配置，使用同一地址、namespace 和 `ROBOT_CLOUD` group。Gateway 默认 `lb://robot-auth`、`lb://robot-system`，Auth 使用服务发现。开发配置可用 `optional:`；生产启用远端配置时必须改为必需导入，护栏拒绝 optional Nacos。实际加载、注册、调用和规则生效需单独验证。
 
 三服务使用同一 Redis 会话配置。自定义 key 的 `ROBOT_ENV` 不自动跟随 Spring profile，也不证明 Sa-Token 内部 key 已完成环境隔离；环境应采用明确的实例/database 隔离方案。
 
@@ -92,12 +94,12 @@ system/
 ├── role/             角色查询、角色命令、临时授权命令
 ├── menu/             全局菜单/按钮目录与拓扑
 ├── dict/             字典类型、项与编码查询
-├── permission/       授权事实、数据范围、授予策略、审计和缓存控制
-├── security/         System 主体安全版本验证
+├── permission/       授权事实、主体复验、数据范围、授予策略、审计和缓存控制
+├── security/         System 内部服务受众与可信委托边界
 └── api/              本服务 DTO、VO、Entity
 ```
 
-Controller 绑定协议，Service 编排用例和事务，Mapper 持久化。控制设施 `PermissionStateStore` 集中管理 epoch/Outbox SQL，不向 Controller 暴露数据库访问。
+Controller 绑定协议，Service 编排用例和事务，Mapper 持久化。`PermissionStateStore` 管理数据库 epoch、菜单树/公司写协调锁，并保留控制设施的调用合同；内部 `CacheOutboxStore` 专门承担通知入队、到期扫描、投递围栏、重排、隔离、逻辑归档及治理审计 SQL。两者共享同一 JdbcTemplate 和调用方事务，拆分不产生分段提交，Controller 不直接访问数据库。
 
 角色能力拆为：
 
@@ -106,6 +108,8 @@ Controller 绑定协议，Service 编排用例和事务，Mapper 持久化。控
 - `TemporaryAuthorizationCommandService`：有界临时角色授予。
 - `PermissionGrantPolicy`：唯一授予上界、自授限制和永久操作者策略。
 - `EffectiveRoleResolver`：业务消费方读取有效角色事实。
+- `ActiveCompanySubject`：实时验证账号、公司、租户及唯一有效成员，供主体 guard 和角色解析协作。
+- `GlobalDirectoryPolicy`：从数据库独立平台账号事实与当前永久身份判定全局目录写能力。
 
 职责拆分保持原聚合事务。查询类不通过写命令取数；命令不因拆成多个 Bean 而分段提交。
 
@@ -115,23 +119,28 @@ Controller 绑定协议，Service 编排用例和事务，Mapper 持久化。控
 
 | 数据 | 当前属主 | 关键语义 |
 | --- | --- | --- |
-| sys_user | System / 账号 | 全局账号、凭据摘要、当前全局部门引用、账号启用及安全版本 |
-| sys_user_company | System / 成员 | 账号在公司内的成员上下文、状态、成员版本；当前表无部门字段 |
+| sys_user | System / 账号 | 全局账号、凭据摘要、账号启用/安全版本和独立 platform_admin_flag；department_id 仅为遗留字段 |
+| sys_user_company | System / 成员 | 账号在公司内的成员上下文、状态、成员版本及一个可空主部门 department_id |
 | sys_tenant / sys_company | System | 租户和公司目录 |
 | sys_department | System / 组织 | 公司内部门树 |
 | sys_role / sys_user_role | System / 授权 | 公司角色、成员永久绑定 |
 | sys_role_menu / sys_role_button | System / 授权 | 页面与按钮分别精确绑定 |
 | sys_temp_authorization | System / 授权 | 指定成员、公司、角色、半开生效时间窗 |
 | sys_menu / sys_menu_button | System / 目录 | 全局导航与精确权限资源，不属于个人 Session |
-| sys_dict_type / sys_dict_item | System / 字典 | 全局类型与值；当前写权限沿既有协议 |
+| sys_dict_type / sys_dict_item | System / 字典 | 全局类型与值；写入要求平台管理员事实及端点权限 |
 | 登录/权限审计 | System / 审计 | 操作者、公司、对象、动作与安全元数据 |
-| sys_cache_epoch | System / 缓存控制 | 权限/字典权威版本与菜单树控制行 |
+| sys_cache_epoch | System / 缓存控制 | 权限/字典权威版本、菜单树/公司协调行，以及授权 UTC 解释 marker；用途不能互相替代 |
 | sys_cache_outbox / sys_cache_outbox_replay_log | System / 缓存控制 | 待发通知、投递围栏及重放审计 |
-| access / family / ticket | Auth / Redis | 设备会话及签发状态；不是角色数据库 |
+| access / family / ticket | Auth / Redis | schema v2 设备会话及签发状态；不是角色数据库 |
+| 认证审计 pending hash / due zset | Auth / Redis | 与成功状态 CAS 同槽提交的待确认事件；无 TTL，System 按 eventId 幂等接收后才 ACK |
 
 ### 容易混淆的边界
 
 “移出公司”软删当前成员并撤销该公司的关联授权，保留全局账号和其他公司的成员。跨公司共享账号的资料/密码不能由某一公司管理员任意改写；本人入口与公司独占账号规则分别承担相应职责。
+
+主部门来自当前公司成员，登录上下文、用户视图和数据范围均读取 `sys_user_company.department_id`，不再读取或双写全局账号的遗留部门。V11 只将属于该成员公司、仍有效且启用的旧部门回填；其他成员保留空部门，需按各公司事实补齐。每个公司成员只有一个主部门，跨公司归属互不覆盖。
+
+平台身份来自 `sys_user.platform_admin_flag`，不能从公司 `SUPER_ADMIN` 推导，也不能由普通用户 DTO 设置。`GlobalDirectoryPolicy` 在全局菜单、按钮、字典写入时复验平台账号启用/有效标志与永久操作者事实；公司超管也不能通过代改密码或重绑成员接管平台属主。首次平台交接使用明确的可信启动入口，与审计、安全版本、epoch/Outbox 同事务。
 
 `company_id` 是当前业务隔离键。全局表和关系表在插件忽略清单中并不意味着免授权：相关 Service 仍需明确归属与权限检查。
 
@@ -171,6 +180,10 @@ sequenceDiagram
 
 当前共享 bearer secret 定义同一服务信任域；它不是每个调用方的独立授权或 mTLS。新增不等信任级别的业务服务前，需要拆分认证敏感供给与普通主体供给，设计受众/服务身份、允许公司和密钥轮换，避免扩大能读取凭据摘要的调用方集合。
 
+Servlet 业务服务必须提供 `SessionSubjectVerifier`，安全自动装配在缺失时拒绝启动，不能退回仅信任 Redis 登录快照。纯非 Web 的 API client context 不安装 Servlet 策略，Gateway 的 WebFlux 边界也不承担业务主体核验。
+
+System 的 `SystemSessionSubjectVerifier` 调用 `ActiveCompanySubject.loadActive`：有效主体路径依次读取当前账号、公司、租户和成员四类事实，要求唯一有效成员及精确 contextId。返回的不可变 `ActiveFacts` 供同次 guard 比较两个安全版本和凭据指纹，避免再次读取账号/成员；指纹不进入诊断。角色解析与写命令仍独立读取当前事实，不复用早先请求 guard 作为授权依据。
+
 ## 认证生命周期
 
 公司、contextId 与账号/成员安全版本存于 token Session。同一账号的不同设备有独立刷新族，可分别处于不同公司；切换公司仅轮换当前设备。
@@ -195,9 +208,13 @@ stateDiagram-v2
 | family 与 refresh 摘要索引 | 7 天，轮换后重设 |
 | loginTicket | 5 分钟，一次性 |
 
-刷新先做无副作用主体复验，再准备候选 access，以单 key Redis Lua CAS 提交。竞争输家只清理自己的候选；请求验证当前族的 access 摘要，因此旧 Sa 映射清理失败也不能使旧 access 继续有效。
+会话 schema v2 使用 `robot:<env>:auth:{sessions}:v2:*`，族、成功审计 payload hash 与 due zset 同处 `{sessions}` slot。刷新先做无副作用主体复验，再准备候选 access，以一次 Lua 同时完成状态 CAS 和成功审计入队；容量和存储类型在状态改变前检查。竞争输家只清理自己的候选；请求验证当前族的 access 摘要，因此旧 Sa 映射清理失败也不能使旧 access 继续有效。
 
-注销以原子消费族状态为提交点。账号/成员安全版本与密码指纹在服务侧再次核验，停用再启用不会倒退安全版本。已通过核验的在途请求不保证中途取消。
+注销以当前 access 摘要归属核对后的族删除和成功审计原子提交为撤销点；旧轮换 token 不能撤销后继。账号/成员安全版本与密码指纹在请求或轮换时再次核验，停用再启用不会倒退安全版本。已通过核验的在途请求不保证中途取消。
+
+认证审计 pending 无 TTL、容量最多 10000；System 以 UUID eventId 幂等落库并返回真实成功后才 ACK，Feign 降级不能冒充确认。CAS 后不等待审计 HTTP；旧索引和 Sa 会话清理由有界后台队列处理，失败时索引按原 TTL 退出。HTTP/Feign/自定义 Redis JSON 保持 Jackson 2 合同，Sa-Token token Session 使用 Jackson 3 精确类型白名单。
+
+Admin 主登录流程提交凭据后，单一有效公司直接建立会话，多公司只返回短期票据与上下文选择，确认后激活。独立 `/auth/login-companies` 工具入口也要求完整凭据，不再允许按 username 公开查询公司；账号门在查库预门后还按可信 stored userId 计数，避免数据库排序等价用户名绕过预算。
 
 Redis 异步复制、旧快照恢复可能回退逐族注销事实；当前单节点和并发验证不能证明 HA 撤销持久性。故障分类与受控版本切换见 [认证生命周期](auth-session-lifecycle.md)。
 
@@ -225,6 +242,8 @@ Redis 异步复制、旧快照恢复可能回退逐族注销事实；当前单�
 | 角色删除 | query expectedRevision = role.revision | 角色及关联资源 |
 | 角色/权限编辑 | revision | 角色及菜单/按钮绑定 |
 | 完整成员编辑 | membershipRevision；涉及账号另有 revision | 成员与必要账号资料 |
+| 菜单/按钮/字典删除 | query expectedRevision | 全局目录对象的页面版本 |
+| 菜单移动 | body revision（兼容 expectedRevision） | 所移动节点版本与全局树拓扑 |
 
 先核对页面版本，持久化仍限定有效对象、公司、状态及版本，影响行数不符合预期时拒绝。仅使用锁后数据库最新 revision 不能保护旧页面意图。
 
@@ -298,7 +317,7 @@ Redis 故障时保护请求可能无法完成身份验证；“通知可恢复�
 
 ### 重放治理
 
-`/sys/cache-outbox` 要求专属 `sys:cache-outbox:manage`，Service 再检查当前永久超级管理员事实。查询有界，不输出 Redis key 或下游错误原文。
+`/sys/cache-outbox` 要求专属 `sys:cache-outbox:manage`，Service 再检查当前公司永久超级管理员与独立平台管理员事实。查询有界，不输出 Redis key 或下游错误原文。
 
 ```mermaid
 sequenceDiagram
@@ -327,7 +346,7 @@ sequenceDiagram
 
 采集线程刷新数据库快照；Prometheus scrape 读取内存快照，不依赖实时数据库连接。数据库不可达时保留最近快照，并通过 snapshot age 暴露过期。告警应结合最老年龄与流量基线，不把 pending 短时增长等同于故障。
 
-缓存通知错误只存受控类别和 failureId，不存任意 ex.getMessage、响应体、凭据或敏感 URL。共享异常处理器日志只记录固定类别、业务码和 traceId，技术响应固定；业务校验消息需保持面向用户且不含敏感值。网关和 Servlet 统一约束 TraceId 格式及长度，框架 DEBUG/TRACE 请求载荷日志由部署控制。完成记录保留期/归档需运维定稿；pending 不能按普通 TTL 清理。
+缓存通知错误只存受控类别和 failureId，不存任意 ex.getMessage、响应体、凭据或敏感 URL。共享异常处理器日志只记录固定类别、业务码和 traceId，技术响应固定；业务校验消息需保持面向用户且不含敏感值。网关和 Servlet 统一约束 TraceId 格式及长度，框架 DEBUG/TRACE 请求载荷日志由部署控制。已完成历史可按 30–3650 天保留期、单批 1–500 做有预览/审计/版本保护的逻辑归档，具体留存周期由部署选定；pending 和隔离事件不能按普通 TTL 清理。
 
 ## 契约与持续门禁
 
@@ -335,15 +354,16 @@ sequenceDiagram
 
 | 门 | 重点与范围 |
 | --- | --- |
-| 编译/行为/ArchUnit | 实际 Service、MVC、JSON、事务和依赖方向 |
+| 编译/行为/ArchUnit/Java 质量 | 实际 Service、MVC、JSON、事务、依赖方向；Checkstyle/PMD/SpotBugs/Spotless 与逐类覆盖率 |
 | 用户/角色机器合同 | HandlerMapping、权限、请求约束、视图和治理字段 |
 | 迁移 manifest | 真实 SQL 版本、顺序、字节哈希和历史不可变 |
 | 打包 Mapper | 从最终 Boot JAR 取生产类/依赖，组装 Mapper 和 statement；H2 仅为离线探针驱动 |
-| 已有库升级 | 隔离 V5 数据与历史升级到当前迁移，检查保全、结构、唯一约束、重复历史软删与拒绝无历史接管 |
+| 全库结构与已有库升级 | 固定 golden 核对全部 20 表列/索引属性；新库、V10 和 V5 历史升级分别检查保全、唯一约束、历史软删与拒绝无历史接管 |
+| 供应链 | 当前制品 CycloneDX、完整 OSV/许可证政策；缺失、网络失败、陈旧报告和未修漏洞阻断 |
 | 运行故障验收 | 两 System、真实 MySQL/Redis、连接故障、丢确认、重复/迟到与重启 |
 | 生产出口 | 目标环境、Admin、Nacos/Sentinel、容量、HA及恢复演练 |
 
-用户/角色数据库合同当前是明确子集，不能推导全库字段语义或结构已经被机器治理。新增表/命令必须扩展相应合同与验收。
+全库结构 golden 覆盖当前 20 表；用户/角色等业务机器合同仍是明确的行为子集，不能由结构一致推导全部字段业务语义已受机器治理。新增表/命令必须扩展相应合同与验收。
 
 Maven、源码测试存在、制品绑定、真实单节点、多实例、生产验收分别记录。仓库已配置 GitHub/Gitee 双远程，`main` 为稳定主分支、`dev` 为集成基线；远端 CI 实际结果以对应提交的 Actions 记录为准，本地运行相同入口不替代托管验证。协作与同步流程见 [Git 维护流程](git-workflow.md)。
 
@@ -421,11 +441,11 @@ flowchart LR
 | MyBatis-Plus 当前无自定义 XML | 简化当前系统查询/命令 | 复杂 SQL 出现时增加资源与 statement 检查 |
 | Flyway 默认不自动 baseline | 防止未评审接管非空库 | 仅经过明确基线评审的迁移窗口 |
 | 共享内部密钥 | 当前受控内网的实现边界 | 新服务信任级别不同、需轮换/受众隔离 |
-| 保留现有 BOM 基线 | 版本变化需联合回归 | 安全/支持要求或功能需要时评估升级 |
+| 统一 BOM、固定 Java17/Wrapper 与平台联合升级 | Boot4 平台组合与传递依赖需同时验证 | 官方修复/支持要求或功能变化时结合当前 SBOM 与联合回归 |
 
 ## 交付和后续验证
 
-交付绑定当前源码与制品SHA，仓库内摘要见 [本轮验收](verification-2026-10-09.md)。[原始执行回执](../../../output/robot-cloud-iteration-2026-10-09/evidence.json)位于开发工作区，独立clone不自带，托管CI另以artifact留存。以下项目必须独立留证：目标生产数据库版本、真实 Admin 页面、Nacos/Sentinel、Redis HA 回退、容量与备份恢复。
+交付绑定当前源码与制品 SHA，当前进度和未验收边界见 [改进台账](improvement-roadmap.md)。[2026-10-09 验收](verification-2026-10-09.md)只保留当时范围；开发工作区回执不随独立 clone 携带，托管 CI 另以 artifact 留存。以下项目必须独立留证：目标生产数据库版本、真实 Admin 页面、Nacos/Sentinel、Redis HA 回退、容量与备份恢复。
 
 本地隔离故障演练针对数据库版本及缓存通知；不能由此推导 HA 会话注销持久性、所有未来业务范围或跨服务事件平台已验证。
 

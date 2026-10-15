@@ -2,6 +2,11 @@ server:
   port: 9201
 
 spring:
+  http:
+    converters:
+      preferred-json-mapper: jackson2
+    codecs:
+      preferred-json-mapper: jackson2
   application:
     name: robot-auth
   profiles:
@@ -23,8 +28,8 @@ spring:
       client:
         config:
           default:
-            connect-timeout: 3000
-            read-timeout: 8000
+            connect-timeout: 1000
+            read-timeout: 2000
             retryer: com.robot.auth.config.FeignNoRetryer
       circuitbreaker:
         enabled: false
@@ -34,7 +39,9 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       database: ${REDIS_DATABASE:0}
-      timeout: 3s
+      timeout: 1s
+      ssl:
+        enabled: ${REDIS_SSL:false}
       lettuce:
         pool:
           max-active: 16
@@ -53,6 +60,12 @@ sa-token:
   is-read-header: true
 
 robot:
+  env: ${ROBOT_ENV:local}
+  management:
+    secret: ${ROBOT_MANAGEMENT_SECRET:}
+  production:
+    redis-isolated: ${ROBOT_REDIS_ISOLATED:false}
+    bootstrap-complete: ${ROBOT_BOOTSTRAP_COMPLETE:false}
   security:
     inner-secret: ${ROBOT_INNER_SECRET:robot-inner-dev-secret}
     exclude-paths:

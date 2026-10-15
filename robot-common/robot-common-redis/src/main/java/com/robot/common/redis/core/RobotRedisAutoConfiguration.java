@@ -7,7 +7,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
+import org.springframework.boot.data.redis.autoconfigure.DataRedisProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,25 +17,26 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
  * Redis 序列化约定（wl-skills-bd standards/20 §6）：
+ *
  * <ul>
- *   <li>Key / HashKey 一律 StringRedisSerializer，保证可读可排查；</li>
- *   <li>Value 用 Jackson JSON + 类型信息，注册 JavaTimeModule 支持 LocalDateTime；</li>
- *   <li>只允许 Robot 缓存模型与已登记的基础容器，拒绝任意第三方类型。</li>
+ *   <li>Key / HashKey 一律 StringRedisSerializer，保证可读可排查；
+ *   <li>Value 用 Jackson JSON + 类型信息，注册 JavaTimeModule 支持 LocalDateTime；
+ *   <li>只允许 Robot 缓存模型与已登记的基础容器，拒绝任意第三方类型。
  * </ul>
  */
 @AutoConfiguration
 public class RobotRedisAutoConfiguration {
 
     /**
-     * 配置绑定完成后，将未提供的 Redis 凭据归一为 null，避免 Redisson 发送空 AUTH。
-     * static 且无依赖，保证注册此处理器时不会提前实例化 Redis 客户端或配置 Bean。
+     * 配置绑定完成后，将未提供的 Redis 凭据归一为 null，避免 Redisson 发送空 AUTH。 static 且无依赖，保证注册此处理器时不会提前实例化 Redis
+     * 客户端或配置 Bean。
      */
     @Bean
     public static BeanPostProcessor redisCredentialsNormalizer() {
         return new BeanPostProcessor() {
             @Override
             public Object postProcessAfterInitialization(Object bean, String beanName) {
-                if (bean instanceof RedisProperties properties) {
+                if (bean instanceof DataRedisProperties properties) {
                     properties.setUsername(blankToNull(properties.getUsername()));
                     properties.setPassword(blankToNull(properties.getPassword()));
                 }
@@ -56,7 +57,8 @@ public class RobotRedisAutoConfiguration {
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
-        mapper.activateDefaultTyping(BasicPolymorphicTypeValidator.builder()
+        mapper.activateDefaultTyping(
+                BasicPolymorphicTypeValidator.builder()
                         .allowIfSubType("com.robot.")
                         .allowIfSubType(java.util.ArrayList.class)
                         .allowIfSubType(java.util.HashMap.class)
@@ -65,7 +67,8 @@ public class RobotRedisAutoConfiguration {
                         .allowIfSubType(java.util.LinkedHashSet.class)
                         .allowIfSubType(java.time.LocalDateTime.class)
                         .build(),
-                ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY);
 
         Jackson2JsonRedisSerializer<Object> valueSerializer =
                 new Jackson2JsonRedisSerializer<>(mapper, Object.class);

@@ -25,9 +25,20 @@ fi
 python3 scripts/migration_manifest.py
 python3 -m unittest discover -s scripts -p 'test_*.py'
 python3 -m unittest discover -s scripts/runtime -p 'test_*.py'
-VERIFY_MAVEN="${MAVEN_CMD:-mvn}"
-VERIFY_ARGS=(-B -ntp clean verify)
+VERIFY_MAVEN="${MAVEN_CMD:-./mvnw}"
+VERIFY_ARGS=(-B -ntp clean verify -Probot-quality)
 if "$VERIFY_MYSQL"; then VERIFY_ARGS+=(-Pmysql-upgrade); fi
-"$VERIFY_MAVEN" "${VERIFY_ARGS[@]}"
+VERIFY_LOG="$(mktemp "${TMPDIR:-/tmp}/robot-maven-verify.XXXXXX")"
+trap 'rm -f "$VERIFY_LOG"' EXIT
+set +e
+"$VERIFY_MAVEN" "${VERIFY_ARGS[@]}" 2>&1 | tee "$VERIFY_LOG"
+VERIFY_PIPE_RESULT=("${PIPESTATUS[@]}")
+set -e
+mkdir -p target/verification
+cp "$VERIFY_LOG" target/verification/maven-verify.log
+if [[ "${VERIFY_PIPE_RESULT[0]}" -ne 0 ]]; then exit "${VERIFY_PIPE_RESULT[0]}"; fi
+if [[ "${VERIFY_PIPE_RESULT[1]}" -ne 0 ]]; then exit "${VERIFY_PIPE_RESULT[1]}"; fi
+python3 scripts/check_java_quality.py --root . --maven-log target/verification/maven-verify.log > target/verification/java-quality.json
+python3 scripts/check_supply_chain.py --sbom target/bom.json --policy quality/supply-chain-policy.json --output target/verification/supply-chain.json
 python3 scripts/verify_packaged_mappers.py
 python3 scripts/verification_summary.py

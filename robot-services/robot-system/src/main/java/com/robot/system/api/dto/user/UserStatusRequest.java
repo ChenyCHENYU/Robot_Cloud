@@ -9,13 +9,8 @@ import jakarta.validation.constraints.NotNull;
  *
  * @author Robot Cloud
  * @since 1.0.0-SNAPSHOT
+ * @param status 状态，1有效/0停用
+ * @param expectedRevision 客户端期望的聚合版本
  */
 public record UserStatusRequest(
-        @NotNull
-        @Min(0)
-        @Max(1)
-        Integer status,
-        @NotNull
-        @Min(0)
-        Integer expectedRevision) {
-}
+        @NotNull @Min(0) @Max(1) Integer status, @NotNull @Min(0) Integer expectedRevision) {}

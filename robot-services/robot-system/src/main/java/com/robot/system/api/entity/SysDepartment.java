@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_department")
 public class SysDepartment extends TenantEntity {
 
+    @java.io.Serial private static final long serialVersionUID = 1L;
+
     private String parentId;
 
     private String deptName;

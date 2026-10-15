@@ -15,6 +15,16 @@
   <description>安全公共：Sa-Token 认证集成 / AuthUtil 登录上下文 / 权限码校验</description>
 
   <dependencies>
+    <!-- Sa-Token Boot 4 session persistence requires its Jackson 3 runtime. -->
+    <dependency>
+      <groupId>tools.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <!-- Servlet adapters use MVC APIs explicitly; the Sa-Token starter does not provide them transitively. -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-webmvc</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.robot</groupId>
       <artifactId>robot-common-core</artifactId>
@@ -25,11 +35,11 @@
     </dependency>
     <dependency>
       <groupId>cn.dev33</groupId>
-      <artifactId>sa-token-spring-boot3-starter</artifactId>
+      <artifactId>sa-token-spring-boot4-starter</artifactId>
     </dependency>
     <dependency>
       <groupId>cn.dev33</groupId>
-      <artifactId>sa-token-redis-jackson</artifactId>
+      <artifactId>sa-token-redis-template</artifactId>
     </dependency>
     <!-- 内部委托透传拦截器（仅在消费方同时具备 Feign 时装配） -->
     <dependency>

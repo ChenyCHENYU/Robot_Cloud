@@ -3,7 +3,7 @@ spring:
     import: ""
   autoconfigure:
     exclude:
-      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+      - org.redisson.spring.starter.RedissonAutoConfigurationV4
   cloud:
     nacos:
       discovery:

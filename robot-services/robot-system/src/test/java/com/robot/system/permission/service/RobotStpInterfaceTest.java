@@ -1,30 +1,5 @@
 package com.robot.system.permission.service;
 
-import com.robot.common.redis.core.RedisHelper;
-import com.robot.system.api.entity.SysMenu;
-import com.robot.system.api.entity.SysMenuButton;
-import com.robot.system.api.entity.SysRole;
-import com.robot.system.api.entity.SysRoleMenu;
-import com.robot.system.api.entity.SysRoleButton;
-import com.robot.system.menu.mapper.SysMenuButtonMapper;
-import com.robot.system.menu.mapper.SysMenuMapper;
-import com.robot.system.permission.service.EffectiveRoleResolver.EffectiveRoles;
-import com.robot.system.role.mapper.SysRoleButtonMapper;
-import com.robot.system.role.mapper.SysRoleMenuMapper;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import org.junit.jupiter.api.BeforeEach;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,39 +11,63 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * 权限数据源测试（RC01/RC02/RC05 整改回归）：
- * 超管只来自用户自身有效角色；缓存键携带版本实际值；命中仍复验主体和已提交epoch。
- */
+import com.robot.common.redis.core.RedisHelper;
+import com.robot.system.api.entity.SysMenu;
+import com.robot.system.api.entity.SysMenuButton;
+import com.robot.system.api.entity.SysRole;
+import com.robot.system.api.entity.SysRoleButton;
+import com.robot.system.api.entity.SysRoleMenu;
+import com.robot.system.menu.mapper.SysMenuButtonMapper;
+import com.robot.system.menu.mapper.SysMenuMapper;
+import com.robot.system.permission.service.EffectiveRoleResolver.EffectiveRoles;
+import com.robot.system.role.mapper.SysRoleButtonMapper;
+import com.robot.system.role.mapper.SysRoleMenuMapper;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+/** 权限数据源测试（RC01/RC02/RC05 整改回归）： 超管只来自用户自身有效角色；缓存键携带版本实际值；命中仍复验主体和已提交epoch。 */
 @ExtendWith(MockitoExtension.class)
 class RobotStpInterfaceTest {
+    private static final int TEMPORARY_GRANT_SECONDS = 5;
 
-    @Mock
-    private SysRoleMenuMapper roleMenuMapper;
-    @Mock
-    private SysRoleButtonMapper roleButtonMapper;
-    @Mock
-    private SysMenuMapper menuMapper;
-    @Mock
-    private SysMenuButtonMapper menuButtonMapper;
-    @Mock
-    private EffectiveRoleResolver effectiveRoleResolver;
-    @Mock
-    private RedisHelper redisHelper;
+    @Mock private SysRoleMenuMapper roleMenuMapper;
+    @Mock private SysRoleButtonMapper roleButtonMapper;
+    @Mock private SysMenuMapper menuMapper;
+    @Mock private SysMenuButtonMapper menuButtonMapper;
+    @Mock private EffectiveRoleResolver effectiveRoleResolver;
+    @Mock private RedisHelper redisHelper;
 
-    @Mock
-    private PermissionStateStore stateStore;
+    @Mock private PermissionStateStore stateStore;
     private final Clock clock = Clock.fixed(Instant.parse("2026-10-08T00:00:00Z"), ZoneOffset.UTC);
 
     @BeforeEach
     void validSubject() {
-        lenient().when(effectiveRoleResolver.isActiveSubject(anyString(), anyString())).thenReturn(true);
+        lenient()
+                .when(effectiveRoleResolver.isActiveSubject(anyString(), anyString()))
+                .thenReturn(true);
         lenient().when(stateStore.currentVersion(anyString())).thenReturn(1L);
     }
 
     private RobotStpInterface stpInterface() {
-        return new RobotStpInterface(roleMenuMapper, roleButtonMapper, menuMapper,
-                menuButtonMapper, effectiveRoleResolver, redisHelper, stateStore, clock) {
+        return new RobotStpInterface(
+                roleMenuMapper,
+                roleButtonMapper,
+                menuMapper,
+                menuButtonMapper,
+                effectiveRoleResolver,
+                redisHelper,
+                stateStore,
+                clock) {
             @Override
             String currentCompanyId() {
                 return "cmp-1";
@@ -78,8 +77,7 @@ class RobotStpInterfaceTest {
 
     private void cacheMiss() {
         lenient().when(stateStore.currentVersion(anyString())).thenReturn(1L);
-        when(redisHelper.getObject(anyString(),
-                eq(RobotStpInterface.CachedPermissions.class)))
+        when(redisHelper.getObject(anyString(), eq(RobotStpInterface.CachedPermissions.class)))
                 .thenReturn(java.util.Optional.empty());
     }
 
@@ -87,8 +85,7 @@ class RobotStpInterfaceTest {
     @Test
     @DisplayName("RC01: 公司有超管而用户零绑定 → 无 * 且无任何权限码")
     void companySuperAdminMustNotLeakToUnboundUser() {
-        when(effectiveRoleResolver.resolve("usr-1", "cmp-1"))
-                .thenReturn(EffectiveRoles.EMPTY);
+        when(effectiveRoleResolver.resolve("usr-1", "cmp-1")).thenReturn(EffectiveRoles.EMPTY);
         cacheMiss();
 
         List<String> permissions = stpInterface().getPermissionList("usr-1", "login");
@@ -158,8 +155,8 @@ class RobotStpInterfaceTest {
         org.mockito.ArgumentCaptor<java.util.Collection<String>> ids =
                 org.mockito.ArgumentCaptor.forClass(java.util.Collection.class);
         verify(menuButtonMapper).selectBatchIds(ids.capture());
-        org.junit.jupiter.api.Assertions.assertEquals(List.of("btn-save"),
-                List.copyOf(ids.getValue()));
+        org.junit.jupiter.api.Assertions.assertEquals(
+                List.of("btn-save"), List.copyOf(ids.getValue()));
 
         ArgumentCaptor<RobotStpInterface.CachedPermissions> captor =
                 ArgumentCaptor.forClass(RobotStpInterface.CachedPermissions.class);
@@ -172,23 +169,29 @@ class RobotStpInterfaceTest {
     @Test
     @DisplayName("RC05: 版本自增后缓存键改变，旧版本缓存不命中")
     void versionBumpChangesCacheKey() {
-        when(effectiveRoleResolver.resolve("usr-1", "cmp-1"))
-                .thenReturn(EffectiveRoles.EMPTY);
+        when(effectiveRoleResolver.resolve("usr-1", "cmp-1")).thenReturn(EffectiveRoles.EMPTY);
         when(stateStore.currentVersion(anyString())).thenReturn(1L);
-        when(redisHelper.getObject(anyString(),
-                eq(RobotStpInterface.CachedPermissions.class)))
+        when(redisHelper.getObject(anyString(), eq(RobotStpInterface.CachedPermissions.class)))
                 .thenReturn(java.util.Optional.empty());
 
         stpInterface().getPermissionList("usr-1", "login");
-        verify(redisHelper).setObjectExact(
-                eq(com.robot.system.support.SystemKeys.userPermissions("cmp-1", "usr-1", 1L)),
-                any(), any());
+        verify(redisHelper)
+                .setObjectExact(
+                        eq(
+                                com.robot.system.support.SystemKeys.userPermissions(
+                                        "cmp-1", "usr-1", 1L)),
+                        any(),
+                        any());
 
         when(stateStore.currentVersion(anyString())).thenReturn(2L);
         stpInterface().getPermissionList("usr-1", "login");
-        verify(redisHelper).setObjectExact(
-                eq(com.robot.system.support.SystemKeys.userPermissions("cmp-1", "usr-1", 2L)),
-                any(), any());
+        verify(redisHelper)
+                .setObjectExact(
+                        eq(
+                                com.robot.system.support.SystemKeys.userPermissions(
+                                        "cmp-1", "usr-1", 2L)),
+                        any(),
+                        any());
     }
 
     /** 缓存命中：复验主体及epoch，省略角色重建直接返回载荷。 */
@@ -197,9 +200,11 @@ class RobotStpInterfaceTest {
     void cacheHitSkipsResolverAndDb() {
         lenient().when(stateStore.currentVersion(anyString())).thenReturn(1L);
         // 旧无期限载荷必须重建；本例明确给出有效期限。
-        RobotStpInterface.CachedPermissions payload = new RobotStpInterface.CachedPermissions(false, List.of("sys:user:list"));
+        RobotStpInterface.CachedPermissions payload =
+                new RobotStpInterface.CachedPermissions(false, List.of("sys:user:list"));
         payload.validUntil = LocalDateTime.now(clock).plusMinutes(1);
-        when(redisHelper.getObject(anyString(), eq(RobotStpInterface.CachedPermissions.class))).thenReturn(java.util.Optional.of(payload));
+        when(redisHelper.getObject(anyString(), eq(RobotStpInterface.CachedPermissions.class)))
+                .thenReturn(java.util.Optional.of(payload));
         List<String> permissions = stpInterface().getPermissionList("usr-1", "login");
 
         assertEquals(List.of("sys:user:list"), permissions);
@@ -210,20 +215,40 @@ class RobotStpInterfaceTest {
     @Test
     @DisplayName("两公司：各自解析互不串扰，缓存键按公司隔离")
     void twoCompaniesAreIsolated() {
-        when(effectiveRoleResolver.resolve("usr-1", "cmp-A"))
-                .thenReturn(EffectiveRoles.EMPTY);
-        when(effectiveRoleResolver.resolve("usr-1", "cmp-B"))
-                .thenReturn(EffectiveRoles.EMPTY);
+        when(effectiveRoleResolver.resolve("usr-1", "cmp-A")).thenReturn(EffectiveRoles.EMPTY);
+        when(effectiveRoleResolver.resolve("usr-1", "cmp-B")).thenReturn(EffectiveRoles.EMPTY);
         cacheMiss();
 
-        RobotStpInterface cmpA = new RobotStpInterface(roleMenuMapper, roleButtonMapper,
-                menuMapper, menuButtonMapper, effectiveRoleResolver, redisHelper, stateStore, clock) {
-            @Override String currentCompanyId() { return "cmp-A"; }
-        };
-        RobotStpInterface cmpB = new RobotStpInterface(roleMenuMapper, roleButtonMapper,
-                menuMapper, menuButtonMapper, effectiveRoleResolver, redisHelper, stateStore, clock) {
-            @Override String currentCompanyId() { return "cmp-B"; }
-        };
+        RobotStpInterface cmpA =
+                new RobotStpInterface(
+                        roleMenuMapper,
+                        roleButtonMapper,
+                        menuMapper,
+                        menuButtonMapper,
+                        effectiveRoleResolver,
+                        redisHelper,
+                        stateStore,
+                        clock) {
+                    @Override
+                    String currentCompanyId() {
+                        return "cmp-A";
+                    }
+                };
+        RobotStpInterface cmpB =
+                new RobotStpInterface(
+                        roleMenuMapper,
+                        roleButtonMapper,
+                        menuMapper,
+                        menuButtonMapper,
+                        effectiveRoleResolver,
+                        redisHelper,
+                        stateStore,
+                        clock) {
+                    @Override
+                    String currentCompanyId() {
+                        return "cmp-B";
+                    }
+                };
 
         assertTrue(cmpA.getPermissionList("usr-1", "login").isEmpty());
         assertTrue(cmpB.getPermissionList("usr-1", "login").isEmpty());
@@ -234,13 +259,17 @@ class RobotStpInterfaceTest {
     @Test
     void temporaryRoleBoundaryCapsCacheLifetimeWithoutJitter() {
         cacheMiss();
-        LocalDateTime boundary = LocalDateTime.now(clock).plusSeconds(5);
+        LocalDateTime boundary = LocalDateTime.now(clock).plusSeconds(TEMPORARY_GRANT_SECONDS);
         when(effectiveRoleResolver.resolve("usr-1", "cmp-1"))
                 .thenReturn(new EffectiveRoles(true, List.of(), boundary));
         assertEquals(List.of("*"), stpInterface().getPermissionList("usr-1", "login"));
         ArgumentCaptor<RobotStpInterface.CachedPermissions> payload =
                 ArgumentCaptor.forClass(RobotStpInterface.CachedPermissions.class);
-        verify(redisHelper).setObjectExact(anyString(), payload.capture(), eq(java.time.Duration.ofSeconds(5)));
+        verify(redisHelper)
+                .setObjectExact(
+                        anyString(),
+                        payload.capture(),
+                        eq(java.time.Duration.ofSeconds(TEMPORARY_GRANT_SECONDS)));
         assertEquals(boundary, payload.getValue().validUntil);
     }
 
@@ -265,13 +294,20 @@ class RobotStpInterfaceTest {
     @Test
     void legacyWildcardInOrdinaryRoleMenuCannotBecomeSuperAdmin() {
         cacheMiss();
-        SysRole role = new SysRole(); role.setId("ordinary");
+        SysRole role = new SysRole();
+        role.setId("ordinary");
         when(effectiveRoleResolver.resolve("usr-1", "cmp-1"))
                 .thenReturn(new EffectiveRoles(false, List.of(role)));
-        SysRoleMenu binding = new SysRoleMenu(); binding.setRoleId("ordinary"); binding.setMenuId("unsafe");
+        SysRoleMenu binding = new SysRoleMenu();
+        binding.setRoleId("ordinary");
+        binding.setMenuId("unsafe");
         when(roleMenuMapper.selectList(any())).thenReturn(List.of(binding));
         when(roleButtonMapper.selectList(any())).thenReturn(List.of());
-        SysMenu menu = new SysMenu();menu.setId("unsafe");menu.setDeleteFlag(1);menu.setStatusFlag(1);menu.setPermCode("*");
+        SysMenu menu = new SysMenu();
+        menu.setId("unsafe");
+        menu.setDeleteFlag(1);
+        menu.setStatusFlag(1);
+        menu.setPermCode("*");
         when(menuMapper.selectList(any())).thenReturn(List.of(menu));
         assertEquals(List.of(), stpInterface().getPermissionList("usr-1", "login"));
     }

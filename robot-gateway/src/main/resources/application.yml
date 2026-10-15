@@ -2,6 +2,11 @@ server:
   port: 8080
 
 spring:
+  http:
+    converters:
+      preferred-json-mapper: jackson2
+    codecs:
+      preferred-json-mapper: jackson2
   application:
     name: robot-gateway
   profiles:
@@ -20,40 +25,47 @@ spring:
         dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
       eager: false
     gateway:
-      discovery:
-        locator:
-          enabled: false
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowed-origin-patterns: "${ROBOT_CORS_ORIGINS:http://localhost:*}"
-            allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
-            allowed-headers: "*"
-            exposed-headers: "Authorization,X-Trace-Id"
-            allow-credentials: false
-            max-age: 3600
-      routes:
-        - id: robot-auth
-          uri: ${robot.gateway.routes.auth-uri}
-          predicates:
-            - Path=/auth/**
-          filters:
-            - name: RequestSize
-              args:
-                maxSize: 5242880
-        - id: robot-system
-          uri: ${robot.gateway.routes.system-uri}
-          predicates:
-            - Path=/sys/**,/account/**
-          filters:
-            - name: RequestSize
-              args:
-                maxSize: 10485760
-      httpclient:
-        connect-timeout: 3000
-        response-timeout: 15s
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: false
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origin-patterns: "${ROBOT_CORS_ORIGINS:http://localhost:*}"
+                allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+                allowed-headers: "*"
+                exposed-headers: "Authorization,X-Trace-Id"
+                allow-credentials: false
+                max-age: 3600
+          routes:
+            - id: robot-auth
+              uri: ${robot.gateway.routes.auth-uri}
+              predicates:
+                - Path=/auth/**
+              filters:
+                - name: RequestSize
+                  args:
+                    maxSize: 5242880
+            - id: robot-system
+              uri: ${robot.gateway.routes.system-uri}
+              predicates:
+                - Path=/sys/**,/account/**
+              filters:
+                - name: RequestSize
+                  args:
+                    maxSize: 10485760
+          httpclient:
+            connect-timeout: 3000
+            response-timeout: 15s
 
 robot:
+  env: ${ROBOT_ENV:local}
+  management:
+    secret: ${ROBOT_MANAGEMENT_SECRET:}
+  production:
+    bootstrap-complete: ${ROBOT_BOOTSTRAP_COMPLETE:false}
   gateway:
     routes:
       auth-uri: ${ROBOT_AUTH_URI:http://127.0.0.1:9201}
@@ -71,8 +83,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,gateway
+        include: health,info,prometheus
   endpoint:
+    gateway:
+      access: none
     health:
       show-details: when-authorized
 

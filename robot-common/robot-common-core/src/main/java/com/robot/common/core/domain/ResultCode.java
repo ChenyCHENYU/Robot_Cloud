@@ -4,10 +4,11 @@ package com.robot.common.core.domain;
  * 错误码字典（接口契约的一部分，新增错误码必须在此登记）。
  *
  * <p>取值约束（与 Robot_Admin 前端 request-core 对齐）：
+ *
  * <ul>
- *   <li>成功码固定 {@code 0}（前端 {@code BUSINESS_SUCCESS_CODES = [200, 0, '200', '0']}，
- *       且 {@code /auth/context/activate} 强校验 {@code String(code) === '0'}，故统一取 0）；</li>
- *   <li>业务失败使用 4xxxx / 5xxxx，禁止与成功码 0 / 200 混用。</li>
+ *   <li>成功码固定 {@code 0}（前端 {@code BUSINESS_SUCCESS_CODES = [200, 0, '200', '0']}， 且 {@code
+ *       /auth/context/activate} 强校验 {@code String(code) === '0'}，故统一取 0）；
+ *   <li>业务失败使用 4xxxx / 5xxxx，禁止与成功码 0 / 200 混用。
  * </ul>
  */
 public enum ResultCode {

@@ -9,9 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 登录日志内部接口（/inner/**：认证服务打点写入，尽力而为语义）。
- */
+/** 登录日志内部接口（/inner/**：可信认证队列幂等写入，成功响应才确认持久化）。 */
 @RestController
 @RequiredArgsConstructor
 public class LoginLogInnerController {

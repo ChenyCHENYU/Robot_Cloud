@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "migrationVersion": 13,
+  "defaultMenuId": "menu-sys-permission",
+  "parentId": "menu-sys",
+  "menuType": "menu",
+  "name": "权限治理",
+  "path": "/sys-manage/permission-manage",
+  "component": "sys-manage/permission-manage/index",
+  "permission": null,
+  "inheritedFromExactPagePermission": "sys:role:list",
+  "authorization": "Only navigation is inherited by currently enabled, nondeleted roles with an exact active role-list page binding; role_button and the effective API permission set remain unchanged.",
+  "existingOwner": "Preserve its ID and every field; require canonical component, live visible page under menu-sys and no extra permission beyond an already held sys:role:list. Ambiguous path, incompatible owner, occupied seed ID or deterministic binding collision fails before writes.",
+  "cacheEpochs": [
+    "permissions",
+    "menu-tree"
+  ],
+  "delivery": "DML migration during stopped writes followed by reviewed environment restart; no fabricated authorization audit or environment-specific outbox key.",
+  "tableCount": 20,
+  "seedMigrationFile": "V13__permission_governance_navigation.sql",
+  "specification": "Robot navigation seed contract; DML reference, not a CRUD or table schema mirror"
+}

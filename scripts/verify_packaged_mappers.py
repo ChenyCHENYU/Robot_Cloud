@@ -2,6 +2,7 @@
 """Run mapper assembly using production classes/dependencies extracted from the final Boot JAR."""
 import hashlib
 import json
+import io
 import os
 from pathlib import Path
 import subprocess
@@ -45,6 +46,15 @@ def verify():
             names = archive.namelist()
             if 'BOOT-INF/classes/com/robot/system/RobotSystemApplication.class' not in names:
                 raise ValueError('artifact is not the repackaged system Boot JAR')
+            if archive.read('META-INF/LICENSE') != (ROOT / 'LICENSE').read_bytes():
+                raise ValueError('packaged project license differs from repository license')
+            connectors = [name for name in names if name.startswith('BOOT-INF/lib/mysql-connector-j-') and name.endswith('.jar')]
+            if len(connectors) != 1:
+                raise ValueError('exactly one actual MySQL connector is required')
+            with zipfile.ZipFile(io.BytesIO(archive.read(connectors[0]))) as connector:
+                if not any(name.endswith('LICENSE') and b'UNIVERSAL FOSS' in connector.read(name).upper()
+                           for name in connector.namelist()):
+                    raise ValueError('bundled connector must retain original GPL and Universal FOSS notice')
             manifest = json.loads((ROOT / 'contracts/database/migrations.json').read_text())
             artifact_sql = [name for name in names if name.startswith('BOOT-INF/classes/db/migration/V') and name.endswith('.sql')]
             if len(artifact_sql) != len(manifest['migrations']):
@@ -73,6 +83,7 @@ def verify():
         evidence = json.loads(result_file.read_text())
         evidence.update({'artifact': str(jar.relative_to(ROOT)), 'sha256': hashlib.sha256(jar.read_bytes()).hexdigest(),
                          'productionClasspath': 'BOOT-INF/classes + BOOT-INF/lib from final JAR only',
+                         'licenseNotices': 'project MIT and bundled MySQL GPL/Universal FOSS retained',
                          'infrastructure': 'offline H2; no Redis/MySQL/Nacos', 'xmlRequired': False})
         output = ROOT / 'target/verification'
         output.mkdir(parents=True, exist_ok=True)

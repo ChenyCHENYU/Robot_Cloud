@@ -22,33 +22,55 @@ import com.robot.common.core.exception.ServiceAssert;
 import com.robot.common.core.exception.ServiceException;
 import com.robot.common.redis.core.RedisHelper;
 import com.robot.common.security.util.AuthUtil;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 认证编排：登录 → 上下文发现/激活 → 会话签发（委托 {@link AuthSessionManager}）→ 双 Token 轮换。
  *
  * <p>安全设计（wl-skills-bd standards/11 + 前端契约注释）：
+ *
  * <ul>
- *   <li>角色只由本服务在激活后授予，客户端提交的角色/公司字段一律不信任；</li>
- *   <li>loginTicket 5 分钟一次性（激活即焚）；refreshToken 7 天轮换式（旧换新作废）；</li>
- *   <li>用户名/密码错误共用错误码；公司发现保留公开契约，未知/停用账号返回空清单。</li>
+ *   <li>角色只由本服务在激活后授予，客户端提交的角色/公司字段一律不信任；
+ *   <li>loginTicket 5 分钟一次性（激活即焚）；refreshToken 7 天轮换式（旧换新作废）；
+ *   <li>登录和公司发现均先证明完整凭据，未知账号与错误密码使用相同错误码。
  * </ul>
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AuthService {
+    private static final int MAX_USERNAME_LENGTH = 30;
+    private static final int MAX_LOGIN_PASSWORD_LENGTH = 1024;
 
     private final RemoteSystemService remoteSystemService;
     private final RedisHelper redisHelper;
     private final AuthSessionManager sessions;
-    private final org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
+    private final AuthCredentials credentials;
+
+    /**
+     * Construct orchestration with explicit account, storage and credential boundaries.
+     *
+     * @param remote trusted current account/member supply
+     * @param redis one-time ticket storage
+     * @param sessions atomic session lifecycle manager
+     * @param mapper configured ticket codec
+     * @param credentials bounded verification and reliable failure audit
+     */
+    public AuthService(
+            RemoteSystemService remote,
+            RedisHelper redis,
+            AuthSessionManager sessions,
+            ObjectMapper mapper,
+            AuthCredentials credentials) {
+        this.remoteSystemService = remote;
+        this.redisHelper = redis;
+        this.sessions = sessions;
+        this.objectMapper = mapper;
+        this.credentials = credentials;
+    }
 
     /* ==================== 登录与上下文 ==================== */
 
@@ -60,17 +82,15 @@ public class AuthService {
      * @throws ServiceException 凭据错误、账号停用、无有效成员或系统供给不可用
      */
     public LoginResponse login(LoginRequest request) {
-        RemoteUserDTO user = loadActiveUser(request.getUsername());
-        ServiceAssert.isTrue(passwordMatches(request.getPassword(), user.getPasswordHash()),
-                ResultCode.AUTH_LOGIN_FAILED);
-
+        validateCredentialsInput(request.getUsername(), request.getPassword());
+        RemoteUserDTO user = credentials.verify(request.getUsername(), request.getPassword());
         List<RemoteUserContextDTO> contexts = loadContexts(user.getId());
         ServiceAssert.isTrue(!contexts.isEmpty(), ResultCode.AUTH_COMPANY_MISSING);
 
         // 请求显式选择上下文 → 校验成员关系后直接签发会话
         if (request.getContextId() != null && !request.getContextId().isBlank()) {
-            return sessions.issue("login", user, selectContext(contexts, request.getContextId()),
-                    contexts);
+            return sessions.issue(
+                    "login", user, selectContext(contexts, request.getContextId()), contexts);
         }
         // 唯一上下文 → 直接签发
         if (contexts.size() == 1) {
@@ -80,26 +100,27 @@ public class AuthService {
         return pendingActivation(user, contexts);
     }
 
+    private static void validateCredentialsInput(String username, String password) {
+        ServiceAssert.isTrue(
+                username != null
+                        && username.length() <= MAX_USERNAME_LENGTH
+                        && password != null
+                        && password.length() <= MAX_LOGIN_PASSWORD_LENGTH,
+                ResultCode.PARAM_INVALID);
+    }
+
     /**
-     * 为登录页返回账号可选的公司上下文，沿用用户名查询的公开契约。
+     * 证明完整凭据后为登录页返回有效公司，不签发会话或登录票据。
      *
-     * @param request 待登录用户名
-     * @return 启用账号的公司清单；未知或停用账号返回空清单
-     * @throws ServiceException 系统供给暂不可用，不能以空清单掩盖故障
+     * @param request 待登录用户名及原始密码
+     * @return 已验证且启用账号的有效公司清单
+     * @throws ServiceException 凭据错误、凭据已证明但账号停用或系统供给不可用
      */
     public LoginCompaniesResponse getLoginCompanies(LoginCompaniesRequest request) {
-        try {
-            RemoteUserDTO user = loadActiveUser(request.getUsername());
-            return new LoginCompaniesResponse(loadContexts(user.getId()).stream()
-                    .map(AuthService::toLoginCompany).toList());
-        } catch (ServiceException e) {
-            // 沿用公司发现契约：未知/停用账号均返回空清单。
-            if (e.getCode() == ResultCode.AUTH_LOGIN_FAILED.getCode()
-                    || e.getCode() == ResultCode.AUTH_ACCOUNT_DISABLED.getCode()) {
-                return new LoginCompaniesResponse(List.of());
-            }
-            throw e;
-        }
+        validateCredentialsInput(request.getUsername(), request.getPassword());
+        RemoteUserDTO user = credentials.verify(request.getUsername(), request.getPassword());
+        return new LoginCompaniesResponse(
+                loadContexts(user.getId()).stream().map(AuthService::toLoginCompany).toList());
     }
 
     /**
@@ -110,25 +131,34 @@ public class AuthService {
      * @throws ServiceException 票据失效、上下文无权进入或系统供给不可用；临时供给失败保留票据
      */
     public LoginResponse activateContext(ActivateContextRequest request) {
-        ServiceAssert.isTrue(AuthTokenSecrets.validSecret(request.getLoginTicket()),
+        credentials.checkAnonymous();
+        ServiceAssert.isTrue(
+                AuthTokenSecrets.validSecret(request.getLoginTicket()),
                 ResultCode.AUTH_LOGIN_TICKET_INVALID);
         String ticketKey = AuthKeys.loginTicket(request.getLoginTicket());
-        String encoded = redisHelper.getString(ticketKey)
-                .orElseThrow(() -> new ServiceException(ResultCode.AUTH_LOGIN_TICKET_INVALID));
+        String encoded =
+                redisHelper
+                        .getString(ticketKey)
+                        .orElseThrow(
+                                () -> new ServiceException(ResultCode.AUTH_LOGIN_TICKET_INVALID));
         TicketState ticket = decodeTicket(encoded);
         String userId = ticket.userId();
         // RPC/上下文选择失败不烧毁票据；最终原子取走的请求才可签发。
         RemoteUserDTO user = loadActiveUserById(userId);
         if (!ticket.userSecurityVersion().equals(user.getSecurityVersion())
                 || user.getPasswordHash() == null
-                || !ticket.credentialFingerprint().equals(AuthTokenSecrets.digest(user.getPasswordHash()))) {
+                || !ticket.credentialFingerprint()
+                        .equals(AuthTokenSecrets.digest(user.getPasswordHash()))) {
             redisHelper.consumeString(ticketKey);
             throw new ServiceException(ResultCode.AUTH_LOGIN_TICKET_INVALID);
         }
         List<RemoteUserContextDTO> contexts = loadContexts(userId);
         RemoteUserContextDTO context = selectContext(contexts, request.getContextId());
-        String consumed = redisHelper.consumeString(ticketKey)
-                .orElseThrow(() -> new ServiceException(ResultCode.AUTH_LOGIN_TICKET_INVALID));
+        String consumed =
+                redisHelper
+                        .consumeString(ticketKey)
+                        .orElseThrow(
+                                () -> new ServiceException(ResultCode.AUTH_LOGIN_TICKET_INVALID));
         ServiceAssert.isTrue(encoded.equals(consumed), ResultCode.AUTH_LOGIN_TICKET_INVALID);
         return sessions.issue("activate", user, context, contexts);
     }
@@ -144,8 +174,8 @@ public class AuthService {
         String userId = StpUtil.getLoginIdAsString();
         RemoteUserDTO user = loadActiveUserById(userId);
         List<RemoteUserContextDTO> contexts = loadContexts(userId);
-        return sessions.switchCurrent(user,
-                selectContext(contexts, request.getContextId()), contexts);
+        return sessions.switchCurrent(
+                user, selectContext(contexts, request.getContextId()), contexts);
     }
 
     /* ==================== 双 Token 轮换 ==================== */
@@ -158,6 +188,7 @@ public class AuthService {
      * @throws ServiceException 凭据失效或系统供给失败；临时供给失败允许原凭据重试
      */
     public RefreshTokenResponse refreshToken(String refreshToken) {
+        credentials.checkAnonymous();
         AuthSessionManager.RefreshSession pending = sessions.requireRefresh(refreshToken);
         LoginResponse session = refreshVerified(pending);
         return RefreshTokenResponse.builder()
@@ -194,40 +225,57 @@ public class AuthService {
 
     /* ==================== 会话内聚合接口 ==================== */
 
-    /** 按当前 token Session 的账号/公司委托 System 读取菜单，供给失败直接阻断本次读取。 */
+    /**
+     * 按当前 token Session 的账号/公司委托 System 读取菜单，供给失败直接阻断本次读取。
+     *
+     * @return 当前有效公司权限对应的路由树
+     */
     public List<RemoteMenuRouteDTO> getCurrentMenus() {
-        return aggregate(remoteSystemService.getRoutesByUser(
-                requireLoginUser().getUserId(), requireLoginUser().getCompanyId()));
+        return aggregate(
+                remoteSystemService.getRoutesByUser(
+                        requireLoginUser().getUserId(), requireLoginUser().getCompanyId()));
     }
 
-    /** 按当前 token Session 的账号/公司读取显式按钮授权，返回页面编码到按钮编码的映射。 */
+    /**
+     * 按当前 token Session 的账号/公司读取显式按钮授权，返回页面编码到按钮编码的映射。
+     *
+     * @return 页面编码到有效按钮权限的映射
+     */
     public Map<String, List<String>> getCurrentButtons() {
-        return aggregate(remoteSystemService.getButtonList(
-                requireLoginUser().getUserId(), requireLoginUser().getCompanyId()));
+        return aggregate(
+                remoteSystemService.getButtonList(
+                        requireLoginUser().getUserId(), requireLoginUser().getCompanyId()));
     }
 
-    /** 返回 System 根据当前账号/公司有效角色计算的数据范围，客户端角色快照不参与计算。 */
+    /**
+     * 返回 System 根据当前账号/公司有效角色计算的数据范围，客户端角色快照不参与计算。
+     *
+     * @return 当前有效权限的数据范围
+     */
     public List<RemoteDataScopeDTO> getCurrentDataScopes() {
-        return aggregate(remoteSystemService.getDataScopes(
-                requireLoginUser().getUserId(), requireLoginUser().getCompanyId()));
+        return aggregate(
+                remoteSystemService.getDataScopes(
+                        requireLoginUser().getUserId(), requireLoginUser().getCompanyId()));
     }
 
     /* ==================== 私有 ==================== */
 
-    private boolean passwordMatches(String raw, String hash) {
-        return passwordEncoder.matches(raw, hash);
-    }
-
-    private LoginResponse pendingActivation(RemoteUserDTO user,
-                                            List<RemoteUserContextDTO> contexts) {
-        ServiceAssert.isTrue(user.getSecurityVersion() != null && user.getSecurityVersion() >= 0,
+    private LoginResponse pendingActivation(
+            RemoteUserDTO user, List<RemoteUserContextDTO> contexts) {
+        ServiceAssert.isTrue(
+                user.getSecurityVersion() != null && user.getSecurityVersion() >= 0,
                 ResultCode.AUTH_LOGIN_TICKET_INVALID);
         ServiceAssert.notBlank(user.getPasswordHash(), ResultCode.AUTH_LOGIN_TICKET_INVALID);
         String loginTicket = AuthTokenSecrets.randomToken();
         try {
-            String encoded = objectMapper.writeValueAsString(new TicketState(user.getId(),
-                    AuthTokenSecrets.digest(user.getPasswordHash()), user.getSecurityVersion()));
-            redisHelper.setStringExact(AuthKeys.loginTicket(loginTicket), encoded, AuthKeys.TTL_LOGIN_TICKET);
+            String encoded =
+                    objectMapper.writeValueAsString(
+                            new TicketState(
+                                    user.getId(),
+                                    AuthTokenSecrets.digest(user.getPasswordHash()),
+                                    user.getSecurityVersion()));
+            redisHelper.setStringExact(
+                    AuthKeys.loginTicket(loginTicket), encoded, AuthKeys.TTL_LOGIN_TICKET);
         } catch (JsonProcessingException e) {
             throw new ServiceException(ResultCode.FAILED, "登录票据创建失败");
         }
@@ -236,17 +284,21 @@ public class AuthService {
                 .refreshToken("")
                 .expiresIn(0L)
                 .loginTicket(loginTicket)
-                .availableContexts(contexts.stream()
-                        .map(c -> AuthContextVO.fromRemote(c, false)).toList())
+                .availableContexts(
+                        contexts.stream().map(c -> AuthContextVO.fromRemote(c, false)).toList())
                 .build();
     }
 
     private TicketState decodeTicket(String encoded) {
         try {
             TicketState state = objectMapper.readValue(encoded, TicketState.class);
-            ServiceAssert.isTrue(state != null && state.userId() != null && !state.userId().isBlank()
+            ServiceAssert.isTrue(
+                    state != null
+                            && state.userId() != null
+                            && !state.userId().isBlank()
                             && AuthTokenSecrets.validSecret(state.credentialFingerprint())
-                            && state.userSecurityVersion() != null && state.userSecurityVersion() >= 0,
+                            && state.userSecurityVersion() != null
+                            && state.userSecurityVersion() >= 0,
                     ResultCode.AUTH_LOGIN_TICKET_INVALID);
             return state;
         } catch (JsonProcessingException e) {
@@ -255,8 +307,8 @@ public class AuthService {
     }
 
     /** 从上下文清单精确选择（无权进入所选公司 → AUTH_CONTEXT_DENIED）。 */
-    private RemoteUserContextDTO selectContext(List<RemoteUserContextDTO> contexts,
-                                               String contextId) {
+    private RemoteUserContextDTO selectContext(
+            List<RemoteUserContextDTO> contexts, String contextId) {
         return contexts.stream()
                 .filter(c -> contextId.equals(c.getContextId()))
                 .findFirst()
@@ -265,38 +317,32 @@ public class AuthService {
 
     private static LoginCompaniesResponse.LoginCompany toLoginCompany(
             RemoteUserContextDTO context) {
-        return new LoginCompaniesResponse.LoginCompany(context.getContextId(),
+        return new LoginCompaniesResponse.LoginCompany(
+                context.getContextId(),
                 Boolean.TRUE.equals(context.getPrimaryFlag()),
-                context.getTenantName(), context.getCompanyName());
-    }
-
-    private RemoteUserDTO loadActiveUser(String username) {
-        Result<RemoteUserDTO> result = remoteSystemService.getUserByUsername(username);
-        ServiceAssert.isTrue(result != null && result.successValue(),
-                ResultCode.FAILED, "系统服务暂不可用，请稍后重试");
-        ServiceAssert.isTrue(result.getData() != null, ResultCode.AUTH_LOGIN_FAILED);
-        return assertActive(result.getData());
+                context.getTenantName(),
+                context.getCompanyName());
     }
 
     private RemoteUserDTO loadActiveUserById(String userId) {
         Result<RemoteUserDTO> result = remoteSystemService.getUserById(userId);
-        ServiceAssert.isTrue(result != null && result.successValue(),
-                ResultCode.FAILED, "系统服务暂不可用，请稍后重试");
-        ServiceAssert.isTrue(result.getData() != null,
-                ResultCode.AUTH_REFRESH_TOKEN_INVALID);
+        ServiceAssert.isTrue(
+                result != null && result.successValue(), ResultCode.FAILED, "系统服务暂不可用，请稍后重试");
+        ServiceAssert.isTrue(result.getData() != null, ResultCode.AUTH_REFRESH_TOKEN_INVALID);
         return assertActive(result.getData());
     }
 
     private RemoteUserDTO assertActive(RemoteUserDTO user) {
-        ServiceAssert.isTrue(user.getStatusFlag() != null && user.getStatusFlag() == 1,
+        ServiceAssert.isTrue(
+                user.getStatusFlag() != null && user.getStatusFlag() == 1,
                 ResultCode.AUTH_ACCOUNT_DISABLED);
         return user;
     }
 
     private List<RemoteUserContextDTO> loadContexts(String userId) {
         Result<List<RemoteUserContextDTO>> result = remoteSystemService.getUserContexts(userId);
-        ServiceAssert.isTrue(result != null && result.successValue(),
-                ResultCode.FAILED, "系统服务暂不可用，请稍后重试");
+        ServiceAssert.isTrue(
+                result != null && result.successValue(), ResultCode.FAILED, "系统服务暂不可用，请稍后重试");
         return result.getData() == null ? List.of() : result.getData();
     }
 
@@ -306,12 +352,13 @@ public class AuthService {
     }
 
     private <T> T aggregate(Result<T> result) {
-        ServiceAssert.isTrue(result != null && result.successValue(),
-                ResultCode.FAILED, "系统服务暂不可用，请稍后重试");
+        ServiceAssert.isTrue(
+                result != null && result.successValue(), ResultCode.FAILED, "系统服务暂不可用，请稍后重试");
         return result.getData();
     }
 
-    private record TicketState(String userId, String credentialFingerprint, Long userSecurityVersion) {
+    private record TicketState(
+            String userId, String credentialFingerprint, Long userSecurityVersion) {
 
         /** 隐藏票据中的凭据指纹，防止异常日志意外输出认证材料。 */
         @Override

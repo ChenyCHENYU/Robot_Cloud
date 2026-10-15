@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "allowedLicenses": [
+    "Apache-2.0",
+    "MIT",
+    "MIT-0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "MulanPSL-2.0",
+    "EPL-2.0",
+    "LGPL-2.1-only",
+    "GPL-2.0-only WITH Classpath-exception-2.0",
+    "GPL-2.0-with-classpath-exception"
+  ],
+  "exceptions": [],
+  "licenseDeclarations": [
+    {
+      "package": "org.bouncycastle:bcprov-jdk18on",
+      "version": "1.85.2",
+      "declared": [
+        "Bouncy Castle Licence"
+      ],
+      "expression": "MIT",
+      "owner": "Robot_Cloud release maintainers",
+      "reason": "官方明确普通Crypto APIs及该LICENSE按MIT理解；仅纠正此固定artifact的非SPDX名称，不豁免许可义务。",
+      "evidence": [
+        "https://www.bouncycastle.org/about/license/",
+        "META-INF/LICENSE.md in bcprov-jdk18on-1.85.2.jar"
+      ],
+      "reviewedOn": "2026-10-14",
+      "expires": "2027-01-12"
+    },
+    {
+      "package": "com.mysql:mysql-connector-j",
+      "version": "9.7.0",
+      "declared": [
+        "The GNU General Public License, v2 with Universal FOSS Exception, v1.0"
+      ],
+      "expression": "GPL-2.0-only WITH Universal-FOSS-exception-1.0",
+      "approvedExpression": "GPL-2.0-only WITH Universal-FOSS-exception-1.0",
+      "projectLicense": {
+        "id": "MIT",
+        "path": "LICENSE",
+        "sha256": "fde6e5540a683a2a141a1699e1631252dd9201f8101f88185d4ab4366c06277d"
+      },
+      "owner": "Robot_Cloud release maintainers",
+      "reason": "仅审查该9.7.0原始制品与当前MIT Robot_Cloud完整对应源码分发时的UFOSS接口互操作；保留Connector/J自身GPLv2、UFOSS及第三方声明，不适用于闭源衍生发行或修改驱动。",
+      "evidence": [
+        "https://raw.githubusercontent.com/mysql/mysql-connector-j/release/9.x/LICENSE",
+        "https://oss.oracle.com/licenses/universal-foss-exception/",
+        "https://github.com/ChenyCHENYU/Robot_Cloud",
+        "LICENSE in mysql-connector-j-9.7.0.jar SHA256 75d3a92b08c7bf9476bab5a8661e3abedc081463d85c93251aab60a5e0ad92ce"
+      ],
+      "reviewedOn": "2026-10-14",
+      "expires": "2027-01-12"
+    }
+  ],
+  "firstPartyComponents": [
+    {
+      "package": "com.robot:robot-dependencies",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-common",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-common-core",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-common-web",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-common-redis",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-common-security",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-common-mybatis",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-api",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-api-system",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-gateway",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-services",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-auth",
+      "version": "1.0.0-SNAPSHOT"
+    },
+    {
+      "package": "com.robot:robot-system",
+      "version": "1.0.0-SNAPSHOT"
+    }
+  ]
+}

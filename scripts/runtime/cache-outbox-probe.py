@@ -134,7 +134,8 @@ class Probe:
                    '--port=' + str(self.args.mysql_port), '--user=' + os.environ.get('PROBE_MYSQL_USER', 'root'),
                    '--connect-timeout=2', '--batch', '--skip-column-names', '--raw', self.args.database]
         try:
-            result = subprocess.run(command, input=statement, text=True, capture_output=True,
+            result = subprocess.run(command, input="SET SESSION time_zone='+00:00';\n" + statement,
+                                    text=True, capture_output=True,
                                     env=env, timeout=8, check=False)
         except (OSError, subprocess.TimeoutExpired):
             raise ProbeFailure('mysql_transport_failure') from None

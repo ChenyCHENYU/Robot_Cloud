@@ -8,12 +8,12 @@ import java.util.HexFormat;
 final class AuthTokenSecrets {
 
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int SECRET_BYTES = 32;
 
-    private AuthTokenSecrets() {
-    }
+    private AuthTokenSecrets() {}
 
     static String randomToken() {
-        byte[] bytes = new byte[32];
+        byte[] bytes = new byte[SECRET_BYTES];
         RANDOM.nextBytes(bytes);
         return HexFormat.of().formatHex(bytes);
     }

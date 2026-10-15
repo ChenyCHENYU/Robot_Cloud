@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_role")
 public class SysRole extends TenantEntity {
 
+    @java.io.Serial private static final long serialVersionUID = 1L;
+
     private String roleName;
 
     private String roleCode;

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releasedThrough": 5,
+  "releasedThrough": 10,
   "hashAlgorithm": "SHA-256",
   "migrations": [
     {
@@ -62,6 +62,24 @@
       "file": "V10__cache_outbox_governance.sql",
       "sha256": "fecd7d2951d42aa55e48d6a7c66524ce810c9b65bf2fcf4adb3fa7d2a1a81b23",
       "bytes": 1429
+    },
+    {
+      "version": 11,
+      "file": "V11__platform_membership_and_delivery.sql",
+      "sha256": "fc3ca9a222dba2c5b7764a4b4281c32834334db88a3bb2136ae0d61872edcd19",
+      "bytes": 1162
+    },
+    {
+      "version": 12,
+      "file": "V12__outbox_recovery_governance.sql",
+      "sha256": "e25694fca18b1494dd18df2a3d911feb5fb6c953e60a4260edf3f8e458768ff1",
+      "bytes": 929
+    },
+    {
+      "version": 13,
+      "file": "V13__permission_governance_navigation.sql",
+      "sha256": "0a31eb409345b05d4f671e5d7fe0515b4079fe67ebb78795f59ae59bc2d94ba2",
+      "bytes": 9218
     }
   ]
 }

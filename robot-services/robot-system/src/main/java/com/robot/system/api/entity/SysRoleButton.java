@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_role_button")
 public class SysRoleButton extends BaseEntity {
 
+    @java.io.Serial private static final long serialVersionUID = 1L;
+
     private String roleId;
 
     private String buttonId;

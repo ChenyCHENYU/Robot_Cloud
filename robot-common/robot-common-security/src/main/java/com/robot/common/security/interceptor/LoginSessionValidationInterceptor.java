@@ -11,12 +11,18 @@ public class LoginSessionValidationInterceptor implements HandlerInterceptor {
 
     private final SessionStateVerifier verifier;
 
+    /**
+     * Bind the required current-family and subject revalidation boundary.
+     *
+     * @param verifier current session authority verifier
+     */
     public LoginSessionValidationInterceptor(SessionStateVerifier verifier) {
         this.verifier = verifier;
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+    public boolean preHandle(
+            HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (StpUtil.isLogin()) {
             verifier.verify();
         }

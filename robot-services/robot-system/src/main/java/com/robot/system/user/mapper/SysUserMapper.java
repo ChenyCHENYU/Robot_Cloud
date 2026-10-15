@@ -6,5 +6,4 @@ import org.apache.ibatis.annotations.Mapper;
 
 /** 用户 Mapper：单表 CRUD 由 MP 提供，复杂查询走 XML。 */
 @Mapper
-public interface SysUserMapper extends BaseMapper<SysUser> {
-}
+public interface SysUserMapper extends BaseMapper<SysUser> {}

@@ -17,9 +17,10 @@ class SaTokenAccessTokens implements AuthAccessTokens {
         try {
             AuthHolder.setSessionAttr(AuthHolder.SESSION_LOGIN_USER, user);
             AuthHolder.setSessionAttr(AuthHolder.SESSION_AUTH_FAMILY, familyId);
-            AuthHolder.setSessionAttr(AuthHolder.SESSION_AUTH_ACCESS_DIGEST,
-                    AuthTokenSecrets.digest(token));
-            AuthHolder.setSessionAttr(AuthHolder.SESSION_CREDENTIAL_FINGERPRINT, credentialFingerprint);
+            AuthHolder.setSessionAttr(
+                    AuthHolder.SESSION_AUTH_ACCESS_DIGEST, AuthTokenSecrets.digest(token));
+            AuthHolder.setSessionAttr(
+                    AuthHolder.SESSION_CREDENTIAL_FINGERPRINT, credentialFingerprint);
             return new IssuedAccess(token, StpUtil.getTokenTimeout());
         } catch (RuntimeException e) {
             StpUtil.logoutByTokenValue(token);

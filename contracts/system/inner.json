@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "scope": "fixed MVC mappings and writable properties; behavior and authorization require referenced regression suites",
+  "controllers": [
+    "com.robot.system.user.controller.inner.UserInnerController",
+    "com.robot.system.menu.controller.inner.MenuInnerController",
+    "com.robot.system.account.controller.inner.LoginLogInnerController"
+  ],
+  "routes": {
+    "LoginLogInnerController.recordLogin": {
+      "method": [
+        "POST"
+      ],
+      "paths": [
+        "/inner/log/login-record"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<Void>",
+      "parameters": {
+        "dto": {
+          "type": "RemoteLoginLogDTO",
+          "source": "body",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "MenuInnerController.buttonList": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/inner/menu/{companyId}/button-list"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<Map<String,List<String>>>",
+      "parameters": {
+        "userId": {
+          "type": "String",
+          "source": "query",
+          "valid": false,
+          "required": true
+        },
+        "companyId": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "MenuInnerController.dataScopes": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/inner/permission/{companyId}/data-scope"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<List<RemoteDataScopeDTO>>",
+      "parameters": {
+        "userId": {
+          "type": "String",
+          "source": "query",
+          "valid": false,
+          "required": true
+        },
+        "companyId": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "MenuInnerController.routes": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/inner/menu/{companyId}/routes"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<List<RemoteMenuRouteDTO>>",
+      "parameters": {
+        "userId": {
+          "type": "String",
+          "source": "query",
+          "valid": false,
+          "required": true
+        },
+        "companyId": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "UserInnerController.getById": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/inner/user/{userId}"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<RemoteUserDTO>",
+      "parameters": {
+        "userId": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "UserInnerController.getByUsername": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/inner/user/by-username"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<RemoteUserDTO>",
+      "parameters": {
+        "username": {
+          "type": "String",
+          "source": "query",
+          "valid": false,
+          "required": true
+        }
+      }
+    },
+    "UserInnerController.getContexts": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/inner/user/{userId}/contexts"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<List<RemoteUserContextDTO>>",
+      "parameters": {
+        "userId": {
+          "type": "String",
+          "source": "path",
+          "valid": false,
+          "required": true
+        }
+      }
+    }
+  },
+  "requestModels": {
+    "com.robot.api.system.dto.RemoteLoginLogDTO": {
+      "properties": {
+        "companyId": "String",
+        "eventId": "String",
+        "ip": "String",
+        "loginType": "String",
+        "status": "Integer",
+        "userAgent": "String",
+        "userId": "String",
+        "username": "String"
+      },
+      "sourceOfTruth": "trusted auth event queue; LoginLogService verifies identity, lengths, closed type/status and unique eventId",
+      "definition": "只接可信认证事件；成功响应证明持久化，eventId重投递幂等，失败传播上游重试。"
+    }
+  },
+  "authorizationBoundary": "trusted auth service identity, optional delegate consistency, never public Gateway"
+}

@@ -79,7 +79,7 @@
           "semanticId": "sys_user.department_id",
           "sourceOfTruth": "sys_user.department_id",
           "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V1__init_schema.sql",
-          "definition": "账号行上的部门引用；当前实现为跨公司共享的账户字段，写侧必须验证部门属于当前公司，不能伪称成员独立部门模型。",
+          "definition": "历史账号主部门字段，仅保留升级对账；新的读取与写入事实位于sys_user_company.department_id。",
           "length": 64
         },
         "status_flag": {
@@ -174,6 +174,16 @@
           "sourceOfTruth": "MySQL generated column",
           "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V7__session_revocation_and_active_unique.sql",
           "definition": "MySQL STORED生成的活跃业务键：delete_flag=1时保留对应业务值，其余为NULL，供唯一索引阻止活跃重复且允许多条历史软删。"
+        },
+        "platform_admin_flag": {
+          "type": "tinyint",
+          "nullable": false,
+          "default": "0",
+          "generated": false,
+          "semanticId": "sys_user.platform_admin_flag",
+          "sourceOfTruth": "sys_user.platform_admin_flag",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V11__platform_membership_and_delivery.sql",
+          "definition": "独立全局平台管理员事实，默认关闭；普通账号与公司角色DTO不可修改。"
         }
       },
       "uniqueIndexes": {
@@ -334,6 +344,17 @@
           "sourceOfTruth": "MySQL generated column",
           "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V9__active_relation_uniqueness.sql",
           "definition": "MySQL STORED生成的主公司账号键：仅delete_flag=1且primary_flag=1时取user_id，否则NULL；跨公司最多一条未删除主公司记录。"
+        },
+        "department_id": {
+          "type": "varchar",
+          "nullable": true,
+          "default": null,
+          "generated": false,
+          "semanticId": "sys_user_company.department_id",
+          "sourceOfTruth": "sys_user_company.department_id",
+          "constraintSource": "robot-services/robot-system/src/main/resources/db/migration/V11__platform_membership_and_delivery.sql",
+          "definition": "当前公司成员唯一主部门，省略保留、显式null清空；仅允许本公司有效部门。",
+          "length": 64
         }
       },
       "uniqueIndexes": {

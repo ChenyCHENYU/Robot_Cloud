@@ -2,8 +2,8 @@ package com.robot.system.account.controller;
 
 import com.robot.common.core.domain.Result;
 import com.robot.system.account.service.AccountService;
-import com.robot.system.api.dto.account.ProfileUpdateRequest;
 import com.robot.system.api.dto.account.PasswordChangeRequest;
+import com.robot.system.api.dto.account.ProfileUpdateRequest;
 import com.robot.system.api.vo.account.AccountProfileVO;
 import com.robot.system.api.vo.account.ActivityLogVO;
 import com.robot.system.api.vo.account.LoginRecordVO;
@@ -11,9 +11,13 @@ import com.robot.system.api.vo.account.SecuritySettingVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /** 当前登录账户的自助查询与写入接口。 */
 @Tag(name = "个人账户")

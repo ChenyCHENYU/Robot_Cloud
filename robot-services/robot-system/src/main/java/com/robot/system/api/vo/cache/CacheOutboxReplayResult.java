@@ -2,7 +2,13 @@ package com.robot.system.api.vo.cache;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/** 返回只追加审计ID和新围栏版本；受理不代表 Redis 已完成投递。 */
+/**
+ * 返回只追加审计ID和新围栏版本；受理不代表 Redis 已完成投递。
+ *
+ * @param auditId 成功审计记录ID
+ * @param eventId 缓存通知投递ID
+ * @param revision 当前聚合版本
+ */
 @Schema(description = "缓存通知重放受理结果")
 public record CacheOutboxReplayResult(
         @Schema(description = "只追加重放审计ID") String auditId,

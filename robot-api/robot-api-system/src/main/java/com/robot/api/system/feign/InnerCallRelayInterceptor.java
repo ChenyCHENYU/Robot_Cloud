@@ -3,15 +3,13 @@ package com.robot.api.system.feign;
 import com.robot.common.core.constant.RobotConstants;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
-
 import java.util.function.Supplier;
 
 /**
- * 内部调用凭据透传：仅 RemoteSystemService 的 /inner/** 请求携带密钥，
- * 与提供方 InnerCallInterceptor 配对。
+ * 内部调用凭据透传：仅 RemoteSystemService 的 /inner/** 请求携带密钥， 与提供方 InnerCallInterceptor 配对。
  *
- * <p>密钥来源优先级（与提供方 robot.security.inner-secret 完全同源，
- * 避免两侧配置漂移）：Spring 配置 → ROBOT_INNER_SECRET 环境变量 → 开发默认值。
+ * <p>密钥来源优先级（与提供方 robot.security.inner-secret 完全同源， 避免两侧配置漂移）：Spring 配置 → ROBOT_INNER_SECRET 环境变量 →
+ * 开发默认值。
  */
 public class InnerCallRelayInterceptor implements RequestInterceptor {
 
@@ -19,6 +17,11 @@ public class InnerCallRelayInterceptor implements RequestInterceptor {
 
     private final Supplier<String> secretSupplier;
 
+    /**
+     * 绑定内部调用凭据来源，不向通用 HTTP 客户端扩散该凭据。
+     *
+     * @param secretSupplier 内部调用凭据提供器
+     */
     public InnerCallRelayInterceptor(Supplier<String> secretSupplier) {
         this.secretSupplier = secretSupplier;
     }
@@ -37,9 +40,14 @@ public class InnerCallRelayInterceptor implements RequestInterceptor {
         }
     }
 
-    /** 默认解析链：配置属性 → 环境变量 → 开发默认值。 */
-    public static String resolveSecret(String configured,
-                                       String envValue) {
+    /**
+     * 默认解析链：配置属性 → 环境变量 → 开发默认值。
+     *
+     * @param configured Spring 绑定的内部凭据
+     * @param envValue 环境变量中的内部凭据
+     * @return 按优先级选择的凭据
+     */
+    public static String resolveSecret(String configured, String envValue) {
         if (configured != null && !configured.isBlank()) {
             return configured;
         }

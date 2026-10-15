@@ -4,23 +4,22 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.Version;
-import lombok.Data;
-
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import lombok.Data;
 
 /**
- * 业务表基础字段（对齐 wl-skills-bd「ID + 七个治理字段」基线的通用部分）：
- * ID / CREATE_USER_NO / CREATE_DATE_TIME / UPDATE_USER_NO /
- * UPDATE_DATE_TIME / DELETE_FLAG / REVISION。
+ * 业务表基础字段（对齐 wl-skills-bd「ID + 七个治理字段」基线的通用部分）： ID / CREATE_USER_NO / CREATE_DATE_TIME /
+ * UPDATE_USER_NO / UPDATE_DATE_TIME / DELETE_FLAG / REVISION。
  *
  * <p>类型约定：
+ *
  * <ul>
- *   <li>ID：String VARCHAR(64) 不透明 ID，由 {@code RobotIdGenerator} 生成；</li>
- *   <li>时间：DATETIME ↔ LocalDateTime；</li>
- *   <li>DELETE_FLAG：1=有效 / 0=删除（profile 语义，禁止反向）；</li>
- *   <li>REVISION：乐观锁版本，初始 0，禁止手工维护。</li>
+ *   <li>ID：String VARCHAR(64) 不透明 ID，由 {@code RobotIdGenerator} 生成；
+ *   <li>时间：DATETIME ↔ LocalDateTime；
+ *   <li>DELETE_FLAG：1=有效 / 0=删除（profile 语义，禁止反向）；
+ *   <li>REVISION：乐观锁版本，初始 0，禁止手工维护。
  * </ul>
  *
  * <p>选型：全局表（无 COMPANY_ID 列）继承本类；租户表继承 {@link TenantEntity}。
@@ -28,12 +27,10 @@ import java.time.LocalDateTime;
 @Data
 public abstract class BaseEntity implements Serializable {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
+    @Serial private static final long serialVersionUID = 1L;
 
     /** 主键：不透明 String ID。 */
-    @TableId
-    private String id;
+    @TableId private String id;
 
     /** 创建人工号。 */
     @TableField(value = "create_user_no", fill = FieldFill.INSERT)

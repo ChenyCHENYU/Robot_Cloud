@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_permission_constraint")
 public class SysPermissionConstraint extends TenantEntity {
 
+    @java.io.Serial private static final long serialVersionUID = 1L;
+
     /** 规则名称。 */
     private String ruleName;
 

@@ -2,13 +2,15 @@ package com.robot.system.dict.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.robot.common.core.domain.Result;
-import com.robot.system.api.vo.dict.DictNode;
-import com.robot.system.dict.service.DictService;
 import com.robot.system.api.dto.dict.DictionarySaveRequest;
 import com.robot.system.api.dto.dict.DictionaryStatusRequest;
-import jakarta.validation.Valid;
+import com.robot.system.api.vo.dict.DictNode;
+import com.robot.system.dict.service.DictService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,12 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- * 字典管理接口（前端 /sys/dictionaries 契约：类型+项树形，支持 type/item 双形态提交）。
- */
+/** 字典管理接口（前端 /sys/dictionaries 契约：类型+项树形，支持 type/item 双形态提交）。 */
 @Tag(name = "字典管理")
 @RestController
 @RequestMapping("/sys/dictionaries")
@@ -57,7 +54,8 @@ public class DictController {
     @Operation(summary = "更新字典（类型或项）")
     @SaCheckPermission("sys:dict:save")
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable String id, @Valid @RequestBody DictionarySaveRequest body) {
+    public Result<Void> update(
+            @PathVariable String id, @Valid @RequestBody DictionarySaveRequest body) {
         dictService.update(id, body);
         return Result.success();
     }
@@ -65,18 +63,17 @@ public class DictController {
     @Operation(summary = "启用/停用字典类型或项")
     @SaCheckPermission("sys:dict:save")
     @PutMapping("/{id}/status")
-    public Result<Void> toggleStatus(@PathVariable String id,
-                                     @Valid @RequestBody DictionaryStatusRequest body) {
+    public Result<Void> toggleStatus(
+            @PathVariable String id, @Valid @RequestBody DictionaryStatusRequest body) {
         dictService.toggleStatus(id, body);
         return Result.success();
     }
 
-
     @Operation(summary = "删除字典（类型或项，软删）")
     @SaCheckPermission("sys:dict:delete")
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable String id) {
-        dictService.delete(id);
+    public Result<Void> delete(@PathVariable String id, @RequestParam Integer expectedRevision) {
+        dictService.delete(id, expectedRevision);
         return Result.success();
     }
 }

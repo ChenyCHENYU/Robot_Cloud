@@ -1,27 +1,24 @@
 package com.robot.common.mybatis.tenant;
 
-import com.robot.common.core.constant.RobotConstants;
-import net.sf.jsqlparser.expression.NullValue;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * 租户拦截器测试：未登录返回 NULL（恒假），全局表白名单跳过。
- */
+import com.robot.common.core.constant.RobotConstants;
+import java.util.List;
+import net.sf.jsqlparser.expression.NullValue;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/** 租户拦截器测试：未登录返回 NULL（恒假），全局表白名单跳过。 */
 class RobotTenantLineHandlerTest {
 
     @Test
     @DisplayName("租户列名与全局表白名单行为")
     void shouldUseConfiguredColumnAndIgnoreGlobalTables() {
-        RobotTenantLineHandler handler = new RobotTenantLineHandler(
-                List.of("sys_user", "sys_menu"));
+        RobotTenantLineHandler handler =
+                new RobotTenantLineHandler(List.of("sys_user", "sys_menu"));
 
         assertEquals(RobotConstants.TENANT_COLUMN, handler.getTenantIdColumn());
         assertTrue(handler.ignoreTable("SYS_USER"));

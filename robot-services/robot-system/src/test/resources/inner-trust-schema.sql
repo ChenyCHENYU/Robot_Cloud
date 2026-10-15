@@ -3,7 +3,8 @@ CREATE TABLE sys_user (
   id VARCHAR(64) PRIMARY KEY, username VARCHAR(128), password_hash VARCHAR(255), nickname VARCHAR(128),
   email VARCHAR(128), phone VARCHAR(32), department_id VARCHAR(64), status_flag INT, security_version BIGINT DEFAULT 0,
   create_user_no VARCHAR(64), create_date_time TIMESTAMP, update_user_no VARCHAR(64),
-  update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0
+  update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0,
+  platform_admin_flag INT DEFAULT 0
 );
 CREATE TABLE sys_tenant (
   id VARCHAR(64) PRIMARY KEY, tenant_name VARCHAR(128), status_flag INT, remark VARCHAR(255),
@@ -18,7 +19,8 @@ CREATE TABLE sys_company (
 CREATE TABLE sys_user_company (
   id VARCHAR(64) PRIMARY KEY, user_id VARCHAR(64), company_id VARCHAR(64), primary_flag INT, status_flag INT, security_version BIGINT DEFAULT 0,
   create_user_no VARCHAR(64), create_date_time TIMESTAMP, update_user_no VARCHAR(64),
-  update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0
+  update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0,
+  department_id VARCHAR(64)
 );
 CREATE TABLE sys_role (
   id VARCHAR(64) PRIMARY KEY, company_id VARCHAR(64), role_name VARCHAR(128), role_code VARCHAR(128),
@@ -35,7 +37,8 @@ CREATE TABLE sys_login_log (
   id VARCHAR(64) PRIMARY KEY, user_id VARCHAR(64), company_id VARCHAR(64), username VARCHAR(128),
   login_type VARCHAR(32), status_flag INT, ip VARCHAR(64), user_agent VARCHAR(255), login_time TIMESTAMP,
   create_user_no VARCHAR(64), create_date_time TIMESTAMP, update_user_no VARCHAR(64),
-  update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0
+  update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0,
+  event_id VARCHAR(36) UNIQUE
 );
 INSERT INTO sys_tenant (id,tenant_name,status_flag) VALUES ('t1','Enabled',1),('t2','Disabled',0);
 INSERT INTO sys_company (id,tenant_id,company_name,status_flag) VALUES

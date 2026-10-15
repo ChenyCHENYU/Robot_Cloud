@@ -11,15 +11,11 @@ import com.robot.system.security.InnerSystemAccess;
 import com.robot.system.user.mapper.SysUserCompanyMapper;
 import com.robot.system.user.mapper.SysUserMapper;
 import com.robot.system.user.service.context.UserContextAssembler;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
-/**
- * 认证服务专用的内部账号供给；凭据摘要仅进入 RemoteUserDTO 内部契约。
- * 每个入口独立验证服务身份及可选委托，普通用户管理接口不使用此供给。
- */
+/** 认证服务专用的内部账号供给；凭据摘要仅进入 RemoteUserDTO 内部契约。 每个入口独立验证服务身份及可选委托，普通用户管理接口不使用此供给。 */
 @Service
 @RequiredArgsConstructor
 public class UserSupplyService {
@@ -29,13 +25,20 @@ public class UserSupplyService {
     private final UserContextAssembler contextAssembler;
     private final InnerSystemAccess innerAccess;
 
-    /** 按登录名供给认证账号；未找到返回null，凭据摘要仅供可信服务使用。 */
+    /**
+     * 按登录名供给认证账号；未找到返回null，凭据摘要仅供可信服务使用。
+     *
+     * @param username 平台账号登录名
+     * @return 当前事实派生的结果
+     */
     public RemoteUserDTO findAuthenticationUserByUsername(String username) {
         AuthUtil.requireTrustedService();
-        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getUsername, username)
-                .eq(SysUser::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
-                .last("LIMIT 1"));
+        SysUser user =
+                userMapper.selectOne(
+                        new LambdaQueryWrapper<SysUser>()
+                                .eq(SysUser::getUsername, username)
+                                .eq(SysUser::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE)
+                                .last("LIMIT 1"));
         if (user == null) {
             return null;
         }
@@ -43,28 +46,41 @@ public class UserSupplyService {
         return toRemote(user);
     }
 
-    /** 按账号ID供给认证资料；存在委托时必须与目标账号一致，软删账号返回null。 */
+    /**
+     * 按账号ID供给认证资料；存在委托时必须与目标账号一致，软删账号返回null。
+     *
+     * @param userId 平台账号ID
+     * @return 当前事实派生的结果
+     */
     public RemoteUserDTO findAuthenticationUserById(String userId) {
         innerAccess.requireUser(userId);
         SysUser user = userMapper.selectById(userId);
-        if (user == null || !Integer.valueOf(RobotConstants.DELETE_FLAG_ACTIVE).equals(user.getDeleteFlag())) {
+        if (user == null || !RobotConstants.DELETE_FLAG_ACTIVE.equals(user.getDeleteFlag())) {
             return null;
         }
         return toRemote(user);
     }
 
-    /** 供给当前可登录公司上下文；过滤无效账号、成员、公司和租户并携带撤销版本。 */
+    /**
+     * 供给当前可登录公司上下文；过滤无效账号、成员、公司和租户并携带撤销版本。
+     *
+     * @param userId 平台账号ID
+     * @return 当前事实派生的结果
+     */
     public List<RemoteUserContextDTO> listLoginContexts(String userId) {
         innerAccess.requireUser(userId);
         SysUser user = userMapper.selectById(userId);
         if (user == null || !InnerSystemAccess.active(user.getDeleteFlag(), user.getStatusFlag())) {
             return List.of();
         }
-        List<SysUserCompany> memberships = userCompanyMapper.selectList(
-                new LambdaQueryWrapper<SysUserCompany>()
-                        .eq(SysUserCompany::getUserId, userId)
-                        .eq(SysUserCompany::getStatusFlag, 1)
-                        .eq(SysUserCompany::getDeleteFlag, RobotConstants.DELETE_FLAG_ACTIVE));
+        List<SysUserCompany> memberships =
+                userCompanyMapper.selectList(
+                        new LambdaQueryWrapper<SysUserCompany>()
+                                .eq(SysUserCompany::getUserId, userId)
+                                .eq(SysUserCompany::getStatusFlag, 1)
+                                .eq(
+                                        SysUserCompany::getDeleteFlag,
+                                        RobotConstants.DELETE_FLAG_ACTIVE));
         // 装配器复验当前成员并在可信服务作用域内执行带显式公司谓词的批量查询。
         return contextAssembler.assembleAll(userId, memberships);
     }
@@ -77,7 +93,7 @@ public class UserSupplyService {
                 .nickname(user.getNickname())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .departmentId(user.getDepartmentId())
+                .departmentId(null)
                 .statusFlag(user.getStatusFlag())
                 .securityVersion(user.getSecurityVersion())
                 .build();

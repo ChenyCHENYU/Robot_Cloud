@@ -9,8 +9,8 @@
 
   <p>
     <a href="robot-dependencies/pom.xml"><img src="https://img.shields.io/badge/Java-17-2563EB?style=flat-square&amp;labelColor=172B43" alt="Java 17 编译目标"></a>
-    <a href="robot-dependencies/pom.xml"><img src="https://img.shields.io/badge/Spring_Boot-3.2.12-0E9F8C?style=flat-square&amp;labelColor=172B43" alt="Spring Boot 3.2.12 仓库基线"></a>
-    <a href="robot-dependencies/pom.xml"><img src="https://img.shields.io/badge/Cloud_Alibaba-2023.0.3.3-2563EB?style=flat-square&amp;labelColor=172B43" alt="Spring Cloud Alibaba 2023.0.3.3 仓库基线"></a>
+    <a href="robot-dependencies/pom.xml"><img src="https://img.shields.io/badge/Spring_Boot-4.1.1-0E9F8C?style=flat-square&amp;labelColor=172B43" alt="Spring Boot 4.1.1"></a>
+    <a href="robot-dependencies/pom.xml"><img src="https://img.shields.io/badge/Cloud_Alibaba-2025.1.0.0-2563EB?style=flat-square&amp;labelColor=172B43" alt="Spring Cloud Alibaba 2025.1.0.0"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-64748B?style=flat-square&amp;labelColor=172B43" alt="MIT License"></a>
   </p>
 
@@ -35,9 +35,11 @@ Robot Cloud 为 Robot Admin 提供认证、公司成员、组织与权限管理�
 - 工程组织：独立服务、五个公共组件、跨服务 API、统一依赖 BOM。
 - 演进方向：先巩固内部业务边界和持续验证，再按数据所有权、容量及独立部署需求拆分。
 
-最近一次完整审查为 **2026-10-14**，业务源码基线为 `29c42aa`。[全面审查](docs/review-2026-10-14.md)登记 REV01–REV24，覆盖架构、功能、授权、认证、数据库、性能、配置和交付；当前没有这些项的后续修复提交或验收记录，均保留待处理。优先级、产品决定及环境依赖见 [改进台账](docs/improvement-roadmap.md)，分批实施和完成标准见 [执行计划](docs/review-execution-plan.md)。
+最近一次完整审查为 **2026-10-14**，源码基线为 `29c42aa`。本轮已完成 REV01–REV24 的代码整改、配套 Admin 适配和本地验收；原始发现保留在[全面审查](docs/review-2026-10-14.md)，当前完成状态见[改进台账](docs/improvement-roadmap.md)。
 
-该次默认验证通过 305 项 Java 测试、23 项 Python 测试及 17 个打包 Mapper 检查；独立探针仍发现未覆盖的缺陷。原生 BD 扫描有 74 项 error，完整基线审查无新增阻断，不能等同全部规范通过。真实 MySQL 升级、Admin 页面联调和生产 HA 未在该次审查重跑。文档复核取得 [verify 失败注释](https://api.github.com/repos/ChenyCHENYU/Robot_Cloud/check-runs/114446067171/annotations)：GitHub 账号因计费问题锁定，job 未启动，不能记为托管构建通过或源码构建失败。
+[2026-10-15 验收记录](docs/verification-2026-10-15.md)：679 项 Java 测试、20 项真实 MySQL 验收、83 个业务类逐类质量/覆盖率检查、239 个外部依赖供应链检查通过；Admin 175 项单测、31 项组件测试、23 项浏览器 fixture 及真实 Cloud 114 项浏览器检查通过。双 System 故障15项、受控重启、500成员分页与501归档规模验收完成。固定测试规模和运行边界详见记录。
+
+GitHub 旧 [verify 注释](https://api.github.com/repos/ChenyCHENYU/Robot_Cloud/check-runs/114446067171/annotations)记录账户账单锁定、job 未启动。按用户要求本地验证后同步代码；托管检查、生产 HA/Nacos/SLO 和恢复目标需各自实际结果，本轮未执行生产部署。
 
 [2026-10-09 历史验收](docs/verification-2026-10-09.md)单独保留当时的升级和隔离运行结果。[架构与演进](docs/architecture.md)描述设计与拆分路线；[API 契约](docs/api-contract.md)说明 Robot Admin 的请求字段、权限和兼容要求。
 
@@ -54,7 +56,7 @@ Robot Cloud 为 Robot Admin 提供认证、公司成员、组织与权限管理�
 - [缓存通知与运维](#缓存通知与运维)
 - [开发约定](#开发约定)
 - [分支与协作](#分支与协作)
-- [下一轮改进](#下一轮改进)
+- [定版验收](#定版验收)
 - [文档导航](#文档导航)
 
 ## 能力与边界
@@ -63,17 +65,17 @@ Robot Cloud 为 Robot Admin 提供认证、公司成员、组织与权限管理�
 | --- | --- |
 | 认证 | 密码登录、多公司激活、设备独立上下文、刷新令牌轮换与注销 |
 | 撤销 | 账号/成员安全版本核验；改密、停用或移出后旧凭据失效 |
-| 成员 | 平台账号和公司成员分开维护；当前公司成员查询、编辑、启停和移出 |
+| 成员 | 平台账号和公司成员分开维护；每个公司成员一个主部门，查询区分账号/成员状态 |
 | 授权 | 有效永久/临时角色；页面与按钮精确绑定；管理授权受永久权限上界约束 |
 | 数据范围 | 用户列表和详情执行本人、部门、下级部门及当前公司全量范围 |
-| 系统资源 | 角色、菜单、按钮、部门树、字典、权限目录与审计 |
-| 并发控制 | 编辑提交版本；用户启停/移出、角色删除提交 `expectedRevision`，拒绝旧页面操作 |
+| 系统资源 | 全局菜单/按钮/字典写入另需永久平台管理员事实；公司超管和临时角色不能替代 |
+| 并发控制 | 编辑、删除、移动、撤回提交读取到的版本；关联写与删除在公司协调锁内重新核验 |
 | 缓存一致性 | 数据库 epoch 为权威；业务、审计、epoch 与 Outbox 同事务，Redis 通知可重试 |
 | 验证与观测 | 行为/架构测试、机器契约、迁移/制品检查、升级验收、Prometheus 与 TraceId |
 
 通用字段权限、复杂工作流、业务消息平台、文件服务和完整 Redis HA 恢复属于后续建设。可选依赖登记或配置文件存在不能单独证明运行能力。
 
-已有能力仍有具体缺口：全局资源的写入授权边界待收口；菜单移到根级可能未持久化，动态路由名可能冲突；菜单/按钮/字典删除及移动的客户端版本保护未完整实现。公司成员尚无独立部门事实，Admin 的用户/角色命令与部分治理接口也未完成真实配对。详见 [审查发现](docs/review-2026-10-14.md#findings)。
+本轮已实现根级菜单显式写入 NULL、稳定菜单路由名、不可变权限编码绑定保护、资料 Patch 清空、版本冲突处理及分页临时授权。治理接口明确返回只读能力；未实现的通用约束执行、全局共享账号重置、头像/简介保存不对外宣称可用。真实 Admin→Gateway→Auth→System 联调已按同制品完成，记录于[本轮验收](docs/verification-2026-10-15.md)；目标生产部署另行验收。
 
 ## 服务拓扑
 
@@ -130,30 +132,30 @@ Robot_Cloud/
 
 | 项目 | 仓库基线 |
 | --- | --- |
-| Java | Java 17 编译目标；CI 配置 JDK 17，本地验证使用 JDK 21 |
-| Spring Boot | 3.2.12 |
-| Spring Cloud / Alibaba | 2023.0.3 / 2023.0.3.3 |
-| 认证 | Sa-Token 1.44.0、Bearer、token Session |
-| 持久化 | MyBatis-Plus 3.5.12、MySQL、Flyway |
-| Redis | Spring Data Redis；Redisson 3.44.0 + `redisson-spring-data-32` |
+| Java / Maven | 真实 Java 17；Maven Wrapper 3.9.16，下载 SHA-256 固定，Enforcer 校验工具链 |
+| Spring Boot | 4.1.1；Tomcat 11.0.26 |
+| Spring Cloud / Alibaba | 2025.1.3 / 2025.1.0.0 |
+| 认证 | Sa-Token 1.46.0 Boot4 starter、Bearer、token Session |
+| 持久化 | MyBatis-Plus 3.5.17 Boot4 starter、MySQL、模块化 Flyway starter |
+| Redis | Spring Data Redis；Redisson 4.8.0 + 实际传递 `redisson-spring-data-41` |
 | 配置/流控 | Nacos、Sentinel，按 profile 启用 |
-| 文档/监控 | OpenAPI 3、Knife4j、Actuator、Micrometer/Prometheus |
+| 文档/监控 | springdoc 3.1.1、Actuator、Micrometer/Prometheus；生产文档不可访问 |
+| JSON | Jackson2 2.21.7 / Jackson3 3.1.7；HTTP/Feign/业务缓存暂用官方 Jackson2 兼容桥，Sa-Token 使用 Jackson3 |
 
-上述版本是仓库现状。Boot 3.2.12 是 3.2.x 最后一个 OSS 补丁，Cloud 2023.0.x 已结束支持，分别见 [Boot 官方公告](https://spring.io/blog/2024/11/21/spring-boot-3-2-12-available-now/)和 [Cloud 支持表](https://spring.io/projects/spring-cloud/)。实际 Security 6.2.8 落在 [BCrypt 安全公告](https://spring.io/security/cve-2025-22228/)影响区间。兼容升级、SBOM 和漏洞扫描仍待实施，见 [依赖维护项 REV18](docs/review-2026-10-14.md)。
+升级同时调整 MVC/WebFlux 测试模块、Gateway/Sentinel 适配器、MyBatis 服务基类、Redis 配置和 Sa-Token 类型白名单。Jackson2 兼容桥是保持现有线路协议的过渡方案，官方已弃用，后续迁移必须覆盖 HTTP/Feign/Redis 类型合同。版本依据与维护边界见 [技术选择](docs/tech-selection.md)。默认验证从实际 CycloneDX SBOM 执行完整 OSV 查询和许可证政策检查，未知许可、漏洞、网络失败和过期豁免均阻断。
 
 ## 本地构建与启动
 
 ### 环境与构建
 
-准备 Maven、真实 JDK、MySQL 与 Redis。默认 `local` 使用 HTTP 直连，关闭 Nacos/Sentinel；数据库与 Redis 仍是必要依赖。
+准备真实 JDK 17、MySQL 与 Redis；仓库提供 Maven Wrapper。默认 `local` 使用 HTTP 直连，关闭 Nacos/Sentinel；数据库与 Redis 仍是必要依赖。
 
 ```bash
 # 替换实际 JDK 根目录；macOS 通常以 Contents/Home 结尾
 export JAVA_HOME="/path/to/jdk"
 export PATH="$JAVA_HOME/bin:$PATH"
 java -version
-mvn -version
-mvn clean verify
+./mvnw -version
 
 # 完整门禁：构建、契约、迁移清单和打包 Mapper 检查
 bash scripts/verify.sh
@@ -198,7 +200,7 @@ curl -fsS http://127.0.0.1:9201/actuator/health
 curl -fsS http://127.0.0.1:8080/actuator/health
 ```
 
-随后验证登录、公司激活和受保护接口。开发种子账号为 `admin/admin123`；生产应替换开发凭据，当前未实现强制首次改密。
+随后验证登录、公司激活和受保护接口。`admin/admin123` 仅用于隔离 local 种子。平台管理员须显式启动交接，生产启动会检查开发凭据、账号状态和配置护栏，不能只设置一个“已完成”标志绕过实际凭据检查。交接步骤见 [部署与运维](docs/deployment.md)。
 
 ```bash
 curl -sS -X POST http://127.0.0.1:8080/auth/login \
@@ -221,13 +223,17 @@ curl -sS 'http://127.0.0.1:8080/sys/users?page=1&pageSize=10' \
 | `SPRING_DATA_REDIS_USERNAME` | 可选 Redis ACL 用户名，按 Spring Boot 标准属性注入 |
 | `ROBOT_ENV` | 自定义 Redis key 环境段，需显式设置 |
 | `ROBOT_INNER_SECRET` | 内部共享服务密钥，生产覆盖开发默认值 |
+| `ROBOT_MANAGEMENT_SECRET` | 生产 Actuator 独立管理密钥，通过 `X-Robot-Management-Secret` 提交 |
+| `ROBOT_REDIS_ISOLATED` / `REDIS_SSL` | 生产显式隔离声明、TLS、受控 Redis 凭据；自定义 key 环境段不能隔离 Sa-Token 自身 key |
+| `ROBOT_BOOTSTRAP_COMPLETE` | 生产交接完成声明，仍核验真实种子状态 |
+| `ROBOT_PLATFORM_ADMIN_BOOTSTRAP/USER_ID/BOOTSTRAP_PASSWORD` | 可信启动交接配置；首次成功后移除交接密码和启用开关 |
 | `ROBOT_AUTH_URI/ROBOT_SYSTEM_URI` | local 网关 HTTP 目标 |
 | `ROBOT_SYSTEM_URL` | local Auth 的 remoteSystemService Feign 目标 |
 | `NACOS_SERVER_ADDR/NACOS_NAMESPACE` | 配置/发现地址与环境 |
 | `ROBOT_CORS_ORIGINS` | 前端 origin 白名单 |
 | `DEBUG` / `LOGGING_LEVEL_*` | 控制框架日志；不要在认证环境开启请求/响应载荷调试 |
 
-nacos group 为 `ROBOT_CLOUD`，每个服务读取各自 YAML dataId。导入为 `optional:`，远端配置加载、注册及规则需单独验收。生产应限制 Actuator/OpenAPI 网络访问，分离迁移与运行账号，配置数据库 TLS、Redis ACL 和密钥轮换。
+nacos group 为 `ROBOT_CLOUD`，每个服务读取各自 YAML dataId。开发允许 `optional:`；启用 Nacos 配置的生产环境必须覆写为必需导入。生产护栏要求非 local profile、合法独立环境段、至少32字符非开发密钥、独立管理密钥、Redis TLS/凭据/隔离声明、MySQL `sslMode=VERIFY_IDENTITY` 及迁移/运行账号分离。Gateway Actuator 路由管理端点明确关闭，文档路径返回404。配置护栏通过仍需验证证书、网络和实际权限。
 
 详细默认值和受控切换步骤见 [部署与运维](docs/deployment.md)。
 
@@ -243,9 +249,11 @@ nacos group 为 `ROBOT_CLOUD`，每个服务读取各自 YAML dataId。导入为
 - 冲突 `40902` 要求刷新并重新确认操作，后端不代填最新版本。
 - 用户“删除”表示移出本公司，保留平台账号及其他公司关系。
 
-字段和兼容语义见 [API 契约](docs/api-contract.md)。真实 Admin 页面联调需独立验收。
+字段和兼容语义见 [API 契约](docs/api-contract.md)。真实 Admin 页面与同制品联调结果见[本轮验收](docs/verification-2026-10-15.md)。
 
-以上是后端要求，尚不能认定配套 Admin 已满足。2026-10-14 对比发现用户/角色命令缺版本字段、临时授权模型不一致、提前撤回及部分治理保存缺后端入口；完整差异与验收路径见 [REV10](docs/review-2026-10-14.md#admin-contract)。前后端和 mock/remote 应采用同一合同，冲突时重新确认，不能自动拿最新版本覆盖。
+配套 Admin 已按这些请求字段整改，并采用按用户授予已有角色、起止时间/原因、分页和版本撤回。无授权首页不擅自补权限，动态路由身份稳定；账号状态与成员状态、不同公司主部门分开表示。远端不支持的治理保存、头像/简介或安全配置不会发出虚假的成功请求。组件/HTTP fixture 测试与真实联调分别记录，冲突始终要求重新读取并确认。
+
+资料、安全和活动记录是需要登录的本人基础页面，不依赖业务菜单授权。V13 为已有角色查询权限的角色补齐权限治理导航，保留合法既有菜单；发现路径、组件或归属冲突时拒绝升级，不扩大接口与按钮权限。
 
 ## 持续验证与数据库升级
 
@@ -272,7 +280,7 @@ bash scripts/verify.sh --mysql-upgrade
 
 CI 使用同一入口并归档报告和制品摘要。远端 job 或生产演练未实际运行时保持未验证；测试数量从真实报告汇总，不作为固定完成指标。
 
-当前机器 HTTP 合同只覆盖用户/角色的 17 个路由，完整端点清单为 70 个；数据库合同为 6 表子集。ArchUnit 已实际执行，Checkstyle、PMD、SpotBugs、Spotless 与 JaCoCo 类级覆盖率门仍待接入。扫描基线和测试数量不能替代这些缺失的门禁。
+机器 HTTP 合同已扩展到 System 全部 Controller 的接口、权限、字段与类型；另有实际 MVC 行为负例。数据库固定 golden 覆盖20表、248列和98个索引列，全量新建及 V10 升级都须对账；已发布 V1–V10 校验和不变，新增 V11–V13。Checkstyle、PMD、SpotBugs、Spotless 与 JaCoCo 已进入统一门禁：每个业务 Service 类及辅助/内部类至少70%行、60%分支，Controller 至少50%行。缺报告、陈旧报告、分析错误、遗漏类和跳过工具均失败；见 [质量规则](quality/README.md)。
 
 ## 缓存通知与运维
 
@@ -280,7 +288,7 @@ CI 使用同一入口并归档报告和制品摘要。远端 job 或生产演练
 
 投递可重复，权限通知只单调推进；字典按数据库版本隔离。重放仅重排已有合法事件，经授权、预览哈希、漂移检查和同事务审计，不回退业务或 epoch。
 
-监控 pending/due、最老年龄、尝试次数、失败分类和结果。错误只保留受控分类及关联 ID，避免写入凭据或任意异常报文。已完成记录的保留期和归档作业需运维落地；pending 须保留到处理或明确裁决。
+监控 pending/due、最老年龄、尝试次数、隔离事件、失败分类和结果；业务结果指标另计入 HTTP200 中的失败。错误只保留受控分类及关联 ID。毒事件进入隔离，可受控预览/重放；已完成历史可在保留期后预览并逻辑归档，保留审计、版本与漂移核验，不能归档 pending。实际部署的阈值、接收人和演练仍需落地。
 
 ## 开发约定
 
@@ -305,7 +313,9 @@ git commit -m "feat(system): add company membership commands"
 
 提交必须采用 `type(scope): message`，scope 必填，类型白名单与 Robot Admin 相同。本地 Hook 和 CI 共用配置；已共享历史保留，之后的提交范围持续校验。具体类型、安装和检查说明见 [贡献指南](CONTRIBUTING.md)。
 
-BD 已接入项目入口、规范、受管资产检查和持续门禁。Robot 采用 31 条通用 B 规则，并保留 32 条原始扫描结果；B1 仍需 Sa-Token 适配，现有权限行为测试继续执行。JH4J profiles 和默认 Robot profile 都禁止代码生成，Java 8/Boot 2 模板不进入 Robot 源码或 POM；完整适配边界见 [规范映射](docs/conventions-bd-mapping.md)。
+BD 已接入项目入口、规范、受管资产检查和持续门禁。Robot 保留32条原始扫描结果，项目适配器另外检查 Sa-Token/public/inner、公司范围、软删、分页及合同，并纳入 multipart 端点。供应商不支持的规则和宿主加载不得自报通过；项目原生 Java17 门与包的旧 Java8模板分别记录。完整适配边界见 [规范映射](docs/conventions-bd-mapping.md)。
+
+字段注解与认证测试同包建议按[精确语义复核](quality/backend-semantic-reviews.md)和固定源码哈希派生项目有效门；两份原始报告保留失败，baseline、B25/B6 和零警告预算保持不变，独立报告记录分类与有效阻断项。
 
 ## 分支与协作
 
@@ -317,17 +327,13 @@ BD 已接入项目入口、规范、受管资产检查和持续门禁。Robot �
 
 GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开始工作时先更新 `dev`，再创建功能分支。任务完成并通过适用验证后提交推送，再依次快进到 `dev`、`main`，同步两个远程并核对 SHA，保持线性历史；交付不只停在功能分支。详细命令、双远程同步和分支保护配置见 [Git 维护流程](docs/git-workflow.md)。
 
-## 下一轮改进
+## 定版验收
 
-以 [REV01–REV24 改进台账](docs/improvement-roadmap.md)持续追踪，每项保留证据、状态、依赖和完成标准：
+以 [REV01–REV24 改进台账](docs/improvement-roadmap.md)记录每项实际实现和证据；历史原审查/计划独立保留。用户确认按用户临时授予已有角色、每公司成员一个主部门、独立平台管理员维护全局目录及资料Patch清空规则。当前整改包含这些规则的实现与前后端配对，并补全Java质量、数据库、认证和供应链门。
 
-1. 先修明确的功能和安全边界：根级菜单持久化、稳定路由身份、密码 UTF-8 字节限制及敏感模型输出。
-2. 收口全局目录永久权威身份、生产配置与初始化、实际请求字节限制、认证失败门控与审计；开放业务前完成相应负例。
-3. 联合 Admin 完成版本命令、临时授权与治理合同，验证真实 MySQL 引用竞争和多公司部门模型。
-4. 并行补 Java 质量/覆盖率、依赖维护与真实 CI，处理刷新 CAS 后响应预算、数据库超时与统一重试时钟。
-5. 固定容量和运行目标后再优化身份查询、epoch、树和 Outbox，验收当前制品、HA、告警、发布与恢复。
+交付须完成同次源码的完整本地门禁、当前制品运行和真实前后端联调，再提交并同步GitHub/Gitee的dev/main。托管CI账户锁定、目标生产HA/SLO或分支保护没有实际证据时保留未验证；本地验证及代码同步不能自动记为上线或生产验收。用户已要求本地验证后推送，不等待托管账户恢复。
 
-完整批次见 [执行与验收计划](docs/review-execution-plan.md)。继续保留 Gateway/Auth/System，角色、绑定、成功审计、epoch 与 Outbox 同事务；独立业务服务按数据属主和实际部署需求引入。
+继续保留Gateway/Auth/System和相关强一致事务。独立业务域、未声明可用的字段规则/约束执行器及目标部署容量按实际产品需求演进，不用拆服务数量或增加接口占位表示优化完成。
 
 品牌资产采用仓库内的原生 SVG，提供浅色、深色与单色版本，使用说明见 [品牌资产](docs/assets/brand/README.md)。
 
@@ -336,6 +342,7 @@ GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开
 | 文档 | 内容 |
 | --- | --- |
 | [架构与演进](docs/architecture.md) | 服务、数据属主、时序、边界、未来拆分 |
+| [2026-10-15 本轮验收](docs/verification-2026-10-15.md) | 最终制品、统一门禁、真实前后端与隔离故障/规模结果 |
 | [2026-10-14 全面审查](docs/review-2026-10-14.md) | REV01–REV24、源码证据、独立探针及验证边界 |
 | [改进台账](docs/improvement-roadmap.md) | 最新状态、优先级、旧 N 编号映射和待定输入 |
 | [执行与验收计划](docs/review-execution-plan.md) | 分批范围、必要负例、兼容/回滚及完成标准 |

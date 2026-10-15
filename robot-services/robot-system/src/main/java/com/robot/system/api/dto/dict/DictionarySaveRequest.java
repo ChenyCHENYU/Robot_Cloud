@@ -54,6 +54,11 @@ public class DictionarySaveRequest {
     @Min(0)
     private Integer revision;
 
+    /**
+     * 创建或返回该类型的明确协作结果。
+     *
+     * @return 校验是否通过
+     */
     @JsonIgnore
     @AssertTrue(message = "字典名称、编码、所属类型或存储值不合法，兼容字段不得冲突")
     public boolean isDefinitionValid() {
@@ -64,25 +69,46 @@ public class DictionarySaveRequest {
     }
 
     private boolean validTypeDefinition() {
-        return nonblank(name) && nonblank(effectiveCode())
+        return nonblank(name)
+                && nonblank(effectiveCode())
                 && effectiveCode().matches("[a-zA-Z][a-zA-Z0-9_.:-]*")
                 && consistent(code, typeCode);
     }
 
     private boolean validItemDefinition() {
-        return nonblank(parentId) && nonblank(effectiveLabel())
-                && nonblank(effectiveValue()) && nonblank(effectiveCode())
-                && consistent(name, label) && consistent(name, dictLabel)
-                && consistent(label, dictLabel) && consistent(value, dictValue);
+        return nonblank(parentId)
+                && nonblank(effectiveLabel())
+                && nonblank(effectiveValue())
+                && nonblank(effectiveCode())
+                && consistent(name, label)
+                && consistent(name, dictLabel)
+                && consistent(label, dictLabel)
+                && consistent(value, dictValue);
     }
+
+    /**
+     * 创建或返回该类型的明确协作结果。
+     *
+     * @return 当前事实派生的结果
+     */
     public String effectiveLabel() {
         return first(dictLabel, label, name);
     }
 
+    /**
+     * 创建或返回该类型的明确协作结果。
+     *
+     * @return 当前事实派生的结果
+     */
     public String effectiveValue() {
         return first(dictValue, value);
     }
 
+    /**
+     * 创建或返回该类型的明确协作结果。
+     *
+     * @return 当前事实派生的结果
+     */
     public String effectiveCode() {
         return "type".equals(type) ? first(typeCode, code) : first(code, effectiveValue());
     }
@@ -90,9 +116,11 @@ public class DictionarySaveRequest {
     private static boolean nonblank(String value) {
         return value != null && !value.isBlank();
     }
+
     private static boolean consistent(String left, String right) {
         return !nonblank(left) || !nonblank(right) || left.equals(right);
     }
+
     private static String first(String... values) {
         for (String value : values) {
             if (nonblank(value)) {

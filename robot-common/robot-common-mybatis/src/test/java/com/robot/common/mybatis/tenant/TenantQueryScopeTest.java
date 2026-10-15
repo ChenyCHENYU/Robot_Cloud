@@ -1,13 +1,14 @@
 package com.robot.common.mybatis.tenant;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.baomidou.mybatisplus.core.plugins.IgnoreStrategy;
 import com.baomidou.mybatisplus.core.plugins.InterceptorIgnoreHelper;
 import com.robot.common.security.context.InnerTrustContext;
 import com.robot.common.security.exception.InnerAccessDeniedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.*;
 
 class TenantQueryScopeTest {
     @AfterEach
@@ -26,20 +27,29 @@ class TenantQueryScopeTest {
     @Test
     void nestedScopeAndInnerFailurePreserveOuterScopeAndCleanupOnExit() {
         InnerTrustContext.bindVerifiedService(null, null, null);
-        TenantQueryScope.withoutTenantLine(() -> {
-            assertThat(InterceptorIgnoreHelper.willIgnoreTenantLine("query")).isTrue();
-            assertThat(InterceptorIgnoreHelper.willIgnoreBlockAttack("query")).isFalse();
-            assertThatThrownBy(() -> TenantQueryScope.withoutTenantLine(() -> {
-                throw new IllegalStateException("nested");
-            })).isInstanceOf(IllegalStateException.class);
-            assertThat(InterceptorIgnoreHelper.willIgnoreTenantLine("query")).isTrue();
-            return null;
-        });
+        TenantQueryScope.withoutTenantLine(
+                () -> {
+                    assertThat(InterceptorIgnoreHelper.willIgnoreTenantLine("query")).isTrue();
+                    assertThat(InterceptorIgnoreHelper.willIgnoreBlockAttack("query")).isFalse();
+                    assertThatThrownBy(
+                                    () ->
+                                            TenantQueryScope.withoutTenantLine(
+                                                    () -> {
+                                                        throw new IllegalStateException("nested");
+                                                    }))
+                            .isInstanceOf(IllegalStateException.class);
+                    assertThat(InterceptorIgnoreHelper.willIgnoreTenantLine("query")).isTrue();
+                    return null;
+                });
         assertThat(InterceptorIgnoreHelper.hasIgnoreStrategy()).isFalse();
         assertThat(InterceptorIgnoreHelper.willIgnoreTenantLine("query")).isFalse();
-        assertThatThrownBy(() -> TenantQueryScope.withoutTenantLine(() -> {
-            throw new IllegalStateException("outer");
-        })).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(
+                        () ->
+                                TenantQueryScope.withoutTenantLine(
+                                        () -> {
+                                            throw new IllegalStateException("outer");
+                                        }))
+                .isInstanceOf(IllegalStateException.class);
         assertThat(InterceptorIgnoreHelper.hasIgnoreStrategy()).isFalse();
     }
 

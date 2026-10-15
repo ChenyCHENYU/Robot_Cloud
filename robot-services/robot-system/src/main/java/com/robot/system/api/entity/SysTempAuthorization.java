@@ -2,16 +2,17 @@ package com.robot.system.api.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.robot.common.mybatis.domain.TenantEntity;
+import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.time.LocalDateTime;
 
 /** 临时授权（限时角色授予，到期自动失效）。 */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_temp_authorization")
 public class SysTempAuthorization extends TenantEntity {
+
+    @java.io.Serial private static final long serialVersionUID = 1L;
 
     /** 被授权用户。 */
     private String userId;

@@ -1,21 +1,19 @@
 package com.robot.common.security.interceptor;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.robot.common.core.constant.RobotConstants;
 import com.robot.common.security.config.RobotSecurityProperties;
 import jakarta.servlet.http.HttpServletResponse;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-/**
- * 内部调用鉴权拦截器测试：密钥匹配放行；缺失/错误 403。
- */
+/** 内部调用鉴权拦截器测试：密钥匹配放行；缺失/错误 403。 */
 class InnerCallInterceptorTest {
 
     private InnerCallInterceptor interceptor;

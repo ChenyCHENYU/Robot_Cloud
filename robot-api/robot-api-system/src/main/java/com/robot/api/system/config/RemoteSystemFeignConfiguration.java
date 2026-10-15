@@ -11,15 +11,17 @@ import org.springframework.core.env.Environment;
 public class RemoteSystemFeignConfiguration {
     @Bean
     public RequestInterceptor innerCallRelayInterceptor(Environment environment) {
-        return new InnerCallRelayInterceptor(() -> InnerCallRelayInterceptor.resolveSecret(
-                environment.getProperty("robot.security.inner-secret"),
-                environment.getProperty("ROBOT_INNER_SECRET")));
+        return new InnerCallRelayInterceptor(
+                () ->
+                        InnerCallRelayInterceptor.resolveSecret(
+                                environment.getProperty("robot.security.inner-secret"),
+                                environment.getProperty("ROBOT_INNER_SECRET")));
     }
 
     @Bean
     public RequestInterceptor innerTrustRelayInterceptor() {
         // 账号供给的目标来自密码/票据/refresh 验证，不能混入请求可能携带的另一 access 身份。
-        return new InnerTrustRelayInterceptor(RemoteSystemService.class,
-                path -> !path.startsWith("/inner/user/"));
+        return new InnerTrustRelayInterceptor(
+                RemoteSystemService.class, path -> !path.startsWith("/inner/user/"));
     }
 }

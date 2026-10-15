@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "scope": "fixed MVC mappings and writable properties; behavior and authorization require referenced regression suites",
+  "controllers": [
+    "com.robot.system.account.controller.AccountController"
+  ],
+  "routes": {
+    "AccountController.activityLogs": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/account/activity-logs"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<List<ActivityLogVO>>",
+      "parameters": {}
+    },
+    "AccountController.changePassword": {
+      "method": [
+        "PUT"
+      ],
+      "paths": [
+        "/account/password"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<Void>",
+      "parameters": {
+        "request": {
+          "type": "PasswordChangeRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    },
+    "AccountController.loginRecords": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/account/login-records"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<List<LoginRecordVO>>",
+      "parameters": {}
+    },
+    "AccountController.profile": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/account/profile"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<AccountProfileVO>",
+      "parameters": {}
+    },
+    "AccountController.securitySettings": {
+      "method": [
+        "GET"
+      ],
+      "paths": [
+        "/account/security-settings"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<List<SecuritySettingVO>>",
+      "parameters": {}
+    },
+    "AccountController.updateProfile": {
+      "method": [
+        "PUT"
+      ],
+      "paths": [
+        "/account/profile"
+      ],
+      "consumes": [],
+      "permission": null,
+      "response": "Result<Void>",
+      "parameters": {
+        "request": {
+          "type": "ProfileUpdateRequest",
+          "source": "body",
+          "valid": true,
+          "required": true
+        }
+      }
+    }
+  },
+  "requestModels": {
+    "com.robot.system.api.dto.account.PasswordChangeRequest": {
+      "properties": {
+        "newPassword": "String",
+        "oldPassword": "String"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.account.PasswordChangeRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    },
+    "com.robot.system.api.dto.account.ProfileUpdateRequest": {
+      "properties": {
+        "email": "String",
+        "nickname": "String",
+        "phone": "String"
+      },
+      "sourceOfTruth": "com.robot.system.api.dto.account.ProfileUpdateRequest + validated application command",
+      "definition": "明确请求白名单；服务可信公司与平台权限不从请求提供，具体状态、CAS及清空语义由正式领域行为回归验证。"
+    }
+  },
+  "authorizationBoundary": "authenticated current subject and old-password verification"
+}

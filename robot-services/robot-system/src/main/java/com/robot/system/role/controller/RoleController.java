@@ -1,22 +1,24 @@
 package com.robot.system.role.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import com.robot.common.core.domain.PageQuery;
 import com.robot.common.core.domain.PageResult;
 import com.robot.common.core.domain.Result;
+import com.robot.system.api.dto.role.PermissionAssignRequest;
 import com.robot.system.api.dto.role.RolePageQuery;
 import com.robot.system.api.dto.role.RoleSaveRequest;
-import com.robot.system.api.dto.role.PermissionAssignRequest;
-import com.robot.system.api.entity.SysTempAuthorization;
 import com.robot.system.api.vo.permission.DataScopeVO;
 import com.robot.system.api.vo.role.RoleOptionVO;
 import com.robot.system.api.vo.role.RoleUserVO;
 import com.robot.system.api.vo.role.RoleVO;
+import com.robot.system.api.vo.role.TemporaryAuthorizationVO;
 import com.robot.system.role.service.RoleCommandService;
 import com.robot.system.role.service.RoleQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,8 +30,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * 角色查询与版本受控命令接口（对齐Robot Admin的/sys/roles路径）。
@@ -84,8 +84,15 @@ public class RoleController {
     @Operation(summary = "角色临时授权清单")
     @SaCheckPermission("sys:role:query")
     @GetMapping("/{id}/temp-authorizations")
-    public Result<List<SysTempAuthorization>> tempAuthorizations(@PathVariable String id) {
+    public Result<List<TemporaryAuthorizationVO>> tempAuthorizations(@PathVariable String id) {
         return Result.success(roleQueries.tempAuthorizations(id));
+    }
+
+    @Operation(summary = "角色成员分页")
+    @SaCheckPermission("sys:role:query")
+    @GetMapping("/{id}/users/page")
+    public Result<PageResult<RoleUserVO>> roleUsersPage(@PathVariable String id, PageQuery query) {
+        return Result.success(roleQueries.roleUsersPage(id, query));
     }
 
     @Operation(summary = "新增角色")
@@ -98,8 +105,8 @@ public class RoleController {
     @Operation(summary = "编辑角色")
     @SaCheckPermission("sys:role:update")
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable String id,
-                               @Valid @RequestBody RoleSaveRequest request) {
+    public Result<Void> update(
+            @PathVariable String id, @Valid @RequestBody RoleSaveRequest request) {
         request.setId(id);
         roleCommands.update(id, request);
         return Result.success();
@@ -108,8 +115,8 @@ public class RoleController {
     @Operation(summary = "角色权限批量授权（前端 /sys/roles/{id}/permissions）")
     @SaCheckPermission("sys:role:update")
     @PutMapping("/{id}/permissions")
-    public Result<Void> assignPermissions(@PathVariable String id,
-                                          @Valid @RequestBody PermissionAssignRequest body) {
+    public Result<Void> assignPermissions(
+            @PathVariable String id, @Valid @RequestBody PermissionAssignRequest body) {
         roleCommands.assignPermissions(id, body.getPermissionIds(), body.getRevision());
         return Result.success();
     }
@@ -117,10 +124,10 @@ public class RoleController {
     @Operation(summary = "删除角色（有用户绑定拦截）")
     @SaCheckPermission("sys:role:delete")
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable String id,
-                               @RequestParam("expectedRevision") @Min(0) Integer expectedRevision) {
+    public Result<Void> delete(
+            @PathVariable String id,
+            @RequestParam("expectedRevision") @Min(0) Integer expectedRevision) {
         roleCommands.delete(id, expectedRevision);
         return Result.success();
     }
-
 }

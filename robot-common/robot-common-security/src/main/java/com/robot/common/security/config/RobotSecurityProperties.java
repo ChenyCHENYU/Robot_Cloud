@@ -1,10 +1,8 @@
 package com.robot.common.security.config;
 
+import java.util.List;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 安全配置项。
@@ -25,8 +23,26 @@ import java.util.List;
 public class RobotSecurityProperties {
 
     /** 免登录路径（Ant 风格）。 */
-    private List<String> excludePaths = new ArrayList<>();
+    private List<String> excludePaths = List.of();
 
     /** 内部接口共享密钥：调用方（Feign 拦截器）与提供方（/inner 拦截器）必须一致；生产走环境变量覆盖。 */
-    private String innerSecret = "robot-inner-dev-secret";
+    @lombok.ToString.Exclude private String innerSecret = "robot-inner-dev-secret";
+
+    /**
+     * Return a detached immutable exclusion policy snapshot.
+     *
+     * @return explicit path exclusions
+     */
+    public List<String> getExcludePaths() {
+        return List.copyOf(excludePaths);
+    }
+
+    /**
+     * Preserve the writable binding contract without retaining caller-owned lists.
+     *
+     * @param paths reviewed exclusions
+     */
+    public void setExcludePaths(List<String> paths) {
+        excludePaths = List.copyOf(paths);
+    }
 }

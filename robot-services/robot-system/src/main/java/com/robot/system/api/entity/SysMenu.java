@@ -1,5 +1,7 @@
 package com.robot.system.api.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.robot.common.mybatis.domain.BaseEntity;
 import lombok.Data;
@@ -11,6 +13,10 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_menu")
 public class SysMenu extends BaseEntity {
 
+    @java.io.Serial private static final long serialVersionUID = 1L;
+
+    /** 根级是显式 NULL；拓扑命令必须能够清空原父级。 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String parentId;
 
     /** directory=目录 / menu=菜单 / button 声明在 sys_menu_button。 */

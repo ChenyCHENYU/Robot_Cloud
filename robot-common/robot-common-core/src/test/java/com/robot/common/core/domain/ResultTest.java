@@ -1,16 +1,23 @@
 package com.robot.common.core.domain;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Result 契约测试：成功码 0（前端 BUSINESS_SUCCESS_CODES 兼容 activate 强校验）。
- */
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/** Result 契约测试：成功码 0（前端 BUSINESS_SUCCESS_CODES 兼容 activate 强校验）。 */
 class ResultTest {
+    private static final int UNAUTHORIZED_CODE = 401;
+    private static final int MATCHING_ROWS = 42;
+    private static final int REQUESTED_PAGE = 3;
+    private static final int REQUESTED_PAGE_SIZE = 20;
+    private static final int OVERSIZED_PAGE = 99999;
+    private static final int MAXIMUM_PAGE_SIZE = 200;
+    private static final int SELECTED_PAGE = 5;
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int EXPECTED_OFFSET = 40;
 
     @Test
     @DisplayName("成功响应 code=0 且 message/msg 同值")
@@ -28,10 +35,11 @@ class ResultTest {
     @Test
     @DisplayName("失败响应携带语义码与 traceId")
     void failedShouldCarryCodeAndTraceId() {
-        Result<Void> result = Result.failed(ResultCode.UNAUTHORIZED,
-                ResultCode.UNAUTHORIZED.getMessage(), "trace-001");
+        Result<Void> result =
+                Result.failed(
+                        ResultCode.UNAUTHORIZED, ResultCode.UNAUTHORIZED.getMessage(), "trace-001");
 
-        assertEquals(401, result.getCode());
+        assertEquals(UNAUTHORIZED_CODE, result.getCode());
         assertEquals("trace-001", result.getTraceId());
         assertEquals(ResultCode.UNAUTHORIZED.getMessage(), result.getMsg());
     }
@@ -39,12 +47,17 @@ class ResultTest {
     @Test
     @DisplayName("分页结果字段契约：list/total/page/pageSize")
     void pageResultShouldMatchFrontendContract() {
-        PageResult<String> page = PageResult.of(java.util.List.of("a", "b"), 42, 3, 20);
+        PageResult<String> page =
+                PageResult.of(
+                        java.util.List.of("a", "b"),
+                        MATCHING_ROWS,
+                        REQUESTED_PAGE,
+                        REQUESTED_PAGE_SIZE);
 
         assertEquals(2, page.getList().size());
-        assertEquals(42, page.getTotal());
-        assertEquals(3, page.getPage());
-        assertEquals(20, page.getPageSize());
+        assertEquals(MATCHING_ROWS, page.getTotal());
+        assertEquals(REQUESTED_PAGE, page.getPage());
+        assertEquals(REQUESTED_PAGE_SIZE, page.getPageSize());
     }
 
     @Test
@@ -52,14 +65,14 @@ class ResultTest {
     void pageQueryShouldClampInvalidValues() {
         PageQuery query = new PageQuery();
         query.setPage(0);
-        query.setPageSize(99999);
+        query.setPageSize(OVERSIZED_PAGE);
         assertEquals(1, query.pageValue());
-        assertEquals(200, query.pageSizeValue());
+        assertEquals(MAXIMUM_PAGE_SIZE, query.pageSizeValue());
 
-        query.setPage(5);
+        query.setPage(SELECTED_PAGE);
         query.setPageSize(null);
-        assertEquals(5, query.pageValue());
-        assertEquals(10, query.pageSizeValue());
-        assertEquals(40, query.offset());
+        assertEquals(SELECTED_PAGE, query.pageValue());
+        assertEquals(DEFAULT_PAGE_SIZE, query.pageSizeValue());
+        assertEquals(EXPECTED_OFFSET, query.offset());
     }
 }

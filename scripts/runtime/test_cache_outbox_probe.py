@@ -1,7 +1,9 @@
 """Pure-memory probe-contract tests; no HTTP, sockets, credentials or SQL."""
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('cache_outbox_probe', Path(__file__).with_name('cache-outbox-probe.py'))
 module = importlib.util.module_from_spec(spec)
@@ -9,6 +11,19 @@ spec.loader.exec_module(module)
 
 
 class ContractTest(unittest.TestCase):
+    def test_mysql_fixture_session_uses_utc_independently_of_server_timezone(self):
+        instance = object.__new__(module.Probe)
+        instance.args = SimpleNamespace(mysql_port=33317, database='robot_iteration_fixture')
+        completed = SimpleNamespace(returncode=0, stdout='utc-row\n')
+        with patch.dict(module.os.environ, {'PROBE_MYSQL_PASSWORD': 'fixture-only-password'}), \
+                patch.object(module.subprocess, 'run', return_value=completed) as run:
+            self.assertEqual([['utc-row']], instance.sql('SELECT CURRENT_TIMESTAMP;'))
+        call = run.call_args
+        self.assertEqual("SET SESSION time_zone='+00:00';\nSELECT CURRENT_TIMESTAMP;",
+                         call.kwargs['input'])
+        self.assertEqual('fixture-only-password', call.kwargs['env']['MYSQL_PWD'])
+        self.assertNotIn('fixture-only-password', ' '.join(call.args[0]))
+
     def probe(self, responses):
         instance = object.__new__(module.Probe)
         instance.auth = 'http://127.0.0.1:29201'

@@ -4,9 +4,9 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import com.robot.common.core.domain.PageResult;
 import com.robot.common.core.domain.Result;
 import com.robot.system.api.dto.user.UserPageQuery;
+import com.robot.system.api.dto.user.UserPasswordResetRequest;
 import com.robot.system.api.dto.user.UserSaveRequest;
 import com.robot.system.api.dto.user.UserStatusRequest;
-import com.robot.system.api.dto.user.UserPasswordResetRequest;
 import com.robot.system.api.vo.user.UserVO;
 import com.robot.system.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -64,8 +64,8 @@ public class UserController {
     @Operation(summary = "编辑用户")
     @SaCheckPermission("sys:user:update")
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable String id,
-                               @Valid @RequestBody UserSaveRequest request) {
+    public Result<Void> update(
+            @PathVariable String id, @Valid @RequestBody UserSaveRequest request) {
         request.setId(id);
         userService.update(id, request);
         return Result.success();
@@ -74,8 +74,9 @@ public class UserController {
     @Operation(summary = "按成员版本移出当前公司")
     @SaCheckPermission("sys:user:delete")
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable String id,
-                               @RequestParam("expectedRevision") @Min(0) Integer expectedRevision) {
+    public Result<Void> delete(
+            @PathVariable String id,
+            @RequestParam("expectedRevision") @Min(0) Integer expectedRevision) {
         userService.delete(id, expectedRevision);
         return Result.success();
     }
@@ -83,8 +84,8 @@ public class UserController {
     @Operation(summary = "管理员重置密码")
     @SaCheckPermission("sys:user:resetPassword")
     @PostMapping("/{id}/reset-password")
-    public Result<Void> resetPassword(@PathVariable String id,
-                                      @Valid @RequestBody UserPasswordResetRequest body) {
+    public Result<Void> resetPassword(
+            @PathVariable String id, @Valid @RequestBody UserPasswordResetRequest body) {
         userService.resetPassword(id, body);
         return Result.success();
     }
@@ -92,8 +93,8 @@ public class UserController {
     @Operation(summary = "启用/停用用户")
     @SaCheckPermission("sys:user:update")
     @PutMapping("/{id}/status")
-    public Result<Void> toggleStatus(@PathVariable String id,
-                                     @Valid @RequestBody UserStatusRequest body) {
+    public Result<Void> toggleStatus(
+            @PathVariable String id, @Valid @RequestBody UserStatusRequest body) {
         userService.toggleStatus(id, body);
         return Result.success();
     }

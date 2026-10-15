@@ -16,6 +16,10 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-jackson2</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.tngtech.archunit</groupId>
       <artifactId>archunit-junit5</artifactId>
       <scope>test</scope>
@@ -27,7 +31,7 @@
     <!-- WebFlux（网关响应式栈，禁止混入 spring-boot-starter-web） -->
     <dependency>
       <groupId>org.springframework.cloud</groupId>
-      <artifactId>spring-cloud-starter-gateway</artifactId>
+      <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
     </dependency>
     <!-- Nacos 注册发现 -->
     <dependency>
@@ -45,7 +49,7 @@
     </dependency>
     <dependency>
       <groupId>com.alibaba.csp</groupId>
-      <artifactId>sentinel-spring-cloud-gateway-adapter</artifactId>
+      <artifactId>sentinel-spring-cloud-gateway-v6x-adapter</artifactId>
     </dependency>
     <dependency>
       <groupId>com.alibaba.csp</groupId>
@@ -67,7 +71,7 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
+      <artifactId>spring-boot-starter-webflux-test</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

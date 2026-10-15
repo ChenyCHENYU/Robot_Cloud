@@ -3,12 +3,14 @@ CREATE TABLE sys_user (
   id VARCHAR(64) PRIMARY KEY, username VARCHAR(30), password_hash VARCHAR(255), nickname VARCHAR(30),
   email VARCHAR(100), phone VARCHAR(20), department_id VARCHAR(64), status_flag INT, security_version BIGINT DEFAULT 0,
   create_user_no VARCHAR(64), create_date_time TIMESTAMP, update_user_no VARCHAR(64),
-  update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0
+  update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0,
+  platform_admin_flag INT DEFAULT 0
 );
 CREATE TABLE sys_user_company (
   id VARCHAR(64) PRIMARY KEY, user_id VARCHAR(64), company_id VARCHAR(64), primary_flag INT,
   status_flag INT, security_version BIGINT DEFAULT 0, create_user_no VARCHAR(64), create_date_time TIMESTAMP,
-  update_user_no VARCHAR(64), update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0
+  update_user_no VARCHAR(64), update_date_time TIMESTAMP, delete_flag INT DEFAULT 1, revision INT DEFAULT 0,
+  department_id VARCHAR(64)
 );
 CREATE TABLE sys_user_role (
   id VARCHAR(64) PRIMARY KEY, user_id VARCHAR(64), company_id VARCHAR(64), role_id VARCHAR(64),
@@ -81,8 +83,7 @@ INSERT INTO sys_cache_epoch VALUES('permissions',1),('menu-tree',1);
 CREATE TABLE sys_cache_outbox (
  id VARCHAR(64) PRIMARY KEY, event_kind VARCHAR(16), cache_key VARCHAR(255), cache_version BIGINT,
  created_at TIMESTAMP, next_attempt_at TIMESTAMP, completed_at TIMESTAMP, attempts INT,
- last_error VARCHAR(255), delivery_revision BIGINT NOT NULL DEFAULT 0, last_failure_id VARCHAR(36)
-);
+ last_error VARCHAR(255), delivery_revision BIGINT NOT NULL DEFAULT 0, last_failure_id VARCHAR(36), quarantined_at TIMESTAMP, archived_at TIMESTAMP);
 INSERT INTO sys_role(id,company_id,role_name,role_code,data_scope,status_flag,revision) VALUES
  ('r-free','c1','Free','FREE','self',1,4),('r-other','c2','Other','OTHER','all',1,0);
 INSERT INTO sys_menu(id,menu_type,menu_name,path,status_flag) VALUES

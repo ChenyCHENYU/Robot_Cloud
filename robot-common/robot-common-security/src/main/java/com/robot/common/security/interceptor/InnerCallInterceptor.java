@@ -7,36 +7,43 @@ import com.robot.common.security.context.LoginUser;
 import com.robot.common.security.util.AuthHolder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.servlet.AsyncHandlerInterceptor;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.Objects;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
 /**
  * 内部接口鉴权拦截器：/inner/** 仅允许携带正确 X-Inner-Call 密钥的服务间调用。
  *
  * <p>纵深防御与委托语义：
+ *
  * <ul>
- *   <li>网关对外部请求清洗全部内部头（外部请求到不了 /inner 路由）；</li>
- *   <li>本拦截器先做常量时间密钥比较，失败 403 且<b>不解析</b>任何委托头；</li>
- *   <li>密钥通过后，解析委托用户/公司/用户名并绑定
- *       {@link InnerTrustContext}（请求级 ThreadLocal，afterCompletion 清理），
- *       使租户拦截器与审计填充在服务间调用中获得与登录态一致的上下文。</li>
+ *   <li>网关对外部请求清洗全部内部头（外部请求到不了 /inner 路由）；
+ *   <li>本拦截器先做常量时间密钥比较，失败 403 且<b>不解析</b>任何委托头；
+ *   <li>密钥通过后，解析委托用户/公司/用户名并绑定 {@link InnerTrustContext}（请求级 ThreadLocal，afterCompletion 清理），
+ *       使租户拦截器与审计填充在服务间调用中获得与登录态一致的上下文。
  * </ul>
  */
 public class InnerCallInterceptor implements AsyncHandlerInterceptor {
+    private static final int MAX_USERNAME_LENGTH = 128;
+    private static final int MAX_ID_LENGTH = 64;
 
     private final RobotSecurityProperties properties;
 
+    /**
+     * Bind the shared service secret; request trust is checked independently for every invocation.
+     *
+     * @param properties trusted security configuration
+     */
     public InnerCallInterceptor(RobotSecurityProperties properties) {
         this.properties = properties;
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
-                             Object handler) throws Exception {
+    public boolean preHandle(
+            HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
         InnerTrustContext.clear();
         if (!verifiedServiceSecret(request)) {
             return reject(response);
@@ -53,13 +60,18 @@ public class InnerCallInterceptor implements AsyncHandlerInterceptor {
     private boolean verifiedServiceSecret(HttpServletRequest request) {
         Header secret = readHeader(request, RobotConstants.HEADER_INNER_CALL);
         String configured = properties.getInnerSecret();
-        return secret.isSingle() && secret.value() != null && configured != null
-                && !configured.isBlank() && MessageDigest.isEqual(
-                secret.value().getBytes(StandardCharsets.UTF_8), configured.getBytes(StandardCharsets.UTF_8));
+        return secret.isSingle()
+                && secret.value() != null
+                && configured != null
+                && !configured.isBlank()
+                && MessageDigest.isEqual(
+                        secret.value().getBytes(StandardCharsets.UTF_8),
+                        configured.getBytes(StandardCharsets.UTF_8));
     }
 
     private static Delegation readDelegation(HttpServletRequest request) {
-        return new Delegation(readHeader(request, RobotConstants.HEADER_INNER_USER),
+        return new Delegation(
+                readHeader(request, RobotConstants.HEADER_INNER_USER),
                 readHeader(request, RobotConstants.HEADER_INNER_COMPANY),
                 readHeader(request, RobotConstants.HEADER_INNER_USERNAME));
     }
@@ -69,7 +81,8 @@ public class InnerCallInterceptor implements AsyncHandlerInterceptor {
         if (!delegation.hasHeaders()) {
             return true;
         }
-        return validIdentityHeader(delegation.user()) && validIdentityHeader(delegation.company())
+        return validIdentityHeader(delegation.user())
+                && validIdentityHeader(delegation.company())
                 && validUsernameHeader(delegation.username());
     }
 
@@ -81,8 +94,10 @@ public class InnerCallInterceptor implements AsyncHandlerInterceptor {
         if (!header.isPresent()) {
             return true;
         }
-        return header.isSingle() && header.value() != null
-                && !header.value().isBlank() && header.value().length() <= 128;
+        return header.isSingle()
+                && header.value() != null
+                && !header.value().isBlank()
+                && header.value().length() <= MAX_USERNAME_LENGTH;
     }
 
     /** 请求已有登录态时，委托必须与 token Session 的账号、公司及可选用户名一致。 */
@@ -91,8 +106,10 @@ public class InnerCallInterceptor implements AsyncHandlerInterceptor {
         if (loginId == null) {
             return true;
         }
-        LoginUser loginUser = AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER, LoginUser.class);
-        return delegation.hasHeaders() && loginUser != null
+        LoginUser loginUser =
+                AuthHolder.getSessionAttr(AuthHolder.SESSION_LOGIN_USER, LoginUser.class);
+        return delegation.hasHeaders()
+                && loginUser != null
                 && Objects.equals(String.valueOf(loginId), delegation.user().value())
                 && Objects.equals(loginUser.getUserId(), delegation.user().value())
                 && Objects.equals(loginUser.getCompanyId(), delegation.company().value())
@@ -104,17 +121,22 @@ public class InnerCallInterceptor implements AsyncHandlerInterceptor {
     }
 
     private static void bindDelegation(Delegation delegation) {
-        InnerTrustContext.bindVerifiedService(delegation.user().value(),
-                delegation.company().value(), delegation.username().value());
+        InnerTrustContext.bindVerifiedService(
+                delegation.user().value(),
+                delegation.company().value(),
+                delegation.username().value());
     }
 
     private static boolean validId(String value) {
-        return value != null && !value.isBlank() && value.length() <= 64
+        return value != null
+                && !value.isBlank()
+                && value.length() <= MAX_ID_LENGTH
                 && value.equals(value.trim());
     }
 
     private static Header readHeader(HttpServletRequest request, String name) {
-        return new Header(request.getHeader(name), Collections.list(request.getHeaders(name)).size());
+        return new Header(
+                request.getHeader(name), Collections.list(request.getHeaders(name)).size());
     }
 
     private record Header(String value, int count) {
@@ -146,14 +168,17 @@ public class InnerCallInterceptor implements AsyncHandlerInterceptor {
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
-                                Object handler, Exception ex) {
+    public void afterCompletion(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler,
+            Exception ex) {
         InnerTrustContext.clear();
     }
 
     @Override
-    public void afterConcurrentHandlingStarted(HttpServletRequest request,
-                                               HttpServletResponse response, Object handler) {
+    public void afterConcurrentHandlingStarted(
+            HttpServletRequest request, HttpServletResponse response, Object handler) {
         // 不把请求权限隐式继承到异步工作线程。
         InnerTrustContext.clear();
     }

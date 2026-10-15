@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "keys": [
+    {
+      "pattern": "robot:*:auth:{sessions}:v2:audit:payloads",
+      "purpose": "Reliable login audit outbox; pending events are never expired. Only System acknowledgement removes an event.",
+      "capacity": "10000 events; each encoded payload <= 2048 characters; state CAS refuses atomically when full",
+      "owner": "Robot Cloud authentication maintainers"
+    },
+    {
+      "pattern": "robot:*:auth:{sessions}:v2:audit:due",
+      "purpose": "Bounded due index paired atomically with the payload hash; retry never recreates an acknowledged event.",
+      "capacity": "10000 members, identical event IDs to audit payloads",
+      "owner": "Robot Cloud authentication maintainers"
+    }
+  ]
+}

@@ -2,15 +2,15 @@ package com.robot.common.security.config;
 
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
-import com.robot.common.security.handler.NotLoginExceptionHandler;
-import com.robot.common.security.filter.InnerTrustContextFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.robot.common.redis.core.RedisHelper;
+import com.robot.common.security.filter.InnerTrustContextFilter;
+import com.robot.common.security.handler.NotLoginExceptionHandler;
 import com.robot.common.security.interceptor.InnerCallInterceptor;
 import com.robot.common.security.interceptor.LoginSessionValidationInterceptor;
-import com.robot.common.security.session.SessionStateVerifier;
 import com.robot.common.security.session.RedisSessionStateVerifier;
+import com.robot.common.security.session.SessionStateVerifier;
 import com.robot.common.security.session.SessionSubjectVerifier;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -19,22 +19,46 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
+import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * 安全自动装配：默认登录校验、注解式授权、刷新族复验与内部服务鉴权。
  *
- * <p>策略：拦截器只做「注解有效性 + 登录校验」；
- * 服务侧公共路径通过 {@code robot.security.exclude-paths} 显式排除；
+ * <p>策略：拦截器只做「注解有效性 + 登录校验」； 服务侧公共路径通过 {@code robot.security.exclude-paths} 显式排除；
  * 内部接口先验证服务凭据，已有登录态仍须复验刷新族，才进入授权/业务读取。
  */
 @AutoConfiguration
 @ConditionalOnClass(StpUtil.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableConfigurationProperties(RobotSecurityProperties.class)
+@Import(ProductionSecurityConfiguration.class)
 public class RobotSecurityAutoConfiguration {
+
+    /** 新服务不得在遗漏数据库/RPC主体复验时仅凭Redis快照开放业务。 */
+    @Bean
+    public org.springframework.beans.factory.SmartInitializingSingleton
+            requiredSessionSubjectVerifier(ObjectProvider<SessionSubjectVerifier> verifiers) {
+        return () -> {
+            if (verifiers.orderedStream().findAny().isEmpty()) {
+                throw new IllegalStateException("缺少必需的SessionSubjectVerifier，拒绝开放业务");
+            }
+        };
+    }
+
+    @Bean
+    public FilterRegistrationBean<com.robot.common.security.filter.ProductionManagementFilter>
+            productionManagementFilter(Environment environment) {
+        var registration =
+                new FilterRegistrationBean<>(
+                        new com.robot.common.security.filter.ProductionManagementFilter(
+                                environment));
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
+        return registration;
+    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -49,36 +73,58 @@ public class RobotSecurityAutoConfiguration {
                 new FilterRegistrationBean<>(new InnerTrustContextFilter());
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
         registration.setAsyncSupported(true);
-        registration.setDispatcherTypes(jakarta.servlet.DispatcherType.REQUEST,
-                jakarta.servlet.DispatcherType.ASYNC, jakarta.servlet.DispatcherType.ERROR);
+        registration.setDispatcherTypes(
+                jakarta.servlet.DispatcherType.REQUEST,
+                jakarta.servlet.DispatcherType.ASYNC,
+                jakarta.servlet.DispatcherType.ERROR);
         return registration;
     }
 
     @Bean
     @ConditionalOnMissingBean(SessionStateVerifier.class)
-    public SessionStateVerifier sessionStateVerifier(RedisHelper redisHelper, ObjectMapper objectMapper,
+    public SessionStateVerifier sessionStateVerifier(
+            RedisHelper redisHelper,
+            ObjectMapper objectMapper,
             ObjectProvider<SessionSubjectVerifier> subjectVerifiers) {
         return new RedisSessionStateVerifier(redisHelper, objectMapper, subjectVerifiers);
     }
 
     @Bean
-    public WebMvcConfigurer robotSaTokenInterceptorConfigurer(RobotSecurityProperties properties,
-            SessionStateVerifier sessionStateVerifier) {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addInterceptors(InterceptorRegistry registry) {
-                registry.addInterceptor(new InnerCallInterceptor(properties))
-                        .addPathPatterns("/inner/**").order(Ordered.HIGHEST_PRECEDENCE);
-                registry.addInterceptor(new SaInterceptor(handler -> StpUtil.checkLogin()))
-                        .addPathPatterns("/**")
-                        .excludePathPatterns("/inner/**")
-                        .excludePathPatterns(properties.getExcludePaths());
-                registry.addInterceptor(new LoginSessionValidationInterceptor(sessionStateVerifier))
-                        .addPathPatterns("/**")
-                        .order(Ordered.HIGHEST_PRECEDENCE + 1)
-                        .excludePathPatterns(properties.getExcludePaths().stream()
-                                .filter(path -> !path.startsWith("/inner")).toList());
-            }
-        };
+    public WebMvcConfigurer robotSaTokenInterceptorConfigurer(
+            RobotSecurityProperties properties, SessionStateVerifier sessionStateVerifier) {
+        return new RobotSaTokenConfigurer(properties, sessionStateVerifier);
+    }
+
+    /**
+     * Explicit static assembly retains only injected dependencies, not the outer
+     * auto-configuration.
+     */
+    private static final class RobotSaTokenConfigurer implements WebMvcConfigurer {
+        private final RobotSecurityProperties properties;
+        private final SessionStateVerifier sessionStateVerifier;
+
+        private RobotSaTokenConfigurer(
+                RobotSecurityProperties properties, SessionStateVerifier sessionStateVerifier) {
+            this.properties = properties;
+            this.sessionStateVerifier = sessionStateVerifier;
+        }
+
+        @Override
+        public void addInterceptors(InterceptorRegistry registry) {
+            registry.addInterceptor(new InnerCallInterceptor(properties))
+                    .addPathPatterns("/inner/**")
+                    .order(Ordered.HIGHEST_PRECEDENCE);
+            registry.addInterceptor(new SaInterceptor(handler -> StpUtil.checkLogin()))
+                    .addPathPatterns("/**")
+                    .excludePathPatterns("/inner/**")
+                    .excludePathPatterns(properties.getExcludePaths());
+            registry.addInterceptor(new LoginSessionValidationInterceptor(sessionStateVerifier))
+                    .addPathPatterns("/**")
+                    .order(Ordered.HIGHEST_PRECEDENCE + 1)
+                    .excludePathPatterns(
+                            properties.getExcludePaths().stream()
+                                    .filter(path -> !path.startsWith("/inner"))
+                                    .toList());
+        }
     }
 }

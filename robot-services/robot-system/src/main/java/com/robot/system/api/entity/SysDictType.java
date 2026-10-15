@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_dict_type")
 public class SysDictType extends BaseEntity {
 
+    @java.io.Serial private static final long serialVersionUID = 1L;
+
     /** 类型编码（唯一，小写下划线）。 */
     private String typeCode;
 

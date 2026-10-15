@@ -8,12 +8,11 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 角色新增/编辑请求。
@@ -25,8 +24,7 @@ import java.util.List;
 @NoArgsConstructor
 public class RoleSaveRequest implements Serializable {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
+    @Serial private static final long serialVersionUID = 1L;
 
     private String id;
 
@@ -59,43 +57,92 @@ public class RoleSaveRequest implements Serializable {
     @Min(0)
     private Integer revision;
 
-    /**
-     * 授权资源 ID 集合（菜单与按钮 ID 混合，按存在性分流绑定）。
-     */
+    /** 授权资源 ID 集合（菜单与按钮 ID 混合，按存在性分流绑定）。 */
     @Size(max = 500)
-    private List<
-            @NotBlank
-            @Size(max = 64)
-            String> permissionIds;
+    private List<@NotBlank @Size(max = 64) String> permissionIds;
 
     /** 兼容旧菜单资源字段，与buttonIds合并；不得与permissionIds同时提交。 */
     @Size(max = 500)
-    private List<
-            @NotBlank
-            @Size(max = 64)
-            String> menuIds;
+    private List<@NotBlank @Size(max = 64) String> menuIds;
 
     @Size(max = 500)
-    private List<
-            @NotBlank
-            @Size(max = 64)
-            String> buttonIds;
+    private List<@NotBlank @Size(max = 64) String> buttonIds;
 
+    /**
+     * 创建或返回该类型的明确协作结果。
+     *
+     * @return 校验是否通过
+     */
     @JsonIgnore
     @AssertTrue(message = "permissionIds与menuIds/buttonIds不能同时提交")
     public boolean isPermissionIdsConsistent() {
         return permissionIds == null || menuIds == null && buttonIds == null;
     }
 
-    /** 合并兼容字段；未提交任何权限字段时保留null，交由服务保留原授权。 */
+    /**
+     * 合并兼容字段；未提交任何权限字段时保留null，交由服务保留原授权。
+     *
+     * @return 当前事实派生的结果
+     */
     public List<String> effectivePermissionIds() {
         if (permissionIds != null) {
-            return permissionIds;
+            return getPermissionIds();
         }
         if (menuIds == null && buttonIds == null) {
             return null;
         }
-        return java.util.stream.Stream.concat(menuIds == null ? java.util.stream.Stream.empty() : menuIds.stream(),
-                buttonIds == null ? java.util.stream.Stream.empty() : buttonIds.stream()).toList();
+        return java.util.stream.Stream.concat(
+                        menuIds == null ? java.util.stream.Stream.empty() : menuIds.stream(),
+                        buttonIds == null ? java.util.stream.Stream.empty() : buttonIds.stream())
+                .toList();
+    }
+
+    /**
+     * 返回精确授权资源ID集合。
+     *
+     * @return 精确授权资源ID集合
+     */
+    public List<String> getPermissionIds() {
+        return permissionIds == null ? null : new java.util.ArrayList<>(permissionIds);
+    }
+    /**
+     * 复制输入集合以隔离调用方后续修改。
+     *
+     * @param value 待校验或快照复制的输入值
+     */
+    public void setPermissionIds(List<String> value) {
+        permissionIds = value == null ? null : new java.util.ArrayList<>(value);
+    }
+    /**
+     * 返回精确绑定的菜单ID集合。
+     *
+     * @return 精确绑定的菜单ID集合
+     */
+    public List<String> getMenuIds() {
+        return menuIds == null ? null : new java.util.ArrayList<>(menuIds);
+    }
+    /**
+     * 复制输入集合以隔离调用方后续修改。
+     *
+     * @param value 待校验或快照复制的输入值
+     */
+    public void setMenuIds(List<String> value) {
+        menuIds = value == null ? null : new java.util.ArrayList<>(value);
+    }
+    /**
+     * 返回精确绑定的按钮ID集合。
+     *
+     * @return 精确绑定的按钮ID集合
+     */
+    public List<String> getButtonIds() {
+        return buttonIds == null ? null : new java.util.ArrayList<>(buttonIds);
+    }
+    /**
+     * 复制输入集合以隔离调用方后续修改。
+     *
+     * @param value 待校验或快照复制的输入值
+     */
+    public void setButtonIds(List<String> value) {
+        buttonIds = value == null ? null : new java.util.ArrayList<>(value);
     }
 }

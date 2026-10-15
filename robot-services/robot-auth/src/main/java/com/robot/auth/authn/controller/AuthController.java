@@ -1,5 +1,6 @@
 package com.robot.auth.authn.controller;
 
+import com.robot.api.system.dto.RemoteMenuRouteDTO;
 import com.robot.auth.authn.dto.ActivateContextRequest;
 import com.robot.auth.authn.dto.LoginCompaniesRequest;
 import com.robot.auth.authn.dto.LoginCompaniesResponse;
@@ -9,11 +10,12 @@ import com.robot.auth.authn.dto.RefreshTokenRequest;
 import com.robot.auth.authn.dto.RefreshTokenResponse;
 import com.robot.auth.authn.dto.SwitchContextRequest;
 import com.robot.auth.authn.service.AuthService;
-import com.robot.api.system.dto.RemoteMenuRouteDTO;
 import com.robot.common.core.domain.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,12 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- * 认证接口：路径与响应对齐 Robot_Admin 前端 auth 契约（src/api/auth.contract.ts）。
- */
+/** 认证接口：路径与响应对齐 Robot_Admin 前端 auth 契约（src/api/auth.contract.ts）。 */
 @Tag(name = "认证授权")
 @RestController
 @RequestMapping("/auth")
@@ -41,7 +38,7 @@ public class AuthController {
         return Result.success(authService.login(request));
     }
 
-    @Operation(summary = "登录前按账号发现可选公司（不创建会话）")
+    @Operation(summary = "凭据验证后发现可选公司（不创建会话）")
     @PostMapping("/login-companies")
     public Result<LoginCompaniesResponse> loginCompanies(
             @Valid @RequestBody LoginCompaniesRequest request) {
@@ -50,7 +47,8 @@ public class AuthController {
 
     @Operation(summary = "激活企业上下文（loginTicket 换取完整会话）")
     @PostMapping("/context/activate")
-    public Result<LoginResponse> activateContext(@Valid @RequestBody ActivateContextRequest request) {
+    public Result<LoginResponse> activateContext(
+            @Valid @RequestBody ActivateContextRequest request) {
         return Result.success(authService.activateContext(request));
     }
 
@@ -62,7 +60,8 @@ public class AuthController {
 
     @Operation(summary = "刷新访问令牌（双 Token 轮换）")
     @PostMapping("/refresh-token")
-    public Result<RefreshTokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+    public Result<RefreshTokenResponse> refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request) {
         return Result.success(authService.refreshToken(request.getRefreshToken()));
     }
 

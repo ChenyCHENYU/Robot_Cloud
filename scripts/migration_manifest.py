@@ -10,9 +10,10 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / 'contracts/database/migrations.json'
 MIGRATIONS = ROOT / 'robot-services/robot-system/src/main/resources/db/migration'
+RELEASED_BASELINE = 10
 
 
-def snapshot(directory=MIGRATIONS):
+def snapshot(directory=MIGRATIONS, released_through=0):
     migrations = []
     seen = set()
     for path in directory.glob('V*__*.sql'):
@@ -25,7 +26,7 @@ def snapshot(directory=MIGRATIONS):
         migrations.append({'version': version, 'file': path.name, 'sha256': hashlib.sha256(raw).hexdigest(), 'bytes': len(raw)})
     if not migrations:
         raise ValueError('no migration found')
-    return {'schemaVersion': 1, 'releasedThrough': 5, 'hashAlgorithm': 'SHA-256', 'migrations': sorted(migrations, key=lambda m: m['version'])}
+    return {'schemaVersion': 1, 'releasedThrough': released_through, 'hashAlgorithm': 'SHA-256', 'migrations': sorted(migrations, key=lambda m: m['version'])}
 
 
 def compare(expected, actual):
@@ -34,21 +35,31 @@ def compare(expected, actual):
     return [f'V{version}: missing, unexpected, renamed, or changed bytes' for version in sorted(old.keys() | new.keys()) if old.get(version) != new.get(version)]
 
 
+def reviewed_snapshot(directory, expected, minimum_released=RELEASED_BASELINE):
+    """Preserve the published boundary and reject byte changes before a rewrite."""
+    released = max(minimum_released, expected.get('releasedThrough', 0))
+    actual = snapshot(directory, released_through=released)
+    violations = [item for item in compare(expected, actual)
+                  if int(item.split(':')[0][1:]) <= released]
+    if violations:
+        raise ValueError('released migrations are immutable: ' + '; '.join(violations))
+    return actual
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--write', action='store_true')
     args = parser.parse_args()
-    actual = snapshot()
+    expected = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {'migrations': []}
     if args.write:
-        if MANIFEST.exists():
-            expected = json.loads(MANIFEST.read_text())
-            violations = [v for v in compare(expected, actual) if int(v.split(':')[0][1:]) <= expected['releasedThrough']]
-            if violations:
-                raise ValueError('released migrations are immutable: ' + '; '.join(violations))
+        actual = reviewed_snapshot(MIGRATIONS, expected)
         MANIFEST.write_text(json.dumps(actual, ensure_ascii=False, indent=2) + '\n')
         print(f'manifest written: {len(actual["migrations"])} migrations; review the diff')
     else:
-        differences = compare(json.loads(MANIFEST.read_text()), actual)
+        if expected.get('releasedThrough', 0) < RELEASED_BASELINE:
+            raise ValueError(f'release boundary must preserve V1–V{RELEASED_BASELINE}')
+        actual = snapshot(released_through=expected['releasedThrough'])
+        differences = compare(expected, actual)
         if differences:
             raise ValueError('migration manifest drift: ' + '; '.join(differences))
         print(f'migration manifest verified: {len(actual["migrations"])} files')

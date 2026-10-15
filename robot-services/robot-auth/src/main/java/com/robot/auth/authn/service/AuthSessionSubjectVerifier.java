@@ -8,13 +8,12 @@ import com.robot.common.core.domain.ResultCode;
 import com.robot.common.core.exception.ServiceAssert;
 import com.robot.common.security.context.LoginUser;
 import com.robot.common.security.session.SessionSubjectVerifier;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 /** Auth 受保护请求也实时复验主体；用户供给 RPC 使用服务身份，不携带旧会话委托。 */
 @Component
@@ -40,14 +39,18 @@ public class AuthSessionSubjectVerifier implements SessionSubjectVerifier {
         if (!sameAccount(user, current, credentialFingerprint)) {
             return false;
         }
-        List<RemoteUserContextDTO> contexts = requireAvailable(
-                remoteSystemService.getUserContexts(user.getUserId()));
-        return contexts != null && contexts.stream().anyMatch(context -> sameContext(user, context));
+        List<RemoteUserContextDTO> contexts =
+                requireAvailable(remoteSystemService.getUserContexts(user.getUserId()));
+        return contexts != null
+                && contexts.stream().anyMatch(context -> sameContext(user, context));
     }
 
     private static boolean validSnapshot(LoginUser user) {
-        return user != null && user.getUserId() != null && user.getContextId() != null
-                && user.getCompanyId() != null && validVersion(user.getUserSecurityVersion())
+        return user != null
+                && user.getUserId() != null
+                && user.getContextId() != null
+                && user.getCompanyId() != null
+                && validVersion(user.getUserSecurityVersion())
                 && validVersion(user.getContextSecurityVersion());
     }
 
@@ -55,19 +58,25 @@ public class AuthSessionSubjectVerifier implements SessionSubjectVerifier {
         return version != null && version >= 0;
     }
 
-    private static boolean sameAccount(LoginUser snapshot, RemoteUserDTO current, String fingerprint) {
-        if (current == null || !snapshot.getUserId().equals(current.getId())
+    private static boolean sameAccount(
+            LoginUser snapshot, RemoteUserDTO current, String fingerprint) {
+        if (current == null
+                || !snapshot.getUserId().equals(current.getId())
                 || !Integer.valueOf(1).equals(current.getStatusFlag())
                 || !snapshot.getUserSecurityVersion().equals(current.getSecurityVersion())
-                || current.getPasswordHash() == null || current.getPasswordHash().isBlank()) {
+                || current.getPasswordHash() == null
+                || current.getPasswordHash().isBlank()) {
             return false;
         }
-        return MessageDigest.isEqual(AuthTokenSecrets.digest(current.getPasswordHash())
-                .getBytes(StandardCharsets.US_ASCII), fingerprint.getBytes(StandardCharsets.US_ASCII));
+        return MessageDigest.isEqual(
+                AuthTokenSecrets.digest(current.getPasswordHash())
+                        .getBytes(StandardCharsets.US_ASCII),
+                fingerprint.getBytes(StandardCharsets.US_ASCII));
     }
 
     private static boolean sameContext(LoginUser snapshot, RemoteUserContextDTO context) {
-        return context != null && snapshot.getContextId().equals(context.getContextId())
+        return context != null
+                && snapshot.getContextId().equals(context.getContextId())
                 && snapshot.getCompanyId().equals(context.getCompanyId())
                 && Objects.equals(snapshot.getTenantId(), context.getTenantId())
                 && snapshot.getContextSecurityVersion().equals(context.getSecurityVersion());
@@ -75,8 +84,8 @@ public class AuthSessionSubjectVerifier implements SessionSubjectVerifier {
 
     private static <T> T requireAvailable(Result<T> result) {
         // 临时失败阻断本次读取，不消费 family，也不把系统故障报告为已撤销登录。
-        ServiceAssert.isTrue(result != null && result.successValue(),
-                ResultCode.FAILED, "系统服务暂不可用，请稍后重试");
+        ServiceAssert.isTrue(
+                result != null && result.successValue(), ResultCode.FAILED, "系统服务暂不可用，请稍后重试");
         return result.getData();
     }
 }

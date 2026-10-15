@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_role_menu")
 public class SysRoleMenu extends BaseEntity {
 
+    @java.io.Serial private static final long serialVersionUID = 1L;
+
     private String roleId;
 
     private String menuId;

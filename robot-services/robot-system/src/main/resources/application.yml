@@ -2,6 +2,14 @@ server:
   port: 9202
 
 spring:
+  http:
+    converters:
+      preferred-json-mapper: jackson2
+    codecs:
+      preferred-json-mapper: jackson2
+  jdbc:
+    template:
+      query-timeout: 5s
   application:
     name: robot-system
   profiles:
@@ -21,7 +29,7 @@ spring:
       eager: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:robot_cloud}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    url: ${MYSQL_JDBC_URL:jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:robot_cloud}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true&connectTimeout=3000&socketTimeout=8000}
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:root}
     type: com.zaxxer.hikari.HikariDataSource
@@ -31,7 +39,11 @@ spring:
       maximum-pool-size: 20
       connection-timeout: 5000
       connection-test-query: SELECT 1
+      # 统一DB相对时钟，限制锁等待/SELECT；driver网络超时独立于获取连接预算。
+      connection-init-sql: "SET SESSION time_zone = '+00:00', SESSION innodb_lock_wait_timeout = 5, SESSION MAX_EXECUTION_TIME = 5000"
   flyway:
+    user: ${MYSQL_MIGRATION_USERNAME:${MYSQL_USERNAME:root}}
+    password: ${MYSQL_MIGRATION_PASSWORD:${MYSQL_PASSWORD:root}}
     enabled: true
     locations: classpath:db/migration
     # 非空无历史的数据库必须经迁移评审，不能由应用启动自动接管。
@@ -45,6 +57,8 @@ spring:
       password: ${REDIS_PASSWORD:}
       database: ${REDIS_DATABASE:0}
       timeout: 3s
+      ssl:
+        enabled: ${REDIS_SSL:false}
       lettuce:
         pool:
           max-active: 16
@@ -76,6 +90,16 @@ sa-token:
   is-read-header: true
 
 robot:
+  env: ${ROBOT_ENV:local}
+  management:
+    secret: ${ROBOT_MANAGEMENT_SECRET:}
+  production:
+    redis-isolated: ${ROBOT_REDIS_ISOLATED:false}
+    bootstrap-complete: ${ROBOT_BOOTSTRAP_COMPLETE:false}
+  bootstrap:
+    platform-admin-enabled: ${ROBOT_PLATFORM_ADMIN_BOOTSTRAP:false}
+    platform-admin-user-id: ${ROBOT_PLATFORM_ADMIN_USER_ID:}
+    platform-admin-password: ${ROBOT_PLATFORM_ADMIN_BOOTSTRAP_PASSWORD:}
   security:
     inner-secret: ${ROBOT_INNER_SECRET:robot-inner-dev-secret}
     exclude-paths:

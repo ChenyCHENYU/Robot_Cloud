@@ -23,12 +23,17 @@ export async function checkCommits({ cwd = PROJECT_ROOT, range, historicalHead }
   const results = []
   for (const sha of commitShas) {
     const message = git('show', '-s', '--format=%B', sha)
+    const parents = git('show', '-s', '--format=%P', sha).split(' ').filter(Boolean)
     const result = await lint(message, config.rules, {
       parserOpts: config.parserPreset?.parserOpts,
       defaultIgnores: config.defaultIgnores,
       ignores: config.ignores,
     })
-    results.push({ sha, header: message.split('\n')[0], valid: result.valid, errors: result.errors })
+    const historyErrors = parents.length > 1
+      ? [{ name: 'linear-history', level: 2, message: 'new commits must have at most one parent; integrate with --ff-only' }]
+      : []
+    results.push({ sha, parents: parents.length, header: message.split('\n')[0],
+      valid: result.valid && historyErrors.length === 0, errors: [...result.errors, ...historyErrors] })
   }
   return { ok: results.every((result) => result.valid), range: selection, checked: results.length, commits: results }
 }
