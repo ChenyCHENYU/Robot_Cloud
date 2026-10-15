@@ -18,8 +18,7 @@
     <a href="#本地构建与启动">快速开始</a> ·
     <a href="docs/architecture.md">架构与演进</a> ·
     <a href="docs/api-contract.md">API 契约</a> ·
-    <a href="docs/review-2026-10-14.md">全面审查</a> ·
-    <a href="docs/improvement-roadmap.md">改进台账</a> ·
+    <a href="docs/deployment.md">部署与运维</a> ·
     <a href="https://github.com/ChenyCHENYU/Robot_Admin">Robot Admin</a>
   </p>
 </div>
@@ -35,13 +34,7 @@ Robot Cloud 为 Robot Admin 提供认证、公司成员、组织与权限管理�
 - 工程组织：独立服务、五个公共组件、跨服务 API、统一依赖 BOM。
 - 演进方向：先巩固内部业务边界和持续验证，再按数据所有权、容量及独立部署需求拆分。
 
-最近一次完整审查为 **2026-10-14**，源码基线为 `29c42aa`。本轮已完成 REV01–REV24 的代码整改、配套 Admin 适配和本地验收；原始发现保留在[全面审查](docs/review-2026-10-14.md)，当前完成状态见[改进台账](docs/improvement-roadmap.md)。
-
-[2026-10-15 验收记录](docs/verification-2026-10-15.md)：679 项 Java 测试、20 项真实 MySQL 验收、83 个业务类逐类质量/覆盖率检查、239 个外部依赖供应链检查通过；Admin 175 项单测、31 项组件测试、23 项浏览器 fixture 及真实 Cloud 114 项浏览器检查通过。双 System 故障15项、受控重启、500成员分页与501归档规模验收完成。固定测试规模和运行边界详见记录。
-
-GitHub 旧 [verify 注释](https://api.github.com/repos/ChenyCHENYU/Robot_Cloud/check-runs/114446067171/annotations)记录账户账单锁定、job 未启动。按用户要求本地验证后同步代码；托管检查、生产 HA/Nacos/SLO 和恢复目标需各自实际结果，本轮未执行生产部署。
-
-[2026-10-09 历史验收](docs/verification-2026-10-09.md)单独保留当时的升级和隔离运行结果。[架构与演进](docs/architecture.md)描述设计与拆分路线；[API 契约](docs/api-contract.md)说明 Robot Admin 的请求字段、权限和兼容要求。
+[架构与演进](docs/architecture.md)描述服务边界与拆分路线；[API 契约](docs/api-contract.md)说明 Robot Admin 的请求字段、权限和兼容要求。
 
 ## 目录
 
@@ -56,7 +49,6 @@ GitHub 旧 [verify 注释](https://api.github.com/repos/ChenyCHENYU/Robot_Cloud/
 - [缓存通知与运维](#缓存通知与运维)
 - [开发约定](#开发约定)
 - [分支与协作](#分支与协作)
-- [定版验收](#定版验收)
 - [文档导航](#文档导航)
 
 ## 能力与边界
@@ -75,7 +67,7 @@ GitHub 旧 [verify 注释](https://api.github.com/repos/ChenyCHENYU/Robot_Cloud/
 
 通用字段权限、复杂工作流、业务消息平台、文件服务和完整 Redis HA 恢复属于后续建设。可选依赖登记或配置文件存在不能单独证明运行能力。
 
-本轮已实现根级菜单显式写入 NULL、稳定菜单路由名、不可变权限编码绑定保护、资料 Patch 清空、版本冲突处理及分页临时授权。治理接口明确返回只读能力；未实现的通用约束执行、全局共享账号重置、头像/简介保存不对外宣称可用。真实 Admin→Gateway→Auth→System 联调已按同制品完成，记录于[本轮验收](docs/verification-2026-10-15.md)；目标生产部署另行验收。
+菜单支持根级归属清空和稳定路由名，权限编码受绑定保护；资料支持 Patch 清空，临时授权支持分页和版本冲突处理。治理接口明确返回只读能力；通用约束执行、全局共享账号重置、头像/简介保存暂未开放。
 
 ## 服务拓扑
 
@@ -249,11 +241,11 @@ nacos group 为 `ROBOT_CLOUD`，每个服务读取各自 YAML dataId。开发允
 - 冲突 `40902` 要求刷新并重新确认操作，后端不代填最新版本。
 - 用户“删除”表示移出本公司，保留平台账号及其他公司关系。
 
-字段和兼容语义见 [API 契约](docs/api-contract.md)。真实 Admin 页面与同制品联调结果见[本轮验收](docs/verification-2026-10-15.md)。
+字段和兼容语义见 [API 契约](docs/api-contract.md)。
 
-配套 Admin 已按这些请求字段整改，并采用按用户授予已有角色、起止时间/原因、分页和版本撤回。无授权首页不擅自补权限，动态路由身份稳定；账号状态与成员状态、不同公司主部门分开表示。远端不支持的治理保存、头像/简介或安全配置不会发出虚假的成功请求。组件/HTTP fixture 测试与真实联调分别记录，冲突始终要求重新读取并确认。
+配套 Admin 按用户临时授予已有角色，填写起止时间与原因，并支持分页查询和按版本撤回。无授权首页不擅自补权限，动态路由身份稳定；账号状态与成员状态、不同公司主部门分开表示。远端不支持的治理保存、头像/简介或安全配置保持只读，冲突要求重新读取并确认。
 
-资料、安全和活动记录是需要登录的本人基础页面，不依赖业务菜单授权。V13 为已有角色查询权限的角色补齐权限治理导航，保留合法既有菜单；发现路径、组件或归属冲突时拒绝升级，不扩大接口与按钮权限。
+资料、安全和活动记录是需要登录的本人基础页面，不依赖业务菜单授权。权限治理导航由角色查询权限控制，页面、接口与按钮分别校验授权。
 
 ## 持续验证与数据库升级
 
@@ -278,9 +270,9 @@ bash scripts/verify.sh --mysql-upgrade
 | 双 System 故障 | 缓存重试、重复/迟到、重启和版本单调性 |
 | 生产验收 | Nacos/Sentinel、Admin、容量、目标数据库版本、HA、备份恢复 |
 
-CI 使用同一入口并归档报告和制品摘要。远端 job 或生产演练未实际运行时保持未验证；测试数量从真实报告汇总，不作为固定完成指标。
+CI 使用同一入口并归档报告和制品摘要；生产部署按目标环境验证服务发现、容量、备份与恢复。
 
-机器 HTTP 合同已扩展到 System 全部 Controller 的接口、权限、字段与类型；另有实际 MVC 行为负例。数据库固定 golden 覆盖20表、248列和98个索引列，全量新建及 V10 升级都须对账；已发布 V1–V10 校验和不变，新增 V11–V13。Checkstyle、PMD、SpotBugs、Spotless 与 JaCoCo 已进入统一门禁：每个业务 Service 类及辅助/内部类至少70%行、60%分支，Controller 至少50%行。缺报告、陈旧报告、分析错误、遗漏类和跳过工具均失败；见 [质量规则](quality/README.md)。
+机器 HTTP 合同覆盖 System Controller 的接口、权限、字段与类型，并配合 MVC 行为负例。数据库新建和历史版本升级均与固定结构基线对账，已发布的 Flyway 迁移保持不可变。Checkstyle、PMD、SpotBugs、Spotless 与 JaCoCo 进入统一门禁：每个业务 Service 类及辅助/内部类至少70%行、60%分支，Controller 至少50%行。缺报告、陈旧报告、分析错误、遗漏类和跳过工具均失败；见 [质量规则](quality/README.md)。
 
 ## 缓存通知与运维
 
@@ -313,9 +305,7 @@ git commit -m "feat(system): add company membership commands"
 
 提交必须采用 `type(scope): message`，scope 必填，类型白名单与 Robot Admin 相同。本地 Hook 和 CI 共用配置；已共享历史保留，之后的提交范围持续校验。具体类型、安装和检查说明见 [贡献指南](CONTRIBUTING.md)。
 
-BD 已接入项目入口、规范、受管资产检查和持续门禁。Robot 保留32条原始扫描结果，项目适配器另外检查 Sa-Token/public/inner、公司范围、软删、分页及合同，并纳入 multipart 端点。供应商不支持的规则和宿主加载不得自报通过；项目原生 Java17 门与包的旧 Java8模板分别记录。完整适配边界见 [规范映射](docs/conventions-bd-mapping.md)。
-
-字段注解与认证测试同包建议按[精确语义复核](quality/backend-semantic-reviews.md)和固定源码哈希派生项目有效门；两份原始报告保留失败，baseline、B25/B6 和零警告预算保持不变，独立报告记录分类与有效阻断项。
+BD 用于后端规范与受管资产检查；Robot 项目适配器检查 Sa-Token/public/inner、公司范围、软删、分页及合同。项目使用原生 Java 17 门禁，适用范围和规范差异见 [规范映射](docs/conventions-bd-mapping.md)。
 
 ## 分支与协作
 
@@ -327,25 +317,11 @@ BD 已接入项目入口、规范、受管资产检查和持续门禁。Robot �
 
 GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开始工作时先更新 `dev`，再创建功能分支。任务完成并通过适用验证后提交推送，再依次快进到 `dev`、`main`，同步两个远程并核对 SHA，保持线性历史；交付不只停在功能分支。详细命令、双远程同步和分支保护配置见 [Git 维护流程](docs/git-workflow.md)。
 
-## 定版验收
-
-以 [REV01–REV24 改进台账](docs/improvement-roadmap.md)记录每项实际实现和证据；历史原审查/计划独立保留。用户确认按用户临时授予已有角色、每公司成员一个主部门、独立平台管理员维护全局目录及资料Patch清空规则。当前整改包含这些规则的实现与前后端配对，并补全Java质量、数据库、认证和供应链门。
-
-交付须完成同次源码的完整本地门禁、当前制品运行和真实前后端联调，再提交并同步GitHub/Gitee的dev/main。托管CI账户锁定、目标生产HA/SLO或分支保护没有实际证据时保留未验证；本地验证及代码同步不能自动记为上线或生产验收。用户已要求本地验证后推送，不等待托管账户恢复。
-
-继续保留Gateway/Auth/System和相关强一致事务。独立业务域、未声明可用的字段规则/约束执行器及目标部署容量按实际产品需求演进，不用拆服务数量或增加接口占位表示优化完成。
-
-品牌资产采用仓库内的原生 SVG，提供浅色、深色与单色版本，使用说明见 [品牌资产](docs/assets/brand/README.md)。
-
 ## 文档导航
 
 | 文档 | 内容 |
 | --- | --- |
 | [架构与演进](docs/architecture.md) | 服务、数据属主、时序、边界、未来拆分 |
-| [2026-10-15 本轮验收](docs/verification-2026-10-15.md) | 最终制品、统一门禁、真实前后端与隔离故障/规模结果 |
-| [2026-10-14 全面审查](docs/review-2026-10-14.md) | REV01–REV24、源码证据、独立探针及验证边界 |
-| [改进台账](docs/improvement-roadmap.md) | 最新状态、优先级、旧 N 编号映射和待定输入 |
-| [执行与验收计划](docs/review-execution-plan.md) | 分批范围、必要负例、兼容/回滚及完成标准 |
 | [API 契约](docs/api-contract.md) | 前端协议、版本、权限和错误 |
 | [系统权限](docs/system-permission-contract.md) | 角色事实、授予上界、数据范围、临时授权 |
 | [认证生命周期](docs/auth-session-lifecycle.md) | 票据、刷新族、CAS、注销与故障 |
@@ -357,6 +333,5 @@ GitHub 为主要协作仓库，Gitee 同步相同的 `main`、`dev` 提交。开
 | [贡献指南](CONTRIBUTING.md) | 必填 scope、提交 Hook、开发工具与 BD 门禁 |
 | [Git 维护流程](docs/git-workflow.md) | main/dev、功能分支、PR 与双远程同步 |
 | [品牌资产](docs/assets/brand/README.md) | SVG 标识、字标、配色与使用约定 |
-| [2026-10-09 历史验收](docs/verification-2026-10-09.md) | 当时构建、升级与隔离运行结果及边界 |
 
 后续优先补运行保障并引入独立业务域。审计读模型、导出或异步任务在形成容量和交付需求后迁出；身份、成员、角色与授权的强一致写暂留 System。拆分条件及阶段见 [架构与演进](docs/architecture.md#演进路线与拆分条件)。
