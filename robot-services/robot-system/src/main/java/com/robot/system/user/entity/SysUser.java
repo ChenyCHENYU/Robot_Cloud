@@ -1,4 +1,4 @@
-package com.robot.system.api.entity;
+package com.robot.system.user.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.robot.common.mybatis.domain.BaseEntity;

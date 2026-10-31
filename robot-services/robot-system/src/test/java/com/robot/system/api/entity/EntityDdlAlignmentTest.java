@@ -49,7 +49,7 @@ class EntityDdlAlignmentTest {
     private static final int TENANT_ENTITY_COUNT = 8;
     private static final int GLOBAL_ENTITY_COUNT = 9;
 
-    private static final String ENTITY_PACKAGE = "com.robot.system.api.entity";
+    private static final String ENTITY_SCAN_ROOT = "com.robot.system";
 
     private static final Pattern CREATE_TABLE =
             Pattern.compile(
@@ -123,13 +123,13 @@ class EntityDdlAlignmentTest {
     private static List<Class<?>> entityClasses() {
         ClassPathScanningCandidateComponentProvider provider =
                 new ClassPathScanningCandidateComponentProvider(false);
-        // 只扫描标注 @TableName 的具体类（排除测试类等非实体）
+        // 从业务根包发现 @TableName 具体类，覆盖集中式与业务内模型，排除非实体。
         provider.addIncludeFilter(
                 (MetadataReader reader, MetadataReaderFactory factory) ->
                         reader.getClassMetadata().isConcrete()
                                 && reader.getAnnotationMetadata()
                                         .hasAnnotation(TableName.class.getName()));
-        return provider.findCandidateComponents(ENTITY_PACKAGE).stream()
+        return provider.findCandidateComponents(ENTITY_SCAN_ROOT).stream()
                 .map(BeanDefinition::getBeanClassName)
                 .map(
                         name -> {

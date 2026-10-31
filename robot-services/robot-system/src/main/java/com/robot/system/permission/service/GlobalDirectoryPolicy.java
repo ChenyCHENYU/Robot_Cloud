@@ -2,7 +2,7 @@ package com.robot.system.permission.service;
 
 import com.robot.common.core.domain.ResultCode;
 import com.robot.common.core.exception.ServiceAssert;
-import com.robot.system.api.entity.SysUser;
+import com.robot.system.user.entity.SysUser;
 import com.robot.system.user.mapper.SysUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

@@ -3,7 +3,7 @@
   "scope": "complete columns + unique indexes of user/role aggregate tables, not all system tables",
   "tables": {
     "sys_user": {
-      "entity": "com.robot.system.api.entity.SysUser",
+      "entity": "com.robot.system.user.entity.SysUser",
       "columns": {
         "id": {
           "type": "varchar",
@@ -196,7 +196,7 @@
       }
     },
     "sys_user_company": {
-      "entity": "com.robot.system.api.entity.SysUserCompany",
+      "entity": "com.robot.system.user.entity.SysUserCompany",
       "columns": {
         "id": {
           "type": "varchar",
@@ -544,7 +544,7 @@
       }
     },
     "sys_user_role": {
-      "entity": "com.robot.system.api.entity.SysUserRole",
+      "entity": "com.robot.system.user.entity.SysUserRole",
       "columns": {
         "id": {
           "type": "varchar",

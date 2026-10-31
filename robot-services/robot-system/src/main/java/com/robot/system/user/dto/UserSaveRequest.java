@@ -1,4 +1,4 @@
-package com.robot.system.api.dto.user;
+package com.robot.system.user.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;

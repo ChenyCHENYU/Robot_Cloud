@@ -4,8 +4,8 @@ import com.robot.common.core.domain.ResultCode;
 import com.robot.common.core.exception.ServiceAssert;
 import com.robot.common.core.exception.ServiceException;
 import com.robot.common.core.util.PasswordPolicy;
-import com.robot.system.api.dto.user.UserSaveRequest;
-import com.robot.system.api.entity.SysUser;
+import com.robot.system.user.dto.UserSaveRequest;
+import com.robot.system.user.entity.SysUser;
 import java.util.Objects;
 
 /**

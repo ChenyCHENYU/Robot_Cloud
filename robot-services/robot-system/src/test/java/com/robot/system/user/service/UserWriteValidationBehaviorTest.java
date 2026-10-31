@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.robot.common.core.exception.ServiceException;
-import com.robot.system.api.dto.user.UserSaveRequest;
-import com.robot.system.api.entity.SysUser;
+import com.robot.system.user.dto.UserSaveRequest;
+import com.robot.system.user.entity.SysUser;
 import org.junit.jupiter.api.Test;
 
 class UserWriteValidationBehaviorTest {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedOn": "2026-10-14",
+  "reviewedOn": "2026-10-31",
   "policy": "No package/class/global rule exclusion; exact shared framework constructor dependencies only",
   "entries": [
     {
@@ -11,7 +11,7 @@
       "field": "userService",
       "pattern": "EI_EXPOSE_REP2",
       "source": "robot-services/robot-system/src/main/java/com/robot/system/account/service/AccountService.java",
-      "sourceSha256": "73702273d94f8d14ace92662ae82e09299b8ebf9714a5046161caafc6216fa68",
+      "sourceSha256": "e45b7d770d1f724bd3bf5dd592f0a92a4bc32a5f8060065291f585bbbc36b77a",
       "reason": "Spring管理的协作者与连接/事务/序列化生命周期必须共享；构造器保存final依赖且不向请求DTO或调用者返回该Bean，不能通过拷贝建立另一连接/事务身份。仅评审该类精确构造签名和该字段的EI_EXPOSE_REP2，不覆盖普通DTO/集合或其他方法。",
       "review": "Shared Spring-managed infrastructure; private final constructor dependency, not returned to request callers. DTO aliases and other methods remain in full scan."
     },
@@ -263,7 +263,7 @@
       "field": "stateStore",
       "pattern": "EI_EXPOSE_REP2",
       "source": "robot-services/robot-system/src/main/java/com/robot/system/role/service/RoleCommandService.java",
-      "sourceSha256": "ef19ede5776440a62181300b2acc6cc850fdd4bd7ced87839d89d526cf31d0f7",
+      "sourceSha256": "1607e4f08d7780d1e24713cffed138b3754fbb3a7373e4bd44e7471e3de1a9ef",
       "reason": "Spring管理的协作者与连接/事务/序列化生命周期必须共享；构造器保存final依赖且不向请求DTO或调用者返回该Bean，不能通过拷贝建立另一连接/事务身份。仅评审该类精确构造签名和该字段的EI_EXPOSE_REP2，不覆盖普通DTO/集合或其他方法。",
       "review": "Shared Spring-managed infrastructure; private final constructor dependency, not returned to request callers. DTO aliases and other methods remain in full scan."
     },
@@ -275,7 +275,7 @@
       "field": "stateStore",
       "pattern": "EI_EXPOSE_REP2",
       "source": "robot-services/robot-system/src/main/java/com/robot/system/role/service/TemporaryAuthorizationCommandService.java",
-      "sourceSha256": "5250838cf249e89991edb225f65e8acaf06ef5be516a4861475dab68155ed7a7",
+      "sourceSha256": "ea043f3d62ff5b75bf72e528e71bc1f9693e4101afdcfd24ab5d110b45a7922e",
       "reason": "Spring管理的协作者与连接/事务/序列化生命周期必须共享；构造器保存final依赖且不向请求DTO或调用者返回该Bean，不能通过拷贝建立另一连接/事务身份。仅评审该类精确构造签名和该字段的EI_EXPOSE_REP2，不覆盖普通DTO/集合或其他方法。",
       "review": "Shared Spring-managed infrastructure; private final constructor dependency, not returned to request callers. DTO aliases and other methods remain in full scan."
     },
@@ -287,7 +287,7 @@
       "field": "userService",
       "pattern": "EI_EXPOSE_REP2",
       "source": "robot-services/robot-system/src/main/java/com/robot/system/user/controller/UserController.java",
-      "sourceSha256": "0f09910a5747262a3307903db7dc146a891a875388037257a6710a0fcd468358",
+      "sourceSha256": "8f3d4ac0b93633d9d594491daaa6e14b083a680a8c41ca16e6e9b512e5f9cd50",
       "reason": "Spring管理的协作者与连接/事务/序列化生命周期必须共享；构造器保存final依赖且不向请求DTO或调用者返回该Bean，不能通过拷贝建立另一连接/事务身份。仅评审该类精确构造签名和该字段的EI_EXPOSE_REP2，不覆盖普通DTO/集合或其他方法。",
       "review": "Shared Spring-managed infrastructure; private final constructor dependency, not returned to request callers. DTO aliases and other methods remain in full scan."
     },
@@ -299,7 +299,7 @@
       "field": "memberRoles",
       "pattern": "EI_EXPOSE_REP2",
       "source": "robot-services/robot-system/src/main/java/com/robot/system/user/service/UserService.java",
-      "sourceSha256": "5da0bff050b3803788b3de58dff4f6c558f6e15ab467efa2994b9c80ad6611cd",
+      "sourceSha256": "651cbb459b6768b67d9fd2eb1200446d23526599a3477b64480c18e933b756dd",
       "reason": "Spring管理的协作者与连接/事务/序列化生命周期必须共享；构造器保存final依赖且不向请求DTO或调用者返回该Bean，不能通过拷贝建立另一连接/事务身份。仅评审该类精确构造签名和该字段的EI_EXPOSE_REP2，不覆盖普通DTO/集合或其他方法。",
       "review": "Shared Spring-managed infrastructure; private final constructor dependency, not returned to request callers. DTO aliases and other methods remain in full scan."
     },
@@ -311,7 +311,7 @@
       "field": "stateStore",
       "pattern": "EI_EXPOSE_REP2",
       "source": "robot-services/robot-system/src/main/java/com/robot/system/user/service/UserService.java",
-      "sourceSha256": "5da0bff050b3803788b3de58dff4f6c558f6e15ab467efa2994b9c80ad6611cd",
+      "sourceSha256": "651cbb459b6768b67d9fd2eb1200446d23526599a3477b64480c18e933b756dd",
       "reason": "Spring管理的协作者与连接/事务/序列化生命周期必须共享；构造器保存final依赖且不向请求DTO或调用者返回该Bean，不能通过拷贝建立另一连接/事务身份。仅评审该类精确构造签名和该字段的EI_EXPOSE_REP2，不覆盖普通DTO/集合或其他方法。",
       "review": "Shared Spring-managed infrastructure; private final constructor dependency, not returned to request callers. DTO aliases and other methods remain in full scan."
     },

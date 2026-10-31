@@ -4,7 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.robot.system.api.dto.account.PasswordChangeRequest;
-import com.robot.system.api.dto.user.UserSaveRequest;
+import com.robot.system.user.dto.UserSaveRequest;
+import com.robot.system.user.entity.SysUser;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

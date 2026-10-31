@@ -121,7 +121,7 @@
     }
   ],
   "requests": {
-    "com.robot.system.api.dto.user.UserSaveRequest": {
+    "com.robot.system.user.dto.UserSaveRequest": {
       "fields": {
         "id": {
           "javaType": "String",
@@ -129,7 +129,7 @@
           "validation": {},
           "semanticId": "account.opaque-id",
           "sourceOfTruth": "sys_user.id",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "编辑资源ID；PUT由路径ID覆盖，新增ID由服务端生成。"
         },
         "username": {
@@ -147,7 +147,7 @@
           },
           "semanticId": "account.username",
           "sourceOfTruth": "sys_user.username",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "全局登录名：3至30位字母数字下划线；未删除账号唯一。"
         },
         "password": {
@@ -163,7 +163,7 @@
           },
           "semanticId": "account.password-input-never-output",
           "sourceOfTruth": "BCrypt → sys_user.password_hash",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "写入时的明文密码输入；仅BCrypt后存储，永不成为公共响应字段。新增必填；编辑可留空；重置须6至32字符。新密码同时要求UTF-8≤72字节且合法Unicode，不截断。"
         },
         "nickname": {
@@ -177,7 +177,7 @@
           },
           "semanticId": "account.nickname",
           "sourceOfTruth": "sys_user.nickname",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "账号全局昵称，非公司成员别名。编辑省略保留，显式null/空白拒绝；新增必填。"
         },
         "email": {
@@ -194,7 +194,7 @@
           },
           "semanticId": "account.email",
           "sourceOfTruth": "sys_user.email",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "账号全局邮箱，可空，最大100字符并校验邮箱格式。编辑省略保留、显式null清空。"
         },
         "phone": {
@@ -208,7 +208,7 @@
           },
           "semanticId": "account.phone",
           "sourceOfTruth": "sys_user.phone",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "账号全局联系电话，可空，最大20字符。编辑省略保留、显式null清空。"
         },
         "departmentId": {
@@ -224,7 +224,7 @@
           },
           "semanticId": "membership.department-reference",
           "sourceOfTruth": "sys_user_company.department_id",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "当前公司成员唯一主部门；省略保留，显式null清空，验证当前公司归属。"
         },
         "status": {
@@ -240,7 +240,7 @@
           },
           "semanticId": "membership.enabled-state-1-enabled-0-disabled",
           "sourceOfTruth": "sys_user_company.status_flag",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "当前公司成员启停，1启用、0停用；不改变全局账号状态，也不是软删标记。"
         },
         "roleIds": {
@@ -254,7 +254,7 @@
           },
           "semanticId": "membership.permanent-role-ids",
           "sourceOfTruth": "sys_user_role",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "当前公司永久角色绑定配置，最大500项；每项为非空不透明ID并由服务端检查公司归属/授权边界。",
           "elementValidation": {
             "NotBlank": {},
@@ -274,7 +274,7 @@
           },
           "semanticId": "account.update-cas-version",
           "sourceOfTruth": "sys_user.revision",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "编辑账户或角色聚合的CAS版本；用户成员动作另用membershipRevision。新增由服务端初始化，不能伪造版本。"
         },
         "membershipRevision": {
@@ -287,13 +287,13 @@
           },
           "semanticId": "membership.update-cas-version",
           "sourceOfTruth": "sys_user_company.revision",
-          "constraintSource": "com/robot/system/api/dto/user/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserSaveRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "当前公司成员聚合CAS版本；用户角色重绑、成员状态变化需匹配此版本。"
         }
       },
       "classValidation": {}
     },
-    "com.robot.system.api.dto.user.UserStatusRequest": {
+    "com.robot.system.user.dto.UserStatusRequest": {
       "fields": {
         "status": {
           "javaType": "Integer",
@@ -309,7 +309,7 @@
           },
           "semanticId": "membership.enabled-state-1-enabled-0-disabled",
           "sourceOfTruth": "sys_user_company.status_flag",
-          "constraintSource": "com/robot/system/api/dto/user/UserStatusRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserStatusRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "当前公司成员启停，1启用、0停用；不改变全局账号状态，也不是软删标记。"
         },
         "expectedRevision": {
@@ -323,13 +323,13 @@
           },
           "semanticId": "membership.action-cas-version",
           "sourceOfTruth": "UserVO.membershipRevision → sys_user_company.revision",
-          "constraintSource": "com/robot/system/api/dto/user/UserStatusRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserStatusRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "sys_user_company成员CAS版本，取UserVO.membershipRevision。"
         }
       },
       "classValidation": {}
     },
-    "com.robot.system.api.dto.user.UserPasswordResetRequest": {
+    "com.robot.system.user.dto.UserPasswordResetRequest": {
       "fields": {
         "password": {
           "javaType": "String",
@@ -346,7 +346,7 @@
           },
           "semanticId": "account.reset-password-input",
           "sourceOfTruth": "BCrypt → sys_user.password_hash",
-          "constraintSource": "com/robot/system/api/dto/user/UserPasswordResetRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserPasswordResetRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "写入时的明文密码输入；仅BCrypt后存储，永不成为公共响应字段。新增必填；编辑可留空；重置须6至32字符。"
         },
         "expectedRevision": {
@@ -360,7 +360,7 @@
           },
           "semanticId": "account.reset-cas-version",
           "sourceOfTruth": "UserVO.revision → sys_user.revision",
-          "constraintSource": "com/robot/system/api/dto/user/UserPasswordResetRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserPasswordResetRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "sys_user平台账户CAS版本，取UserVO.revision。"
         },
         "expectedMembershipRevision": {
@@ -374,7 +374,7 @@
           },
           "semanticId": "membership.reset-cas-version",
           "sourceOfTruth": "UserVO.membershipRevision → sys_user_company.revision",
-          "constraintSource": "com/robot/system/api/dto/user/UserPasswordResetRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
+          "constraintSource": "com/robot/system/user/dto/UserPasswordResetRequest.java Jakarta Bean Validation + UserService/UserWriteValidation transaction guard",
           "definition": "密码重置的当前公司成员CAS版本，取UserVO.membershipRevision；与账户版本同时检查。"
         }
       },
@@ -382,7 +382,7 @@
     }
   },
   "responses": {
-    "com.robot.system.api.vo.user.UserVO": {
+    "com.robot.system.user.vo.UserVO": {
       "id": {
         "javaType": "String",
         "jsonType": "string",
@@ -530,7 +530,7 @@
     }
   },
   "queryModels": {
-    "com.robot.system.api.dto.user.UserPageQuery": {
+    "com.robot.system.user.dto.UserPageQuery": {
       "page": "Integer",
       "pageSize": "Integer",
       "keyword": "String",

@@ -5,12 +5,12 @@ import { basename, resolve } from 'node:path'
 import { excludedField, javaClass, javaTokens } from './java_field_review.mjs'
 
 export const FIELD_TARGETS = Object.freeze([
-  { file: 'robot-services/robot-system/src/main/java/com/robot/system/api/entity/SysUser.java',
-    className: 'com.robot.system.api.entity.SysUser', field: 'passwordHash', type: 'String' },
-  { file: 'robot-services/robot-system/src/main/java/com/robot/system/api/entity/SysUser.java',
-    className: 'com.robot.system.api.entity.SysUser', field: 'email', type: 'String' },
-  { file: 'robot-services/robot-system/src/main/java/com/robot/system/api/dto/user/UserSaveRequest.java',
-    className: 'com.robot.system.api.dto.user.UserSaveRequest', field: 'emailPresent', type: 'boolean' },
+  { file: 'robot-services/robot-system/src/main/java/com/robot/system/user/entity/SysUser.java',
+    className: 'com.robot.system.user.entity.SysUser', field: 'passwordHash', type: 'String' },
+  { file: 'robot-services/robot-system/src/main/java/com/robot/system/user/entity/SysUser.java',
+    className: 'com.robot.system.user.entity.SysUser', field: 'email', type: 'String' },
+  { file: 'robot-services/robot-system/src/main/java/com/robot/system/user/dto/UserSaveRequest.java',
+    className: 'com.robot.system.user.dto.UserSaveRequest', field: 'emailPresent', type: 'boolean' },
 ])
 export const TEST_DIRECTORY = 'robot-services/robot-auth/src/test/java/com/robot/auth/authn/service'
 export const MAIN_DIRECTORY = 'robot-services/robot-auth/src/main/java/com/robot/auth/authn/service'

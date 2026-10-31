@@ -7,6 +7,7 @@
 - BD 只应用于 Robot 后端。首次读取 `.agents/skills/wl-skills-bd/SKILL.md`，按真实 `task` notice 读取所需规范，复用 runId 执行校验与 status；安装文件和宿主静态诊断不能证明自动加载或执行通过。
 - JH4J 坐标、Java 8 / Boot 2、`javax.validation`、固定成功码 2000、`data.records`、平台目录、配置生成模板及质量 profile 均不应用于 Robot。完整受管文件保留用于版本追踪，禁止把其中的模板复制到业务或 POM。Robot profile 明确禁止代码生成。
 - 使用现有 `contracts/`、Flyway 与 `docs/api-contract.md`；不要把现有 Robot 合同伪装成 BD 的 CRUD 生成合同。公司身份来自服务可信上下文；逻辑删除为 1 有效、0 删除；普通更新必须比较版本，敏感变更与审计、epoch、Outbox 保持同一事务。
+- 业务包按 `controller/service/dto/vo/entity/mapper` 按需组织，以 `robot-system` 的 `user` 为完整范例，遵循 `docs/backend-package-conventions.md`。本地模型归属业务包，跨服务契约保留在 `robot-api-system`；既有独立共享模型模块保持依赖方向。该项目约定优先于 BD 的统一 `api/entity` 模板，不预建空目录或单实现接口，不把尚未迁移的其他业务当作已完成。
 - 项目规范映射与检查边界见 `docs/conventions-bd-mapping.md`。通用静态发现必须保留原始结果；已有问题基线只允许阻断新增问题，不代表历史问题修复完成，不能自动刷新基线掩盖发现。
 - Java 变化执行 `scripts/verify.sh`，其中固定 Wrapper 运行真实 Java17 的 `clean verify -Probot-quality` 和实际供应链/逐类覆盖率核验；数据库变化另跑隔离 MySQL 升级验收。不要执行包中的 `mvn verify -Pwl-quality` Java8 示例替代 Robot 门禁。缺失、陈旧、跳过或失败的报告阻断，未验环境如实登记。
 - 从最新 `dev` 创建功能分支。每次完成任务并通过适用验证后，提交并推送功能分支，再依次使用 `git merge --ff-only` 快进到 `dev`、`main`，同步 GitHub 和 Gitee 并核对两边 `dev/main` 的 SHA；交付不只停在功能分支。保持线性历史，不新增 merge commit、不重写已共享提交、不强推。PR 用于审查记录；站点保护要求 PR 时遵循实际保护，不绕过。托管 CI 未运行或失败须如实报告，不等同生产发布已验收。不提交本地秘密、运行回执或缓存。

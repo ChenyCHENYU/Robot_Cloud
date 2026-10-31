@@ -96,8 +96,10 @@ system/
 ├── dict/             字典类型、项与编码查询
 ├── permission/       授权事实、主体复验、数据范围、授予策略、审计和缓存控制
 ├── security/         System 内部服务受众与可信委托边界
-└── api/              本服务 DTO、VO、Entity
+└── api/              尚未按业务归并的本服务 DTO、VO、Entity
 ```
+
+业务包内采用 `controller/service/dto/vo/entity/mapper` 按需分层，用户业务 `user/` 为完整范例。请求、响应与持久化模型归属当前业务，跨服务 DTO 和 Feign 继续放在 `robot-api-system`。包组织、共享模型例外及迁移检查见 [后端包组织约定](backend-package-conventions.md)。
 
 Controller 绑定协议，Service 编排用例和事务，Mapper 持久化。`PermissionStateStore` 管理数据库 epoch、菜单树/公司写协调锁，并保留控制设施的调用合同；内部 `CacheOutboxStore` 专门承担通知入队、到期扫描、投递围栏、重排、隔离、逻辑归档及治理审计 SQL。两者共享同一 JdbcTemplate 和调用方事务，拆分不产生分段提交，Controller 不直接访问数据库。
 

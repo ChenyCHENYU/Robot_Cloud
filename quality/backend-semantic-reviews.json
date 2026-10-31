@@ -1,31 +1,31 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-10-15",
+  "reviewedAt": "2026-10-31",
   "owner": "Robot maintainers",
   "reviewReference": "quality/backend-semantic-reviews.md",
   "fields": [
     {
-      "file": "robot-services/robot-system/src/main/java/com/robot/system/api/entity/SysUser.java",
-      "className": "com.robot.system.api.entity.SysUser",
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/entity/SysUser.java",
+      "className": "com.robot.system.user.entity.SysUser",
       "field": "passwordHash",
       "type": "String",
-      "sourceSHA256": "4fb9f1e158f838759c5805c192220fbbd25e7f9844a3262bf41769549817a953",
+      "sourceSHA256": "fe81ce99c6afec6dd729129b7aa371ac9593d6aa39f62e5f2288186f5cfdd8c6",
       "reason": "BCrypt摘要字段已有直属Lombok ToString.Exclude；native扫描仅看声明前几行，漏掉同一行真实注解。仅此类/字段/源快照接受语义复核。"
     },
     {
-      "file": "robot-services/robot-system/src/main/java/com/robot/system/api/entity/SysUser.java",
-      "className": "com.robot.system.api.entity.SysUser",
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/entity/SysUser.java",
+      "className": "com.robot.system.user.entity.SysUser",
       "field": "email",
       "type": "String",
-      "sourceSHA256": "4fb9f1e158f838759c5805c192220fbbd25e7f9844a3262bf41769549817a953",
+      "sourceSHA256": "fe81ce99c6afec6dd729129b7aa371ac9593d6aa39f62e5f2288186f5cfdd8c6",
       "reason": "邮箱字段已有直属Lombok ToString.Exclude；native扫描漏掉同一声明注解。JSON与实际字符串输出仍由正式Java隐私合同独立保护。"
     },
     {
-      "file": "robot-services/robot-system/src/main/java/com/robot/system/api/dto/user/UserSaveRequest.java",
-      "className": "com.robot.system.api.dto.user.UserSaveRequest",
+      "file": "robot-services/robot-system/src/main/java/com/robot/system/user/dto/UserSaveRequest.java",
+      "className": "com.robot.system.user.dto.UserSaveRequest",
       "field": "emailPresent",
       "type": "boolean",
-      "sourceSHA256": "8aa1ba728a8136f687675a95a222ddd59c0274fd754f2faa9734d78a8f462414",
+      "sourceSHA256": "25d9d24771fc8539e54c521c41afbd2a274dec0a4a3c660047a9f0efb286891b",
       "reason": "该boolean仅记录客户端字段是否提交，不保存联系值，且同一声明已有ToString.Exclude。只复核此确切字段，不对email类字段统一排除。"
     }
   ],

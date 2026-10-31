@@ -15,16 +15,19 @@ import com.robot.common.core.exception.ServiceException;
 import com.robot.common.redis.core.RedisHelper;
 import com.robot.common.security.util.AuthUtil;
 import com.robot.system.RobotSystemApplication;
-import com.robot.system.api.dto.user.UserPageQuery;
-import com.robot.system.api.dto.user.UserSaveRequest;
-import com.robot.system.api.dto.user.UserStatusRequest;
 import com.robot.system.api.entity.SysRole;
-import com.robot.system.api.entity.SysUser;
 import com.robot.system.permission.service.EffectiveRoleResolver;
 import com.robot.system.permission.service.PermissionChangeRecorder;
 import com.robot.system.permission.service.PermissionGrantPolicy;
+import com.robot.system.user.dto.UserPageQuery;
+import com.robot.system.user.dto.UserSaveRequest;
+import com.robot.system.user.dto.UserStatusRequest;
+import com.robot.system.user.entity.SysUser;
+import com.robot.system.user.entity.SysUserCompany;
+import com.robot.system.user.entity.SysUserRole;
 import com.robot.system.user.mapper.SysUserMapper;
 import java.util.List;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,6 +63,7 @@ class UserMembershipPersistenceTest {
     @Autowired UserService service;
     @Autowired SysUserMapper userMapper;
     @Autowired JdbcTemplate jdbc;
+    @Autowired SqlSessionFactory sqlSessions;
     MockedStatic<AuthUtil> auth;
 
     @BeforeEach
@@ -84,6 +88,15 @@ class UserMembershipPersistenceTest {
     @AfterEach
     void close() {
         auth.close();
+    }
+
+    @Test
+    void realMybatisFactoryResolvesBusinessAndLegacyEntityAliases() {
+        var aliases = sqlSessions.getConfiguration().getTypeAliasRegistry();
+        assertEquals(SysUser.class, aliases.resolveAlias("SysUser"));
+        assertEquals(SysUserCompany.class, aliases.resolveAlias("SysUserCompany"));
+        assertEquals(SysUserRole.class, aliases.resolveAlias("SysUserRole"));
+        assertEquals(SysRole.class, aliases.resolveAlias("SysRole"));
     }
 
     @Test

@@ -8,13 +8,15 @@ BD 0.37.0 的完整 native scan 和 B2–B32 review 仍真实执行；`bd-native
 
 | 精确类/字段 | 原始发现 | 当前证据 |
 | --- | --- | --- |
-| `com.robot.system.api.entity.SysUser.passwordHash` | B25 error | `@ToString.Exclude` 与 String 字段位于同一声明；BCrypt 摘要不能进入模型字符串 |
-| `com.robot.system.api.entity.SysUser.email` | B25 error | 同一声明真实 Lombok exclusion，联系值不进入模型字符串 |
-| `com.robot.system.api.dto.user.UserSaveRequest.emailPresent` | B25 error | boolean 仅表示提交状态，且同一声明已有真实 exclusion |
+| `com.robot.system.user.entity.SysUser.passwordHash` | B25 error | `@ToString.Exclude` 与 String 字段位于同一声明；BCrypt 摘要不能进入模型字符串 |
+| `com.robot.system.user.entity.SysUser.email` | B25 error | 同一声明真实 Lombok exclusion，联系值不进入模型字符串 |
+| `com.robot.system.user.dto.UserSaveRequest.emailPresent` | B25 error | boolean 仅表示提交状态，且同一声明已有真实 exclusion |
 
 原扫描只检查字段前面的若干行，遗漏同一行的注解。复核词法器保留位置，将注释、普通字符串和 text block 分离，定位精确顶层类的直属单字段声明；验证实际 `lombok.ToString.Exclude` 或明确 import 后的 `ToString.Exclude`。前置或同一声明的注解有效；相邻字段、方法局部、嵌套其它类、评论/字符串、错误 import/同名遮蔽、错误行、缺注解均无效。有显式 `toString()` 的类不自动采纳这项证明。
 
 只接受 JSON 中固定的三组 path/class/field/type 与审核时的源 hash，不能扩成“所有敏感字段自动忽略”。新增或变更须重新审核具体源码；执行器不自动刷新 policy 或 baseline。该静态证明不替代实际字符串输出、JSON、异常日志及敏感字段隐私的 Java 正式回归。
+
+用户模型按业务归属迁至 `user/entity`、`user/dto` 后，复核项沿用相同的三个字段和直属注解，显式更新精确路径、类名及审核源码哈希；不扩大复核范围。构造注入复核仅因 import 迁移重新登记对应源码哈希，构造签名、字段和规则范围保持不变。
 
 ## 同域认证测试的包内可见性
 

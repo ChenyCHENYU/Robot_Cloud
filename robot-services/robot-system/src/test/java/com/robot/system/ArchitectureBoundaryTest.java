@@ -11,6 +11,30 @@ import com.tngtech.archunit.lang.ArchRule;
 @AnalyzeClasses(packages = "com.robot", importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureBoundaryTest {
     @ArchTest
+    static final ArchRule USER_HTTP_DOES_NOT_USE_PERSISTENCE_MODELS =
+            noClasses()
+                    .that()
+                    .resideInAPackage("com.robot.system.user.controller..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAPackage("com.robot.system.user.entity..")
+                    .because("用户HTTP入口通过DTO和VO表达协议，数据库实体属于业务持久化模型");
+
+    @ArchTest
+    static final ArchRule USER_INPUTS_AND_ENTITIES_DO_NOT_USE_EXECUTION_LAYERS =
+            noClasses()
+                    .that()
+                    .resideInAnyPackage(
+                            "com.robot.system.user.dto..", "com.robot.system.user.entity..")
+                    .should()
+                    .dependOnClassesThat()
+                    .resideInAnyPackage(
+                            "com.robot.system..controller..",
+                            "com.robot.system..service..",
+                            "com.robot.system..mapper..")
+                    .because("请求与数据模型不编排用例，不反向依赖控制器、事务服务或数据访问组件");
+
+    @ArchTest
     static final ArchRule CONTROLLERS_USE_SERVICES =
             noClasses()
                     .that()

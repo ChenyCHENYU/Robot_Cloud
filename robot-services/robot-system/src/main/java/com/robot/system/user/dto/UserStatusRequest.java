@@ -1,4 +1,4 @@
-package com.robot.system.api.dto.user;
+package com.robot.system.user.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;

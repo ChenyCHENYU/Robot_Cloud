@@ -1,6 +1,6 @@
-package com.robot.system.api.vo.user;
+package com.robot.system.user.vo;
 
-import com.robot.system.api.entity.SysUser;
+import com.robot.system.user.entity.SysUser;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Builder;

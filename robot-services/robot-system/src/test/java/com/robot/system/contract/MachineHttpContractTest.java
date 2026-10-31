@@ -105,7 +105,7 @@ class MachineHttpContractTest {
         ObjectNode fields =
                 (ObjectNode)
                         changed.path("requests")
-                                .path("com.robot.system.api.dto.user.UserSaveRequest")
+                                .path("com.robot.system.user.dto.UserSaveRequest")
                                 .path("fields");
         fields.set("securityVersion", fields.path("revision").deepCopy());
         assertThrows(

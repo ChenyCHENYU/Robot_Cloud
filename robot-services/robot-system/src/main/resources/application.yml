@@ -67,7 +67,7 @@ spring:
 
 mybatis-plus:
   mapper-locations: classpath*:mapper/**/*.xml
-  type-aliases-package: com.robot.system.api.entity
+  type-aliases-package: com.robot.system.api.entity,com.robot.system.user.entity
   global-config:
     banner: false
     db-config:

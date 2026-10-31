@@ -69,7 +69,7 @@ for (const target of FIELD_TARGETS) test(`actual exact ${target.className}.${tar
 
 const fieldTarget = FIELD_TARGETS[0]
 function example(body, imports = 'import lombok.ToString;') {
-  return `package com.robot.system.api.entity;\n${imports}\npublic class SysUser {\n${body}\n}\n`
+  return `package com.robot.system.user.entity;\n${imports}\npublic class SysUser {\n${body}\n}\n`
 }
 
 for (const [name, body, imports] of [
@@ -107,7 +107,7 @@ test('wrong owner package and wrong finding line cannot borrow a real exclusion'
   replaceReviewed(input, fieldTarget.file, text)
   const finding = fieldFinding(fieldTarget.file, 'passwordHash', text)
   assert.equal(classifyFinding(input.root, { ...finding, line: finding.line + 1 }, input.policy).disposition, 'unreviewed')
-  const moved = text.replace('com.robot.system.api.entity', 'other.entity')
+  const moved = text.replace('com.robot.system.user.entity', 'other.entity')
   replaceReviewed(input, fieldTarget.file, moved)
   assert.equal(classifyFinding(input.root, fieldFinding(fieldTarget.file, 'passwordHash', moved), input.policy)
     .disposition, 'unreviewed')

@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.robot.common.core.exception.ServiceException;
 import com.robot.system.api.entity.SysRole;
-import com.robot.system.api.entity.SysUser;
+import com.robot.system.user.entity.SysUser;
 import com.robot.system.user.mapper.SysUserMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;

@@ -6,8 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.robot.common.security.context.LoginUser;
-import com.robot.system.api.entity.SysUser;
-import com.robot.system.api.entity.SysUserCompany;
+import com.robot.system.user.entity.SysUser;
+import com.robot.system.user.entity.SysUserCompany;
 import com.robot.system.user.mapper.SysUserCompanyMapper;
 import com.robot.system.user.mapper.SysUserMapper;
 import java.nio.charset.StandardCharsets;
